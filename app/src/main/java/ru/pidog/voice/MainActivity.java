@@ -52,6 +52,7 @@ public final class MainActivity extends Activity implements RecognitionListener 
     private TextView recognizedText;
     private TextView commandText;
     private Button micButton;
+    private Button localMicButton;
     private Spinner commandSpinner;
     private Spinner languageSpinner;
     private ViewFlipper servicePages;
@@ -68,6 +69,9 @@ public final class MainActivity extends Activity implements RecognitionListener 
     private TextView powerIndicatorTitle;
     private TextView powerIndicatorDetail;
     private TextView powerIndicatorBadge;
+    private JoystickView driveJoystick;
+    private JoystickView turnJoystick;
+    private TextView movementStatus;
 
     private SpeechRecognizer speechRecognizer;
     private RobotClient robotClient;
@@ -83,6 +87,9 @@ public final class MainActivity extends Activity implements RecognitionListener 
     };
     private boolean listening;
     private boolean cameraStreaming;
+    private int driveDirection;
+    private int turnDirection;
+    private RobotCommand activeMovementCommand;
     private String currentLanguageTag;
 
     @Override
@@ -121,6 +128,7 @@ public final class MainActivity extends Activity implements RecognitionListener 
         recognizedText = findViewById(R.id.recognizedText);
         commandText = findViewById(R.id.commandText);
         micButton = findViewById(R.id.micButton);
+        localMicButton = findViewById(R.id.localMicButton);
         commandSpinner = findViewById(R.id.commandSpinner);
         languageSpinner = findViewById(R.id.languageSpinner);
         servicePages = findViewById(R.id.servicePages);
@@ -135,10 +143,13 @@ public final class MainActivity extends Activity implements RecognitionListener 
         powerIndicatorTitle = findViewById(R.id.powerIndicatorTitle);
         powerIndicatorDetail = findViewById(R.id.powerIndicatorDetail);
         powerIndicatorBadge = findViewById(R.id.powerIndicatorBadge);
+        driveJoystick = findViewById(R.id.driveJoystick);
+        turnJoystick = findViewById(R.id.turnJoystick);
+        movementStatus = findViewById(R.id.movementStatus);
         navButtons = new Button[]{
                 findViewById(R.id.navConnection), findViewById(R.id.navVoice),
-                findViewById(R.id.navCommands), findViewById(R.id.navVision),
-                findViewById(R.id.navSensors)
+                findViewById(R.id.navMovement), findViewById(R.id.navCommands),
+                findViewById(R.id.navVision), findViewById(R.id.navSensors)
         };
         navScroll = findViewById(R.id.navScroll);
     }
@@ -149,18 +160,17 @@ public final class MainActivity extends Activity implements RecognitionListener 
         bindCommandSpinner();
         findViewById(R.id.connectButton).setOnClickListener(view -> checkConnection());
         micButton.setOnClickListener(view -> toggleListening());
+        localMicButton.setOnClickListener(view -> enableBuiltInMicrophone());
         findViewById(R.id.sendSelectedButton).setOnClickListener(view -> sendSelectedCommand());
 
-        bindManual(R.id.forwardButton, RobotCommand.FORWARD);
-        bindManual(R.id.backwardButton, RobotCommand.BACKWARD);
-        bindManual(R.id.leftButton, RobotCommand.TURN_LEFT);
-        bindManual(R.id.rightButton, RobotCommand.TURN_RIGHT);
+        bindJoysticks();
         bindManual(R.id.sitButton, RobotCommand.SIT);
         bindManual(R.id.standButton, RobotCommand.STAND);
         bindManual(R.id.lieButton, RobotCommand.LIE);
         bindManual(R.id.barkButton, RobotCommand.BARK);
         bindManual(R.id.tailButton, RobotCommand.WAG_TAIL);
         bindManual(R.id.stopButton, RobotCommand.STOP);
+        findViewById(R.id.joystickStopButton).setOnClickListener(view -> stopMovement());
 
         bindManual(R.id.findOrangeButton, RobotCommand.FIND_ORANGE);
         bindManual(R.id.findRedButton, RobotCommand.FIND_RED);
@@ -252,13 +262,18 @@ public final class MainActivity extends Activity implements RecognitionListener 
     private void bindNavigation() {
         findViewById(R.id.navConnection).setOnClickListener(view -> showPage(0));
         findViewById(R.id.navVoice).setOnClickListener(view -> showPage(1));
-        findViewById(R.id.navCommands).setOnClickListener(view -> showPage(2));
-        findViewById(R.id.navVision).setOnClickListener(view -> showPage(3));
-        findViewById(R.id.navSensors).setOnClickListener(view -> showPage(4));
+        findViewById(R.id.navMovement).setOnClickListener(view -> showPage(2));
+        findViewById(R.id.navCommands).setOnClickListener(view -> showPage(3));
+        findViewById(R.id.navVision).setOnClickListener(view -> showPage(4));
+        findViewById(R.id.navSensors).setOnClickListener(view -> showPage(5));
         showPage(1);
     }
 
     private void showPage(int page) {
+        if (servicePages.getDisplayedChild() == 2 && page != 2
+                && activeMovementCommand != null) {
+            stopMovement();
+        }
         servicePages.setDisplayedChild(page);
         for (int index = 0; index < navButtons.length; index++) {
             boolean selected = index == page;
@@ -271,6 +286,98 @@ public final class MainActivity extends Activity implements RecognitionListener 
             int inset = Math.round(12 * getResources().getDisplayMetrics().density);
             navScroll.smoothScrollTo(Math.max(0, navButtons[page].getLeft() - inset), 0);
         });
+    }
+
+    private void bindJoysticks() {
+        driveJoystick.configure(JoystickView.Axis.VERTICAL, direction -> {
+            driveDirection = direction;
+            applyJoystickState(true);
+        });
+        turnJoystick.configure(JoystickView.Axis.HORIZONTAL, direction -> {
+            turnDirection = direction;
+            applyJoystickState(false);
+        });
+    }
+
+    private void applyJoystickState(boolean driveChanged) {
+        RobotCommand command = null;
+        if (driveChanged && driveDirection != 0) {
+            command = driveDirection < 0 ? RobotCommand.FORWARD : RobotCommand.BACKWARD;
+        } else if (!driveChanged && turnDirection != 0) {
+            command = turnDirection < 0 ? RobotCommand.TURN_LEFT : RobotCommand.TURN_RIGHT;
+        } else if (driveDirection != 0) {
+            command = driveDirection < 0 ? RobotCommand.FORWARD : RobotCommand.BACKWARD;
+        } else if (turnDirection != 0) {
+            command = turnDirection < 0 ? RobotCommand.TURN_LEFT : RobotCommand.TURN_RIGHT;
+        }
+        dispatchMovementCommand(command == null ? RobotCommand.STOP : command);
+    }
+
+    private void stopMovement() {
+        driveDirection = 0;
+        turnDirection = 0;
+        driveJoystick.resetToCenter();
+        turnJoystick.resetToCenter();
+        dispatchMovementCommand(RobotCommand.STOP);
+    }
+
+    private void dispatchMovementCommand(RobotCommand command) {
+        if (command == activeMovementCommand) {
+            return;
+        }
+        Endpoint endpoint = readEndpoint();
+        if (endpoint == null) {
+            activeMovementCommand = null;
+            movementStatus.setText(R.string.movement_connection_required);
+            movementStatus.setTextColor(getColor(R.color.danger));
+            return;
+        }
+        activeMovementCommand = command;
+        saveSettings();
+        int statusText;
+        switch (command) {
+            case FORWARD: statusText = R.string.movement_forward; break;
+            case BACKWARD: statusText = R.string.movement_backward; break;
+            case TURN_LEFT: statusText = R.string.movement_left; break;
+            case TURN_RIGHT: statusText = R.string.movement_right; break;
+            default: statusText = R.string.movement_stopped;
+        }
+        movementStatus.setText(statusText);
+        movementStatus.setTextColor(getColor(command == RobotCommand.STOP
+                ? R.color.danger : R.color.brand_dark));
+        String phrase = getString(R.string.joystick_command_phrase);
+        setConnectionState(getString(R.string.sending_command,
+                command.displayName(currentLanguageTag)), R.color.muted);
+        robotClient.send(endpoint.host, endpoint.port, endpoint.token, command, phrase,
+                (success, message) -> {
+                    setConnectionState(message, success ? R.color.brand : R.color.danger);
+                    if (!success && command == activeMovementCommand) {
+                        activeMovementCommand = null;
+                        movementStatus.setText(message);
+                        movementStatus.setTextColor(getColor(R.color.danger));
+                    }
+                });
+    }
+
+    private void enableBuiltInMicrophone() {
+        Endpoint endpoint = readEndpoint();
+        if (endpoint == null) {
+            return;
+        }
+        saveSettings();
+        localMicButton.setEnabled(false);
+        localMicButton.setText(R.string.built_in_microphone_starting);
+        setConnectionState(getString(R.string.sending_command,
+                RobotCommand.LOCAL_VOICE_ON.displayName(currentLanguageTag)), R.color.muted);
+        robotClient.send(endpoint.host, endpoint.port, endpoint.token,
+                RobotCommand.LOCAL_VOICE_ON, getString(R.string.built_in_microphone_phrase),
+                (success, message) -> {
+                    localMicButton.setEnabled(true);
+                    localMicButton.setText(success
+                            ? R.string.built_in_microphone_active
+                            : R.string.use_built_in_microphone);
+                    setConnectionState(message, success ? R.color.brand : R.color.danger);
+                });
     }
 
     private void prepareCameraView() {
@@ -318,7 +425,7 @@ public final class MainActivity extends Activity implements RecognitionListener 
 
     private void updatePowerIndicator(RobotClient.SensorData data) {
         if (data == null || !data.powerKnown) {
-            headerPowerIndicator.setText("⚡ —");
+            headerPowerIndicator.setText(R.string.power_header_unknown);
             headerPowerIndicator.setTextColor(getColor(R.color.muted));
             headerPowerIndicator.setBackgroundTintList(
                     ColorStateList.valueOf(getColor(R.color.surface_variant)));
@@ -333,7 +440,8 @@ public final class MainActivity extends Activity implements RecognitionListener 
         }
 
         if (data.externalPower) {
-            headerPowerIndicator.setText(data.charging ? "⚡ CHG" : "⚡ AC");
+            headerPowerIndicator.setText(data.charging
+                    ? R.string.power_header_charging : R.string.power_header_external);
             headerPowerIndicator.setTextColor(getColor(R.color.brand_dark));
             headerPowerIndicator.setBackgroundTintList(
                     ColorStateList.valueOf(getColor(R.color.brand_soft)));
@@ -350,7 +458,7 @@ public final class MainActivity extends Activity implements RecognitionListener 
                 setPowerBadge(getString(R.string.connected_badge), R.color.brand_dark, R.color.brand_soft);
             }
         } else {
-            headerPowerIndicator.setText("🔋 BAT");
+            headerPowerIndicator.setText(R.string.power_header_battery);
             headerPowerIndicator.setTextColor(getColor(R.color.warning));
             headerPowerIndicator.setBackgroundTintList(
                     ColorStateList.valueOf(getColor(R.color.surface_variant)));
@@ -807,6 +915,9 @@ public final class MainActivity extends Activity implements RecognitionListener 
     @Override
     protected void onPause() {
         sensorPollingHandler.removeCallbacks(sensorPoll);
+        if (activeMovementCommand != null && activeMovementCommand != RobotCommand.STOP) {
+            stopMovement();
+        }
         if (cameraStreaming) {
             cameraView.onPause();
         }

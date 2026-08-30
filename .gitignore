@@ -22,3 +22,4 @@ captures/
 __pycache__/
 *.pyc
 README.ru.md
+DEPLOY_AGENT.md

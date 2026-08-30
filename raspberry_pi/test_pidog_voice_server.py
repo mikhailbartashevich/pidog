@@ -94,7 +94,7 @@ class AudioConfigurationTest(unittest.TestCase):
 
         with patch.object(controller, "_find_sound_dir",
                           return_value=Path("/tmp/pidog-sounds")), \
-             patch("pidog_voice_server.shutil.which", return_value="/usr/bin/play"), \
+             patch("pidog_voice.audio.shutil.which", return_value="/usr/bin/play"), \
              patch.object(controller, "_disable_speaker") as disable:
             controller._prepare_audio()
 

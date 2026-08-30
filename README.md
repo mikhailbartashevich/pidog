@@ -46,6 +46,7 @@ The repository includes the `raspberry_pi/pidog-voice.service` template. It expe
 ```bash
 sudo mkdir -p /opt/pidog-voice
 sudo cp raspberry_pi/pidog_voice_server.py /opt/pidog-voice/
+sudo cp -R raspberry_pi/pidog_voice /opt/pidog-voice/
 ```
 
 ```text
@@ -99,6 +100,7 @@ After updating the server and unit files, apply the changes:
 
 ```bash
 sudo cp raspberry_pi/pidog_voice_server.py /opt/pidog-voice/
+sudo cp -R raspberry_pi/pidog_voice /opt/pidog-voice/
 sudo cp raspberry_pi/pidog-voice.service /etc/systemd/system/
 sudo systemctl daemon-reload
 sudo systemctl restart pidog-voice
@@ -146,5 +148,7 @@ Before the first test, place PiDog on the floor with enough free space around it
 
 - `app/` — Android app written in Java with no third-party runtime dependencies;
 - `app/src/main/java/ru/pidog/voice/CommandParser.java` — Russian and English phrase dictionaries with safe command matching;
-- `raspberry_pi/pidog_voice_server.py` — HTTP bridge to the PiDog library;
+- `raspberry_pi/pidog_voice_server.py` — backward-compatible server entry point;
+- `raspberry_pi/pidog_voice/` — server package split into voice, hardware, sensor,
+  camera, HTTP, and command-line modules;
 - `raspberry_pi/test_pidog_voice_server.py` — server-side dry-run tests.
