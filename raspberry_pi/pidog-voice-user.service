@@ -1,0 +1,18 @@
+[Unit]
+Description=PiDog V2 Russian Voice Command Bridge
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/pidog-voice
+EnvironmentFile=%h/.config/pidog-voice.env
+Environment=SDL_AUDIODRIVER=dummy
+ExecStartPre=/usr/bin/env robot_hat disable_speaker
+ExecStart=/usr/bin/python3 %h/pidog-voice/pidog_voice_server.py --host 0.0.0.0 --port 8765
+ExecStopPost=-/usr/bin/env robot_hat disable_speaker
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=default.target

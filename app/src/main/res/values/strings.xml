@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">PiDog Голос</string>
+    <string name="title">PiDog V2</string>
+    <string name="subtitle">Русское голосовое управление</string>
+    <string name="connection">Подключение к роботу</string>
+    <string name="host_hint">IP-адрес PiDog, например 192.168.1.42</string>
+    <string name="port_hint">Порт</string>
+    <string name="token_hint">Секретный токен (необязательно)</string>
+    <string name="check_connection">Проверить связь</string>
+    <string name="not_checked">Связь ещё не проверена</string>
+    <string name="tap_to_speak">Нажмите и скажите команду</string>
+    <string name="listening">Слушаю…</string>
+    <string name="recognized_title">Распознано</string>
+    <string name="recognized_empty">Здесь появится услышанная фраза</string>
+    <string name="command_title">Команда</string>
+    <string name="command_empty">Ожидаю команду</string>
+    <string name="manual_title">Ручное управление</string>
+    <string name="choose_command">Выберите команду</string>
+    <string name="send_to_pidog">Отправить PiDog</string>
+    <string name="quick_commands">Быстрый доступ</string>
+    <string name="forward">Вперёд</string>
+    <string name="backward">Назад</string>
+    <string name="left">Налево</string>
+    <string name="right">Направо</string>
+    <string name="stop">СТОП</string>
+    <string name="sit">Сесть</string>
+    <string name="stand">Встать</string>
+    <string name="lie">Лечь</string>
+    <string name="bark">Голос</string>
+    <string name="tail">Хвост</string>
+    <string name="hint_commands">Примеры: «Пидог, сядь», «иди вперёд», «поверни направо», «дай лапу», «голос», «стоп».</string>
+</resources>

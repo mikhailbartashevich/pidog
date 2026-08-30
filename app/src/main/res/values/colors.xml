@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="ink">#181B2E</color>
+    <color name="muted">#667085</color>
+    <color name="canvas">#F6F6FC</color>
+    <color name="panel">#FFFFFF</color>
+    <color name="surface_variant">#F0F1F7</color>
+    <color name="brand">#5B5BD6</color>
+    <color name="brand_dark">#3F3F9E</color>
+    <color name="brand_soft">#E9E9FF</color>
+    <color name="danger">#E5484D</color>
+    <color name="danger_dark">#B4232A</color>
+    <color name="warning">#D97706</color>
+    <color name="stroke">#DFE2EC</color>
+    <color name="camera">#0E1020</color>
+    <color name="camera_muted">#AFB5D0</color>
+    <color name="success">#16A36A</color>
+    <color name="white">#FFFFFF</color>
+</resources>

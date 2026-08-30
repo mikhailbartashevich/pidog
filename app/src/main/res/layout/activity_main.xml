@@ -1,0 +1,680 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical">
+
+    <LinearLayout
+        android:id="@+id/topBar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@drawable/bg_topbar"
+        android:elevation="3dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="20dp"
+        android:paddingTop="14dp"
+        android:paddingEnd="20dp"
+        android:paddingBottom="12dp">
+
+        <TextView
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:background="@drawable/bg_brand_badge"
+            android:gravity="center"
+            android:text="P"
+            android:textColor="@color/white"
+            android:textSize="21sp"
+            android:textStyle="bold" />
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="sans-serif-medium"
+                android:text="PiDog Control"
+                android:textColor="@color/ink"
+                android:textSize="23sp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="1dp"
+                android:text="Голос · камера · сенсоры"
+                android:textColor="@color/muted"
+                android:textSize="13sp" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/headerPowerIndicator"
+            android:layout_width="wrap_content"
+            android:layout_height="32dp"
+            android:background="@drawable/bg_chip"
+            android:contentDescription="Состояние внешнего питания"
+            android:gravity="center"
+            android:paddingStart="12dp"
+            android:paddingEnd="12dp"
+            android:text="⚡ —"
+            android:textColor="@color/brand_dark"
+            android:textSize="12sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+    <HorizontalScrollView
+        android:id="@+id/navScroll"
+        android:layout_width="match_parent"
+        android:layout_height="60dp"
+        android:background="@color/panel"
+        android:clipToPadding="false"
+        android:elevation="2dp"
+        android:fillViewport="false"
+        android:paddingStart="10dp"
+        android:paddingEnd="10dp"
+        android:scrollbars="none">
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <Button android:id="@+id/navConnection" style="@style/NavButton" android:text="Связь" />
+            <Button android:id="@+id/navVoice" style="@style/NavButton" android:text="Голос" />
+            <Button android:id="@+id/navCommands" style="@style/NavButton" android:text="Команды" />
+            <Button android:id="@+id/navVision" style="@style/NavButton" android:text="Камера" />
+            <Button android:id="@+id/navSensors" style="@style/NavButton" android:text="Сенсоры" />
+        </LinearLayout>
+    </HorizontalScrollView>
+
+    <ViewFlipper
+        android:id="@+id/servicePages"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1">
+
+        <!-- 0 · CONNECTION -->
+        <ScrollView
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:fillViewport="true">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:paddingStart="20dp"
+                android:paddingTop="20dp"
+                android:paddingEnd="20dp"
+                android:paddingBottom="28dp">
+
+                <TextView style="@style/PageTitle" android:text="Подключение" />
+                <TextView style="@style/PageSubtitle" android:text="Raspberry Pi и телефон должны быть в одной Wi‑Fi сети" />
+
+                <LinearLayout
+                    style="@style/CardPanel"
+                    android:layout_marginTop="18dp"
+                    android:orientation="vertical">
+
+                    <TextView style="@style/CardEyebrow" android:text="АДРЕС РОБОТА" />
+
+                    <EditText
+                        android:id="@+id/hostInput"
+                        android:layout_width="match_parent"
+                        android:layout_height="54dp"
+                        android:layout_marginTop="8dp"
+                        android:background="@drawable/bg_input"
+                        android:autofillHints=""
+                        android:hint="IP-адрес, например 192.168.1.37"
+                        android:inputType="textUri"
+                        android:maxLines="1"
+                        android:paddingStart="14dp"
+                        android:paddingEnd="14dp"
+                        android:textColor="@color/ink"
+                        android:textSize="17sp" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal">
+
+                        <EditText
+                            android:id="@+id/portInput"
+                            android:layout_width="92dp"
+                            android:layout_height="52dp"
+                            android:layout_marginTop="10dp"
+                            android:autofillHints=""
+                            android:background="@drawable/bg_input"
+                            android:hint="Порт"
+                            android:inputType="number"
+                            android:maxLength="5"
+                            android:paddingStart="14dp"
+                            android:paddingEnd="10dp"
+                            android:textColor="@color/ink" />
+
+                        <EditText
+                            android:id="@+id/tokenInput"
+                            android:layout_width="0dp"
+                            android:layout_height="52dp"
+                            android:layout_marginStart="10dp"
+                            android:layout_marginTop="10dp"
+                            android:layout_weight="1"
+                            android:autofillHints="password"
+                            android:background="@drawable/bg_input"
+                            android:hint="Секретный токен"
+                            android:inputType="textPassword"
+                            android:maxLines="1"
+                            android:paddingStart="14dp"
+                            android:paddingEnd="14dp"
+                            android:textColor="@color/ink" />
+                    </LinearLayout>
+
+                    <Button
+                        android:id="@+id/connectButton"
+                        style="@style/PrimaryButton"
+                        android:layout_marginTop="12dp"
+                        android:text="Проверить связь" />
+                </LinearLayout>
+
+                <LinearLayout
+                    style="@style/CardPanel"
+                    android:layout_marginTop="14dp"
+                    android:backgroundTint="@color/brand_soft"
+                    android:orientation="vertical">
+                    <TextView style="@style/CardEyebrow" android:text="ТЕКУЩАЯ КОНФИГУРАЦИЯ" />
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="7dp"
+                        android:text="PiDog API · порт 8765\nКамера · порт 9000\nРусское распознавание · ru-RU"
+                        android:textColor="@color/brand_dark"
+                        android:textSize="16sp"
+                        android:lineSpacingExtra="5dp" />
+                </LinearLayout>
+            </LinearLayout>
+        </ScrollView>
+
+        <!-- 1 · VOICE -->
+        <ScrollView
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:fillViewport="true">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_horizontal"
+                android:orientation="vertical"
+                android:paddingStart="20dp"
+                android:paddingTop="20dp"
+                android:paddingEnd="20dp"
+                android:paddingBottom="28dp">
+
+                <TextView style="@style/PageTitle" android:layout_gravity="start" android:text="Голосовое управление" />
+                <TextView style="@style/PageSubtitle" android:layout_gravity="start" android:text="Говорите естественно — команда выбирается из безопасного списка" />
+
+                <Button
+                    android:id="@+id/micButton"
+                    android:layout_width="132dp"
+                    android:layout_height="132dp"
+                    android:layout_marginTop="23dp"
+                    android:background="@drawable/bg_mic"
+                    android:contentDescription="Говорить"
+                    android:text="🎙"
+                    android:textColor="@color/white"
+                    android:textSize="48sp" />
+
+                <TextView
+                    android:id="@+id/listeningStatus"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:gravity="center"
+                    android:text="Нажмите и скажите команду"
+                    android:textColor="@color/brand_dark"
+                    android:textSize="16sp"
+                    android:textStyle="bold" />
+
+                <LinearLayout
+                    style="@style/CardPanel"
+                    android:layout_marginTop="20dp"
+                    android:orientation="vertical">
+                    <TextView style="@style/CardEyebrow" android:text="РАСПОЗНАНО" />
+                    <TextView
+                        android:id="@+id/recognizedText"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="5dp"
+                        android:minHeight="28dp"
+                        android:text="Здесь появится услышанная фраза"
+                        android:textColor="@color/ink"
+                        android:textSize="18sp" />
+                    <TextView style="@style/CardEyebrow" android:layout_marginTop="15dp" android:text="ВЫБРАННАЯ КОМАНДА" />
+                    <TextView
+                        android:id="@+id/commandText"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="5dp"
+                        android:text="Ожидаю команду"
+                        android:textColor="@color/brand_dark"
+                        android:textSize="18sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="14dp"
+                    android:text="Попробуйте: «найди оранжевую баночку», «покажи заряд», «свети фиолетовым», «вой», «слушай звук»."
+                    android:textColor="@color/muted"
+                    android:textSize="14sp" />
+            </LinearLayout>
+        </ScrollView>
+
+        <!-- 2 · COMMANDS -->
+        <ScrollView
+            android:layout_width="match_parent"
+            android:layout_height="match_parent">
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:paddingStart="20dp"
+                android:paddingTop="20dp"
+                android:paddingEnd="20dp"
+                android:paddingBottom="28dp">
+                <TextView style="@style/PageTitle" android:text="Все команды" />
+                <TextView style="@style/PageSubtitle" android:text="Тот же полный набор, что доступен голосом" />
+
+                <LinearLayout style="@style/CardPanel" android:layout_marginTop="17dp" android:orientation="vertical">
+                    <TextView style="@style/CardEyebrow" android:text="ВЫБЕРИТЕ ДЕЙСТВИЕ" />
+                    <Spinner
+                        android:id="@+id/commandSpinner"
+                        android:layout_width="match_parent"
+                        android:layout_height="58dp"
+                        android:layout_marginTop="4dp"
+                        android:spinnerMode="dropdown" />
+                    <Button
+                        android:id="@+id/sendSelectedButton"
+                        style="@style/PrimaryButton"
+                        android:text="Отправить PiDog" />
+                </LinearLayout>
+
+                <TextView style="@style/SectionTitle" android:text="Быстрое управление" />
+                <GridLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:columnCount="2"
+                    android:rowCount="5"
+                    android:useDefaultMargins="false">
+                    <Button android:id="@+id/forwardButton" style="@style/CommandButton" android:text="↑ Вперёд" />
+                    <Button android:id="@+id/backwardButton" style="@style/CommandButton" android:text="↓ Назад" />
+                    <Button android:id="@+id/leftButton" style="@style/CommandButton" android:text="← Налево" />
+                    <Button android:id="@+id/rightButton" style="@style/CommandButton" android:text="→ Направо" />
+                    <Button android:id="@+id/sitButton" style="@style/CommandButton" android:text="Сесть" />
+                    <Button android:id="@+id/standButton" style="@style/CommandButton" android:text="Встать" />
+                    <Button android:id="@+id/lieButton" style="@style/CommandButton" android:text="Лечь" />
+                    <Button android:id="@+id/barkButton" style="@style/CommandButton" android:text="🔊 Голос" />
+                    <Button android:id="@+id/tailButton" style="@style/CommandButton" android:text="Хвост" />
+                    <Button android:id="@+id/stopButton" style="@style/StopButton" android:text="■ СТОП" />
+                </GridLayout>
+            </LinearLayout>
+        </ScrollView>
+
+        <!-- 3 · VISION -->
+        <ScrollView
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:fillViewport="true">
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:paddingStart="20dp"
+                android:paddingTop="20dp"
+                android:paddingEnd="20dp"
+                android:paddingBottom="28dp">
+                <TextView style="@style/PageTitle" android:text="Камера и цвета" />
+                <TextView style="@style/PageSubtitle" android:text="Живой поток и журнал распознавания PiDog" />
+
+                <LinearLayout
+                    style="@style/CardPanel"
+                    android:layout_marginTop="18dp"
+                    android:orientation="vertical">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <TextView style="@style/CardEyebrow" android:text="КАМЕРА PIDOG" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="3dp"
+                                android:fontFamily="sans-serif-medium"
+                                android:text="Прямой видеопоток"
+                                android:textColor="@color/ink"
+                                android:textSize="19sp" />
+                        </LinearLayout>
+
+                        <TextView
+                            android:id="@+id/cameraStatus"
+                            android:layout_width="wrap_content"
+                            android:layout_height="30dp"
+                            android:background="@drawable/bg_chip"
+                            android:gravity="center"
+                            android:paddingStart="10dp"
+                            android:paddingEnd="10dp"
+                            android:text="ВЫКЛЮЧЕНА"
+                            android:textColor="@color/brand_dark"
+                            android:textSize="11sp"
+                            android:textStyle="bold" />
+                    </LinearLayout>
+
+                    <FrameLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="218dp"
+                        android:layout_marginTop="14dp"
+                        android:background="@drawable/bg_camera_frame">
+
+                        <WebView
+                            android:id="@+id/cameraView"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:contentDescription="Видеопоток камеры PiDog" />
+
+                        <TextView
+                            android:id="@+id/cameraPlaceholder"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:gravity="center"
+                            android:padding="32dp"
+                            android:text="Поток камеры пока не запущен"
+                            android:textColor="@color/camera_muted"
+                            android:textSize="14sp" />
+                    </FrameLayout>
+
+                    <Button
+                        android:id="@+id/openCameraButton"
+                        style="@style/PrimaryButton"
+                        android:layout_marginTop="14dp"
+                        android:text="▶  Запустить видеопоток" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:orientation="horizontal">
+
+                        <Button
+                            android:id="@+id/cameraOnButton"
+                            style="@style/SecondaryButton"
+                            android:layout_width="0dp"
+                            android:layout_weight="1"
+                            android:text="↻ Обновить" />
+
+                        <Button
+                            android:id="@+id/cameraOffButton"
+                            style="@style/SecondaryButton"
+                            android:layout_width="0dp"
+                            android:layout_marginStart="10dp"
+                            android:layout_weight="1"
+                            android:text="Выключить" />
+                    </LinearLayout>
+                </LinearLayout>
+
+                <LinearLayout
+                    style="@style/CardPanel"
+                    android:layout_marginTop="16dp"
+                    android:orientation="vertical">
+
+                    <TextView style="@style/CardEyebrow" android:text="ПОИСК ОБЪЕКТОВ" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:fontFamily="sans-serif-medium"
+                        android:text="Какие цвета распознаются"
+                        android:textColor="@color/ink"
+                        android:textSize="19sp" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:text="Красный · оранжевый · жёлтый · зелёный · синий · фиолетовый"
+                        android:textColor="@color/muted"
+                        android:textSize="14sp" />
+
+                    <GridLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="10dp"
+                        android:columnCount="2"
+                        android:rowCount="3"
+                        android:useDefaultMargins="false">
+                        <Button android:id="@+id/findRedButton" style="@style/CommandButton" android:text="●  Красный" android:textColor="#C42B34" />
+                        <Button android:id="@+id/findOrangeButton" style="@style/CommandButton" android:text="●  Оранжевый" android:textColor="#C45A09" />
+                        <Button android:id="@+id/findYellowButton" style="@style/CommandButton" android:text="●  Жёлтый" android:textColor="#8A6A00" />
+                        <Button android:id="@+id/findGreenButton" style="@style/CommandButton" android:text="●  Зелёный" android:textColor="#087A50" />
+                        <Button android:id="@+id/findBlueButton" style="@style/CommandButton" android:text="●  Синий" android:textColor="#2464C5" />
+                        <Button android:id="@+id/findPurpleButton" style="@style/CommandButton" android:text="●  Фиолетовый" android:textColor="#7040B8" />
+                    </GridLayout>
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="10dp"
+                        android:text="При обнаружении PiDog наведёт голову, укажет лапой и подаст голос."
+                        android:textColor="@color/muted"
+                        android:textSize="13sp" />
+                </LinearLayout>
+
+                <LinearLayout
+                    style="@style/CardPanel"
+                    android:layout_marginTop="16dp"
+                    android:orientation="vertical">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+                            <TextView style="@style/CardEyebrow" android:text="ЖУРНАЛ ЗРЕНИЯ" />
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="3dp"
+                                android:fontFamily="sans-serif-medium"
+                                android:text="Последние события"
+                                android:textColor="@color/ink"
+                                android:textSize="19sp" />
+                        </LinearLayout>
+
+                        <Button
+                            android:id="@+id/clearVisionLogButton"
+                            style="@style/TextButton"
+                            android:text="Очистить" />
+                    </LinearLayout>
+
+                    <TextView
+                        android:id="@+id/visionLog"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="14dp"
+                        android:background="@drawable/bg_log"
+                        android:fontFamily="monospace"
+                        android:lineSpacingExtra="3dp"
+                        android:minHeight="104dp"
+                        android:padding="14dp"
+                        android:text="Событий пока нет. Выберите цвет для поиска."
+                        android:textColor="@color/muted"
+                        android:textSize="12sp" />
+                </LinearLayout>
+            </LinearLayout>
+        </ScrollView>
+
+        <!-- 4 · SENSORS + LIGHT -->
+        <ScrollView
+            android:layout_width="match_parent"
+            android:layout_height="match_parent">
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:paddingStart="20dp"
+                android:paddingTop="20dp"
+                android:paddingEnd="20dp"
+                android:paddingBottom="28dp">
+                <TextView style="@style/PageTitle" android:text="Сенсоры и свет" />
+                <TextView style="@style/PageSubtitle" android:text="Живые индикаторы и световые эффекты" />
+
+                <LinearLayout
+                    style="@style/CardPanel"
+                    android:layout_marginTop="18dp"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:id="@+id/powerIndicatorIcon"
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
+                        android:background="@drawable/bg_power_icon"
+                        android:gravity="center"
+                        android:text="⚡"
+                        android:textColor="@color/muted"
+                        android:textSize="23sp" />
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="14dp"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:id="@+id/powerIndicatorTitle"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:fontFamily="sans-serif-medium"
+                            android:text="Определяю источник питания"
+                            android:textColor="@color/ink"
+                            android:textSize="16sp" />
+
+                        <TextView
+                            android:id="@+id/powerIndicatorDetail"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="3dp"
+                            android:text="Статус появится после подключения к PiDog"
+                            android:textColor="@color/muted"
+                            android:textSize="12sp" />
+                    </LinearLayout>
+
+                    <TextView
+                        android:id="@+id/powerIndicatorBadge"
+                        android:layout_width="wrap_content"
+                        android:layout_height="30dp"
+                        android:layout_marginStart="8dp"
+                        android:background="@drawable/bg_chip"
+                        android:gravity="center"
+                        android:paddingStart="10dp"
+                        android:paddingEnd="10dp"
+                        android:text="ПРОВЕРКА"
+                        android:textColor="@color/muted"
+                        android:textSize="11sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+
+                <ru.pidog.voice.SensorDashboardView
+                    android:id="@+id/sensorDashboard"
+                    android:layout_width="match_parent"
+                    android:layout_height="260dp"
+                    android:layout_marginTop="16dp" />
+
+                <TextView
+                    android:id="@+id/sensorsText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:text="Нажмите «Обновить», чтобы прочитать датчики"
+                    android:textColor="@color/muted"
+                    android:textSize="14sp" />
+
+                <Button
+                    android:id="@+id/refreshSensorsButton"
+                    style="@style/PrimaryButton"
+                    android:layout_marginTop="12dp"
+                    android:text="Обновить индикаторы" />
+
+                <GridLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:columnCount="3"
+                    android:rowCount="1"
+                    android:useDefaultMargins="false">
+                    <Button android:id="@+id/batteryButton" style="@style/SmallCommandButton" android:text="🔋 Заряд" />
+                    <Button android:id="@+id/distanceButton" style="@style/SmallCommandButton" android:text="↔ Дистанция" />
+                    <Button android:id="@+id/listenSoundButton" style="@style/SmallCommandButton" android:text="◉ Звук" />
+                </GridLayout>
+
+                <TextView style="@style/SectionTitle" android:text="Цветная подсветка" />
+                <GridLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:columnCount="3"
+                    android:rowCount="4"
+                    android:useDefaultMargins="false">
+                    <Button android:id="@+id/lightRedButton" style="@style/ColorButton" android:backgroundTint="#E53935" android:text="Красный" />
+                    <Button android:id="@+id/lightOrangeButton" style="@style/ColorButton" android:backgroundTint="#F57C00" android:text="Оранж." />
+                    <Button android:id="@+id/lightYellowButton" style="@style/ColorButton" android:backgroundTint="#E6B800" android:text="Жёлтый" />
+                    <Button android:id="@+id/lightGreenButton" style="@style/ColorButton" android:backgroundTint="#16A063" android:text="Зелёный" />
+                    <Button android:id="@+id/lightBlueButton" style="@style/ColorButton" android:backgroundTint="#2979FF" android:text="Синий" />
+                    <Button android:id="@+id/lightPurpleButton" style="@style/ColorButton" android:backgroundTint="#8E44D6" android:text="Фиолет." />
+                    <Button android:id="@+id/lightPinkButton" style="@style/ColorButton" android:backgroundTint="#E94B91" android:text="Розовый" />
+                    <Button android:id="@+id/lightCyanButton" style="@style/ColorButton" android:backgroundTint="#0097A7" android:text="Голубой" />
+                    <Button android:id="@+id/lightWhiteButton" style="@style/ColorButton" android:backgroundTint="#78909C" android:text="Белый" />
+                    <Button android:id="@+id/lightBlinkButton" style="@style/SmallCommandButton" android:text="✦ Мигать" />
+                    <Button android:id="@+id/lightOffButton" style="@style/SmallCommandButton" android:text="○ Выключить" />
+                </GridLayout>
+            </LinearLayout>
+        </ScrollView>
+    </ViewFlipper>
+
+    <TextView
+        android:id="@+id/connectionStatus"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@drawable/bg_status_bar"
+        android:elevation="8dp"
+        android:gravity="center_vertical"
+        android:minHeight="52dp"
+        android:paddingStart="20dp"
+        android:paddingEnd="20dp"
+        android:text="● Связь ещё не проверена"
+        android:textColor="@color/muted"
+        android:textSize="14sp"
+        android:textStyle="bold" />
+</LinearLayout>
