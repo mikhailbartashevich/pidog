@@ -9,11 +9,13 @@ import json
 import logging
 import os
 import pwd
+import re
 import shutil
 import signal
 import subprocess
 import threading
 import time
+import unicodedata
 from collections import deque
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -24,7 +26,7 @@ from typing import Any, Callable
 LOG = logging.getLogger("pidog-voice")
 MAX_BODY_BYTES = 8 * 1024
 AUDIO_FILES = ("single_bark_1", "howling")
-SERVER_VERSION = "1.1.1"
+SERVER_VERSION = "1.2.0"
 
 COMMAND_COLORS = {
     "stop": "#FF3030", "forward": "#21D07A", "backward": "#00B8D9",
@@ -35,9 +37,193 @@ COMMAND_COLORS = {
     "high_five": "#FFCA28", "howl": "#5C6BC0", "sleep": "#3949AB",
     "measure_distance": "#26C6DA", "listen_sound": "#AB47BC",
     "show_battery": "#66BB6A",
+    "local_voice_on": "#00D9FF", "local_voice_off": "#78909C",
     "find_orange": "#FF7A00", "find_red": "#FF2020", "find_yellow": "#FFE000",
     "find_green": "#20D060", "find_blue": "#2080FF", "find_purple": "#A020F0",
 }
+
+VOICE_FILLERS = {
+    "пидог", "пайдог", "пес", "песик", "собака", "собачка", "робот",
+    "эй", "ну", "давай", "пожалуйста", "команда", "теперь", "быстро",
+}
+
+# Local recognition deliberately uses an exact allow-list after punctuation and
+# filler words are removed. A doubtful phrase must never move the robot.
+LOCAL_VOICE_ALIASES: dict[str, tuple[str, ...]] = {
+    "stop": ("стоп", "стой", "остановись", "замри", "не двигайся", "прекрати", "хватит"),
+    "forward": ("вперед", "иди вперед", "двигайся вперед", "шагай вперед", "иди прямо"),
+    "backward": ("назад", "иди назад", "двигайся назад", "шагай назад", "сдай назад"),
+    "turn_left": ("налево", "влево", "поверни налево", "поверни влево"),
+    "turn_right": ("направо", "вправо", "поверни направо", "поверни вправо"),
+    "sit": ("сидеть", "сесть", "сядь", "садись", "присядь"),
+    "stand": ("встать", "встань", "поднимись", "на ноги"),
+    "lie": ("лежать", "лечь", "ляг", "ложись", "приляг"),
+    "bark": ("голос", "подай голос", "гав", "гавкни", "залай"),
+    "wag_tail": ("хвост", "виляй хвостом", "помаши хвостом", "махай хвостом"),
+    "shake_head": ("покачай головой", "потряси головой", "качай головой"),
+    "nod_yes": ("кивни", "скажи да", "покажи да"),
+    "stretch": ("потянись", "растяжка", "сделай растяжку"),
+    "push_up": ("отжимайся", "отожмись", "сделай отжимание", "сделай отжимания"),
+    "handshake": ("дай лапу", "лапу", "пожми руку"),
+    "high_five": ("дай пять", "пять", "ладушки"),
+    "howl": ("вой", "завой", "выть", "повой"),
+    "sleep": ("спать", "засыпай", "усни", "дремать", "отдыхай"),
+    "measure_distance": ("измерь расстояние", "какое расстояние", "дистанция", "что впереди"),
+    "listen_sound": ("слушай звук", "найди звук", "откуда звук", "слушай хлопок"),
+    "show_battery": ("покажи заряд", "сколько заряда", "заряд батареи", "покажи батарею"),
+    "find_orange": ("найди оранжевый", "покажи оранжевый", "найди оранжевую баночку"),
+    "find_red": ("найди красный", "покажи красный"),
+    "find_yellow": ("найди желтый", "покажи желтый"),
+    "find_green": ("найди зеленый", "покажи зеленый"),
+    "find_blue": ("найди синий", "покажи синий"),
+    "find_purple": ("найди фиолетовый", "покажи фиолетовый"),
+    "camera_on": ("включи камеру", "запусти камеру", "покажи камеру"),
+    "camera_off": ("выключи камеру", "останови камеру", "закрой камеру"),
+    "light_red": ("красный свет", "включи красный", "свети красным"),
+    "light_orange": ("оранжевый свет", "включи оранжевый", "свети оранжевым"),
+    "light_yellow": ("желтый свет", "включи желтый", "свети желтым"),
+    "light_green": ("зеленый свет", "включи зеленый", "свети зеленым"),
+    "light_blue": ("синий свет", "включи синий", "свети синим"),
+    "light_purple": ("фиолетовый свет", "включи фиолетовый", "свети фиолетовым"),
+    "light_pink": ("розовый свет", "включи розовый", "свети розовым"),
+    "light_cyan": ("голубой свет", "включи голубой", "свети голубым"),
+    "light_white": ("белый свет", "включи белый", "свети белым"),
+    "light_blink": ("мигай светом", "моргай светом", "мигай лампочками"),
+    "light_off": ("выключи свет", "погаси свет", "свет выключить"),
+    "local_voice_on": (
+        "слушай меня", "слушай команды", "включи голосовое управление",
+        "перейди в режим слушать", "принимай команды с микрофона",
+    ),
+    "local_voice_off": (
+        "перестань слушать", "хватит слушать", "выключи голосовое управление",
+        "отключи голосовое управление", "принимай команды с телефона",
+    ),
+}
+
+
+def normalize_voice_phrase(value: str) -> str:
+    normalized = unicodedata.normalize("NFKC", value).lower().replace("ё", "е")
+    normalized = re.sub(r"[^a-zа-я0-9]+", " ", normalized).strip()
+    return " ".join(word for word in normalized.split() if word not in VOICE_FILLERS)
+
+
+def match_local_voice_command(phrase: str) -> str | None:
+    candidate = normalize_voice_phrase(phrase)
+    if not candidate:
+        return None
+    for command, aliases in LOCAL_VOICE_ALIASES.items():
+        if candidate in aliases:
+            return command
+    return None
+
+
+class LocalVoiceListener:
+    """Runs PiDog's offline Vosk recognizer without blocking the HTTP server."""
+
+    def __init__(self, execute: Callable[[str, str], None],
+                 recognizer_factory: Callable[[], Any] | None = None) -> None:
+        self._execute = execute
+        self._recognizer_factory = recognizer_factory or self._create_recognizer
+        self._lock = threading.Lock()
+        self._stop_event = threading.Event()
+        self._thread: threading.Thread | None = None
+        self._state = "off"
+        self._error: str | None = None
+        self._last_phrase: str | None = None
+        self._last_command: str | None = None
+
+    @staticmethod
+    def _create_recognizer() -> Any:
+        from pidog.stt import Vosk
+
+        return Vosk(language=os.environ.get("PIDOG_VOICE_LANGUAGE", "ru"))
+
+    @property
+    def status(self) -> dict[str, Any]:
+        with self._lock:
+            result: dict[str, Any] = {
+                "active": self._state in {"starting", "listening", "stopping"},
+                "state": self._state,
+                "language": os.environ.get("PIDOG_VOICE_LANGUAGE", "ru"),
+                "input": "PiDog built-in microphone",
+            }
+            if self._error:
+                result["error"] = self._error
+            if self._last_phrase:
+                result["last_phrase"] = self._last_phrase
+            if self._last_command:
+                result["last_command"] = self._last_command
+            return result
+
+    def start(self) -> bool:
+        with self._lock:
+            if self._thread is not None and self._thread.is_alive():
+                return False
+            self._stop_event.clear()
+            self._state = "starting"
+            self._error = None
+            self._thread = threading.Thread(
+                target=self._run, name="pidog-local-voice", daemon=True)
+            self._thread.start()
+            return True
+
+    def stop(self) -> bool:
+        with self._lock:
+            if self._thread is None or not self._thread.is_alive():
+                self._state = "off"
+                return False
+            self._stop_event.set()
+            self._state = "stopping"
+            return True
+
+    def close(self) -> None:
+        self.stop()
+        thread = self._thread
+        if thread is not None and thread is not threading.current_thread():
+            thread.join(timeout=2)
+
+    def _run(self) -> None:
+        try:
+            recognizer = self._recognizer_factory()
+            with self._lock:
+                self._state = "listening"
+            LOG.info("local voice control is listening through the PiDog microphone")
+            while not self._stop_event.is_set():
+                result = recognizer.listen(stream=False)
+                phrase = self._extract_phrase(result)
+                if not phrase:
+                    continue
+                command = match_local_voice_command(phrase)
+                with self._lock:
+                    self._last_phrase = phrase[:200]
+                    self._last_command = command
+                if command is None:
+                    LOG.info("local_voice_phrase=%r command=unmatched", phrase[:200])
+                    continue
+                LOG.info("local_voice_phrase=%r command=%s", phrase[:200], command)
+                self._execute(command, phrase)
+        except Exception as error:
+            LOG.exception("local voice control failed")
+            with self._lock:
+                self._error = str(error) or error.__class__.__name__
+                self._state = "error"
+            return
+        finally:
+            with self._lock:
+                if self._state != "error":
+                    self._state = "off"
+            LOG.info("local voice control stopped")
+
+    @staticmethod
+    def _extract_phrase(result: Any) -> str:
+        if isinstance(result, str):
+            return result.strip()
+        if isinstance(result, dict):
+            for key in ("final", "text", "result"):
+                value = result.get(key)
+                if isinstance(value, str) and value.strip():
+                    return value.strip()
+        return ""
 
 
 class AudioUnavailableError(RuntimeError):
@@ -64,6 +250,7 @@ class RobotController:
         self._audio_processes: list[subprocess.Popen[str]] = []
         self._power_samples: deque[tuple[float, float]] = deque()
         self._external_power: bool | None = None
+        self._local_voice = LocalVoiceListener(self._execute_local_voice)
         if not dry_run:
             # PiDog constructs pygame even though this service routes sounds
             # through SoX. The dummy driver avoids a silent 30-second ALSA open
@@ -103,6 +290,8 @@ class RobotController:
             "measure_distance": self._measure_distance,
             "listen_sound": self._listen_sound,
             "show_battery": self._show_battery,
+            "local_voice_on": self._start_local_voice,
+            "local_voice_off": self._stop_local_voice,
             "light_red": lambda: self._light_command("red"),
             "light_orange": lambda: self._light_command("#FF7A00"),
             "light_yellow": lambda: self._light_command("yellow"),
@@ -146,6 +335,16 @@ class RobotController:
         if self._audio_error:
             result["error"] = self._audio_error
         return result
+
+    @property
+    def local_voice_status(self) -> dict[str, Any]:
+        if self._dry_run:
+            return {
+                "active": None, "state": "dry-run",
+                "language": os.environ.get("PIDOG_VOICE_LANGUAGE", "ru"),
+                "input": "PiDog built-in microphone",
+            }
+        return self._local_voice.status
 
     def execute(self, command: str) -> dict[str, Any]:
         action = self._actions.get(command)
@@ -271,6 +470,7 @@ class RobotController:
         return None
 
     def close(self) -> None:
+        self._local_voice.close()
         with self._lock:
             self._close_camera()
             try:
@@ -283,6 +483,33 @@ class RobotController:
 
     def _action(self, name: str, speed: int) -> None:
         self._dog.do_action(name, speed=speed)
+
+    def _execute_local_voice(self, command: str, phrase: str) -> None:
+        try:
+            self.execute(command)
+        except Exception:
+            LOG.exception("local voice command failed command=%s phrase=%r", command, phrase[:200])
+
+    def _start_local_voice(self) -> dict[str, Any]:
+        started = self._local_voice.start()
+        return {
+            "local_voice": self._local_voice.status,
+            "message": (
+                "Режим прослушивания включается: говорите во встроенный микрофон PiDog"
+                if started else "PiDog уже принимает команды через встроенный микрофон"
+            ),
+        }
+
+    def _stop_local_voice(self) -> dict[str, Any]:
+        stopped = self._local_voice.stop()
+        self._light_off()
+        return {
+            "local_voice": self._local_voice.status,
+            "message": (
+                "Прослушивание встроенного микрофона выключается"
+                if stopped else "Прослушивание встроенного микрофона уже выключено"
+            ),
+        }
 
     def _stop(self) -> dict[str, Any]:
         self._dog.body_stop()
@@ -741,6 +968,7 @@ class RequestHandler(BaseHTTPRequestHandler):
                 "version": SERVER_VERSION,
                 "dry_run": self.server.controller.dry_run,
                 "audio": self.server.controller.audio_status,
+                "local_voice": self.server.controller.local_voice_status,
                 "commands": self.server.controller.commands,
             })
             return

@@ -1,46 +1,47 @@
-# PiDog V2 — русское голосовое управление для Android
+# PiDog V2 — Voice Control for Android
 
-Нативное Android-приложение распознаёт русскую речь, выбирает команду из безопасного списка и отправляет её на Raspberry Pi по локальной сети. Небольшой Python-сервер на Pi вызывает официальную библиотеку `pidog`.
+This native Android app recognizes speech, selects a command from a safe allowlist, and sends it to a Raspberry Pi over the local network. A small Python server on the Pi invokes the official `pidog` library.
 
-## Что уже работает
+## What already works
 
-- распознавание строго на русском языке (`ru-RU`);
-- подсказки распознавателю с фразами PiDog на Android 13+;
-- проверка до восьми вариантов распознанной фразы;
-- русский словарь с вариантами «сядь», «садись», «иди вперёд», «дай лапу» и другими;
-- консервативное нечёткое сравнение: сомнительная фраза не отправляется роботу;
-- ручные кнопки для проверки связи и аварийная кнопка `СТОП`;
-- общий секретный токен для защиты от случайных команд из локальной сети;
-- серверный режим `--dry-run`, который ничего не двигает.
+- Russian (`ru-RU`) and English (`en-US`) speech recognition;
+- a persistent interface and command-language selector, with Russian as the default;
+- PiDog phrase hints for the recognizer on Android 13 and newer;
+- validation of up to eight alternative recognition results;
+- Russian and English command dictionaries with natural phrase variants;
+- conservative fuzzy matching, so uncertain phrases are not sent to the robot;
+- manual controls for connection testing and an emergency `STOP` button;
+- a shared secret token to prevent accidental commands from other devices on the local network;
+- a server-side `--dry-run` mode that never moves the robot.
 
-Поддерживаемые действия: вперёд, назад, повороты, стоп, сесть, встать, лечь, голос, хвост, покачать головой, потянуться, отжиматься, дать лапу, дать пять, выть и спать.
+Supported actions: move forward, move backward, turn left or right, stop, sit, stand, lie down, bark, wag the tail, shake the head, stretch, do push-ups, shake hands, high-five, howl, and sleep.
 
-## 1. Запуск сервера на PiDog
+## 1. Run the server on PiDog
 
-Сначала должны быть установлены официальные модули `robot-hat`, `vilib` и `pidog`. Инструкция SunFounder: [Install All the Modules](https://docs.sunfounder.com/projects/pidog/en/latest/python/python_start/install_all_modules.html).
+First, install the official `robot-hat`, `vilib`, and `pidog` modules. See SunFounder’s [Install All the Modules](https://docs.sunfounder.com/projects/pidog/en/latest/python/python_start/install_all_modules.html) guide.
 
-Скопируйте сервер на Raspberry Pi, затем выполните:
+Copy the server to the Raspberry Pi, then run:
 
 ```bash
-cd /путь/к/pidog/raspberry_pi
-sudo env PIDOG_TOKEN='придумайте-длинный-пароль' python3 pidog_voice_server.py
+cd /path/to/pidog/raspberry_pi
+sudo env PIDOG_TOKEN='choose-a-long-password' python3 pidog_voice_server.py
 ```
 
-Сервер слушает порт `8765`. IP-адрес робота можно узнать командой:
+The server listens on port `8765`. To find the robot’s IP address, run:
 
 ```bash
 hostname -I
 ```
 
-Для безопасной проверки без сервоприводов:
+For a safe test without moving the servos:
 
 ```bash
 python3 pidog_voice_server.py --dry-run --host 127.0.0.1
 ```
 
-### Автозапуск
+### Start automatically
 
-В репозитории есть шаблон `raspberry_pi/pidog-voice.service`. Для него сервер должен лежать в `/opt/pidog-voice/`, а токен — в `/etc/pidog-voice.env`:
+The repository includes the `raspberry_pi/pidog-voice.service` template. It expects the server in `/opt/pidog-voice/` and the token in `/etc/pidog-voice.env`:
 
 ```bash
 sudo mkdir -p /opt/pidog-voice
@@ -48,17 +49,20 @@ sudo cp raspberry_pi/pidog_voice_server.py /opt/pidog-voice/
 ```
 
 ```text
-PIDOG_TOKEN=придумайте-длинный-пароль
-# Обычно сервер находит звуки автоматически. Если репозиторий pidog лежит
-# в другом месте, укажите каталог с single_bark_1 и howling явно:
+PIDOG_TOKEN=choose-a-long-password
+# The server normally discovers the sound files automatically. If the pidog
+# repository is elsewhere, specify the directory containing single_bark_1 and
+# howling explicitly:
 PIDOG_SOUND_DIR=/home/pi/pidog/sounds
-# Если имя владельца установки отличается от pi, его тоже можно задать явно:
+# If the installation owner is not named pi, specify that user as well:
 PIDOG_USER=pi
-# Необязательно: точный sysfs-файл внешнего питания, если он есть в системе:
+# Optional: the exact sysfs path for external power, if available:
 PIDOG_EXTERNAL_POWER_PATH=/sys/class/power_supply/usb/online
+# Offline recognition language for the microphone built into PiDog V2:
+PIDOG_VOICE_LANGUAGE=ru
 ```
 
-После копирования и проверки путей:
+After copying the files and checking the paths:
 
 ```bash
 sudo cp raspberry_pi/pidog-voice.service /etc/systemd/system/
@@ -67,14 +71,31 @@ sudo systemctl enable --now pidog-voice
 sudo systemctl status pidog-voice
 ```
 
-### Если команды «Голос» и «Выть» выполняются без звука
+### Use PiDog's built-in microphone for commands
 
-Сервер включает усилитель только на время лая или воя, затем снова выключает
-его, чтобы динамик не пищал в простое. Звуки идут через SoX и ALSA напрямую; он
-ищет штатные звуки PiDog не только в домашнем каталоге `root`, но и в каталогах
-обычных пользователей. Состояние аудио видно в ответе `/health` в поле `audio`.
+PiDog V2 can switch from the phone microphone to the microphone on Robot HAT V5. The server uses SunFounder's offline Vosk integration, so commands continue working without the phone after the Russian model has been downloaded.
 
-После обновления файла сервера и unit-файла примените их:
+Before the first use, verify that Raspberry Pi sees the capture device:
+
+```bash
+arecord -l
+```
+
+Then initialize the Russian Vosk model once. The first run downloads the small model and therefore needs internet access:
+
+```bash
+sudo python3 -c 'from pidog.stt import Vosk; Vosk(language="ru")'
+```
+
+Restart the service after updating it. In the Android app, say **“Пидог, перейди в режим слушать”** or select **“Слушать через микрофон PiDog”** from the command list. After the server confirms the command, the phone is no longer needed: speak commands 15–30 cm from PiDog. Say **“Пидог, перестань слушать”** to stop local recognition. The `/health` response exposes the current mode in `local_voice` and any Vosk or microphone startup error in `local_voice.error`.
+
+The similarly named **“слушай звук”** command remains a separate six-second sound-direction action and does not start speech recognition.
+
+### If the “Bark” and “Howl” commands produce no sound
+
+The server enables the amplifier only while barking or howling, then disables it again so the speaker does not hiss while idle. Audio is played directly through SoX and ALSA. The server searches for the standard PiDog sounds in both the `root` home directory and regular users’ home directories. The `/health` response reports the audio state in its `audio` field.
+
+After updating the server and unit files, apply the changes:
 
 ```bash
 sudo cp raspberry_pi/pidog_voice_server.py /opt/pidog-voice/
@@ -84,10 +105,7 @@ sudo systemctl restart pidog-voice
 sudo journalctl -u pidog-voice -n 50 --no-pager
 ```
 
-В журнале должна появиться строка `PiDog audio ready` с найденным каталогом.
-Если вместо неё указано, что звуки не найдены, задайте `PIDOG_SOUND_DIR` в
-`/etc/pidog-voice.env`. Если каталог найден, но ALSA не открывается, один раз
-запустите официальную настройку I2S и перезагрузите Raspberry Pi:
+The journal should contain a `PiDog audio ready` line with the detected sound directory. If it reports that no sounds were found, set `PIDOG_SOUND_DIR` in `/etc/pidog-voice.env`. If the directory is found but ALSA cannot be opened, run the official I2S setup once and reboot the Raspberry Pi:
 
 ```bash
 cd ~/robot-hat
@@ -95,37 +113,38 @@ sudo bash i2samp.sh
 sudo reboot
 ```
 
-## 2. Сборка Android-приложения
+## 2. Build the Android app
 
-Требования: Android Studio или JDK 17+ и Android SDK 36. Проект использует AGP 9.3 и Gradle 9.5; JDK 17 остаётся целевой Java toolchain для максимальной совместимости Android-кода.
+Requirements: Android Studio, or JDK 17+ and Android SDK 36. The project uses AGP 9.3 and Gradle 9.5. JDK 17 remains the target Java toolchain for maximum Android code compatibility.
 
-1. Откройте корень проекта в Android Studio.
-2. Дождитесь Gradle Sync.
-3. Подключите телефон с включённой USB-отладкой и нажмите Run, либо выберите **Build → Build APK(s)**.
-4. APK появится в `app/build/outputs/apk/debug/app-debug.apk`.
+1. Open the project root in Android Studio.
+2. Wait for Gradle Sync to finish.
+3. Connect a phone with USB debugging enabled and click Run, or choose **Build → Build APK(s)**.
+4. The APK will be created at `app/build/outputs/apk/debug/app-debug.apk`.
 
-Для командной строки:
+To build from the command line:
 
 ```bash
 ./gradlew test assembleDebug
 ```
 
-## 3. Подключение телефона
+## 3. Connect the phone
 
-1. Телефон и PiDog должны находиться в одной Wi‑Fi сети.
-2. В приложении укажите IP Raspberry Pi, порт `8765` и тот же токен.
-3. Нажмите **Проверить связь**.
-4. Нажмите зелёный микрофон и скажите, например: «Пидог, пожалуйста, сядь».
+1. Connect the phone and PiDog to the same Wi-Fi network.
+2. Choose **Русский** or **English** in the language selector. Russian is selected by default; the choice controls both the interface and voice commands and is saved between launches.
+3. In the app, enter the Raspberry Pi IP address, port `8765`, and the same token.
+4. Tap **Check connection**.
+5. Tap the green microphone and say, for example, “Пидог, пожалуйста, сядь” or “PiDog, please sit.”
 
-Для максимального качества используйте системный распознаватель Google и общую домашнюю Wi‑Fi сеть с интернетом. Если телефон подключён прямо к точке доступа PiDog без интернета, заранее скачайте русский офлайн-пакет распознавания в настройках Google Voice Typing; качество может быть ниже.
+For the best recognition quality, use Google’s system speech recognizer and a regular home Wi-Fi network with internet access. If the phone connects directly to the PiDog access point without internet, download the Russian or English offline recognition pack in Google Voice Typing settings beforehand. Offline recognition may be less accurate.
 
-## Безопасность
+## Safety
 
-Перед первыми тестами поставьте PiDog на пол с достаточным свободным местом. Сервер принимает только заранее заданные команды, ограничивает размер запроса и сравнивает токен безопасным способом. HTTP предназначен только для доверенной локальной сети; не пробрасывайте порт `8765` в интернет.
+Before the first test, place PiDog on the floor with enough free space around it. The server accepts only predefined commands, limits request sizes, and compares the token securely. HTTP is intended only for a trusted local network; do not expose port `8765` to the internet.
 
-## Структура
+## Project structure
 
-- `app/` — Android-приложение на Java без сторонних runtime-зависимостей;
-- `app/src/main/java/ru/pidog/voice/CommandParser.java` — словарь и безопасное сопоставление русских фраз;
-- `raspberry_pi/pidog_voice_server.py` — HTTP-мост к библиотеке PiDog;
-- `raspberry_pi/test_pidog_voice_server.py` — серверные dry-run тесты.
+- `app/` — Android app written in Java with no third-party runtime dependencies;
+- `app/src/main/java/ru/pidog/voice/CommandParser.java` — Russian and English phrase dictionaries with safe command matching;
+- `raspberry_pi/pidog_voice_server.py` — HTTP bridge to the PiDog library;
+- `raspberry_pi/test_pidog_voice_server.py` — server-side dry-run tests.

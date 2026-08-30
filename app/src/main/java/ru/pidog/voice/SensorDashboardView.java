@@ -85,7 +85,9 @@ public final class SensorDashboardView extends View {
         paint.setTextSize(dp(11));
         paint.setTypeface(android.graphics.Typeface.DEFAULT);
         paint.setColor(0xFF667085);
-        String voltage = batteryVoltage < 0 ? "БАТАРЕЯ" : String.format(Locale.US, "%.2f В · БАТАРЕЯ", batteryVoltage);
+        String voltage = batteryVoltage < 0
+                ? getResources().getString(R.string.dashboard_battery)
+                : getResources().getString(R.string.dashboard_voltage_format, batteryVoltage);
         canvas.drawText(voltage, cx, dp(127), paint);
     }
 
@@ -111,7 +113,10 @@ public final class SensorDashboardView extends View {
         paint.setTextAlign(Paint.Align.CENTER);
         paint.setTextSize(dp(11));
         paint.setColor(0xFF667085);
-        canvas.drawText(soundDirection < 0 ? "ЗВУК НЕ НАЙДЕН" : Math.round(soundDirection) + "° · ЗВУК",
+        canvas.drawText(soundDirection < 0
+                        ? getResources().getString(R.string.dashboard_sound_not_found)
+                        : getResources().getString(R.string.dashboard_sound_format,
+                                Math.round(soundDirection)),
                 cx, dp(127), paint);
     }
 
@@ -121,11 +126,12 @@ public final class SensorDashboardView extends View {
         paint.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
         paint.setTextSize(dp(12));
         paint.setColor(0xFF667085);
-        canvas.drawText("УЛЬТРАЗВУК · ИСТОРИЯ", left, top, paint);
+        canvas.drawText(getResources().getString(R.string.dashboard_distance), left, top, paint);
         paint.setTextAlign(Paint.Align.RIGHT);
         paint.setTextSize(dp(20));
         paint.setColor(0xFF5B5BD6);
-        canvas.drawText(distanceCm < 0 ? "—" : String.format(Locale.US, "%.1f см", distanceCm), right, top, paint);
+        canvas.drawText(distanceCm < 0 ? "—"
+                : getResources().getString(R.string.centimeters_format, distanceCm), right, top, paint);
 
         float graphTop = top + dp(15);
         paint.setStyle(Paint.Style.STROKE);

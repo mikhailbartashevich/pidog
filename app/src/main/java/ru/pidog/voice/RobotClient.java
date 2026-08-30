@@ -21,6 +21,11 @@ import java.util.concurrent.Executors;
 public final class RobotClient {
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
+    private final boolean english;
+
+    public RobotClient(boolean english) {
+        this.english = english;
+    }
 
     public interface Callback {
         void onResult(boolean success, String message);
@@ -159,7 +164,7 @@ public final class RobotClient {
                            String path, String body) throws IOException {
         String cleanHost = host == null ? "" : host.trim();
         if (cleanHost.isEmpty()) {
-            return new Result(false, "Укажите IP-адрес PiDog", null);
+            return new Result(false, text("Укажите IP-адрес PiDog", "Enter the PiDog IP address"), null);
         }
         if (cleanHost.startsWith("http://")) {
             cleanHost = cleanHost.substring(7);
@@ -170,7 +175,7 @@ public final class RobotClient {
             cleanHost = cleanHost.substring(0, cleanHost.length() - 1);
         }
         if (cleanHost.contains("/") || cleanHost.contains("?") || cleanHost.contains("#")) {
-            return new Result(false, "Некорректный адрес робота", null);
+            return new Result(false, text("Некорректный адрес робота", "Invalid robot address"), null);
         }
 
         URL url = new URL("http", cleanHost, port, path);
@@ -202,72 +207,85 @@ public final class RobotClient {
             return new Result(true, successMessage(path, response), response);
         }
         if (status == 401) {
-            return new Result(false, "Неверный секретный токен", response);
+            return new Result(false, text("Неверный секретный токен", "Incorrect secret token"), response);
         }
         if (status == 409) {
             return new Result(false, conflictMessage(response), response);
         }
-        return new Result(false, "Ошибка PiDog " + status + (response.isEmpty() ? "" : ": " + response), response);
+        return new Result(false, text("Ошибка PiDog ", "PiDog error ") + status
+                + (response.isEmpty() ? "" : ": " + response), response);
     }
 
-    private static String successMessage(String path, String response) {
+    private String successMessage(String path, String response) {
         try {
             JSONObject json = new JSONObject(response);
             if ("/health".equals(path)) {
                 JSONObject audio = json.optJSONObject("audio");
                 if (audio != null && !audio.isNull("ready")) {
                     if (audio.optBoolean("ready", false)) {
-                        return "PiDog на связи · звук готов";
+                        return text("PiDog на связи · звук готов", "PiDog connected · audio ready");
                     }
-                    String error = audio.optString("error", "аудио недоступно").trim();
-                    return "PiDog на связи, но звук не готов: " + error;
+                    String error = audio.optString("error",
+                            text("аудио недоступно", "audio unavailable")).trim();
+                    return text("PiDog на связи, но звук не готов: ",
+                            "PiDog connected, but audio is not ready: ") + error;
                 }
             }
             if ("/sensors".equals(path)) {
                 String distance = json.isNull("distance_cm")
-                        ? "нет данных" : json.optString("distance_cm") + " см";
-                String touch = json.isNull("touch") ? "нет данных" : json.optString("touch");
+                        ? text("нет данных", "no data")
+                        : json.optString("distance_cm") + text(" см", " cm");
+                String touch = json.isNull("touch")
+                        ? text("нет данных", "no data") : json.optString("touch");
                 String sound;
                 if (json.optBoolean("sound_detected", false)) {
                     sound = json.optString("sound_direction", "?") + "°";
                 } else {
-                    sound = "не обнаружен";
+                    sound = text("не обнаружен", "not detected");
                 }
-                String camera = json.optBoolean("camera", false) ? "включена" : "выключена";
+                String camera = json.optBoolean("camera", false)
+                        ? text("включена", "on") : text("выключена", "off");
                 String power;
                 if (json.isNull("external_power")) {
-                    power = "определяется";
+                    power = text("определяется", "detecting");
                 } else if (json.optBoolean("external_power", false)) {
                     power = json.optBoolean("charging", false)
-                            ? "внешнее · зарядка" : "внешнее питание";
+                            ? text("внешнее · зарядка", "external · charging")
+                            : text("внешнее питание", "external power");
                 } else {
-                    power = "аккумулятор";
+                    power = text("аккумулятор", "battery");
                 }
-                return "Расстояние: " + distance + "\nКасание: " + touch
-                        + "\nЗвук: " + sound + "\nПитание: " + power
-                        + "\nКамера: " + camera;
+                return text("Расстояние: ", "Distance: ") + distance
+                        + text("\nКасание: ", "\nTouch: ") + touch
+                        + text("\nЗвук: ", "\nSound: ") + sound
+                        + text("\nПитание: ", "\nPower: ") + power
+                        + text("\nКамера: ", "\nCamera: ") + camera;
             }
             String message = json.optString("message", "").trim();
-            if (!message.isEmpty()) {
+            if (!message.isEmpty() && !english) {
                 return message;
             }
         } catch (JSONException ignored) {
             // A successful legacy server may return no JSON message.
         }
-        return "/health".equals(path) ? "PiDog на связи" : "Команда принята";
+        return "/health".equals(path)
+                ? text("PiDog на связи", "PiDog connected")
+                : text("Команда принята", "Command accepted");
     }
 
-    private static String conflictMessage(String response) {
+    private String conflictMessage(String response) {
         try {
             JSONObject json = new JSONObject(response);
             if ("audio unavailable".equals(json.optString("error"))) {
-                String detail = json.optString("detail", "проверьте динамик и ALSA").trim();
-                return "Звук PiDog недоступен: " + detail;
+                String detail = json.optString("detail",
+                        text("проверьте динамик и ALSA", "check the speaker and ALSA")).trim();
+                return text("Звук PiDog недоступен: ", "PiDog audio is unavailable: ") + detail;
             }
         } catch (JSONException ignored) {
             // Keep the generic message for legacy or non-JSON server responses.
         }
-        return "PiDog занят или команда не выполнена";
+        return text("PiDog занят или команда не выполнена",
+                "PiDog is busy or the command could not be completed");
     }
 
     private static String readAll(InputStream input) throws IOException {
@@ -309,12 +327,16 @@ public final class RobotClient {
                 + escape(recognizedPhrase == null ? "" : recognizedPhrase) + "\"}";
     }
 
-    private static String readableError(Exception error) {
+    private String readableError(Exception error) {
         String message = error.getMessage();
         if (message == null || message.trim().isEmpty()) {
             message = error.getClass().getSimpleName();
         }
-        return "Нет связи с PiDog: " + message;
+        return text("Нет связи с PiDog: ", "Could not connect to PiDog: ") + message;
+    }
+
+    private String text(String russian, String englishText) {
+        return english ? englishText : russian;
     }
 
     private interface Request {

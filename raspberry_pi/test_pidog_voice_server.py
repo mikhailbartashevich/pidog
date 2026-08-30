@@ -10,7 +10,12 @@ from unittest.mock import Mock, call, patch
 from pathlib import Path
 from types import SimpleNamespace
 
-from pidog_voice_server import RobotController, VoiceServer
+from pidog_voice_server import (
+    LocalVoiceListener,
+    RobotController,
+    VoiceServer,
+    match_local_voice_command,
+)
 
 
 class ServerTest(unittest.TestCase):
@@ -46,7 +51,9 @@ class ServerTest(unittest.TestCase):
         self.assertEqual(200, status)
         self.assertTrue(payload["ok"])
         self.assertIsNone(payload["audio"]["ready"])
+        self.assertEqual("dry-run", payload["local_voice"]["state"])
         self.assertIn("sit", payload["commands"])
+        self.assertIn("local_voice_on", payload["commands"])
 
     def test_valid_command(self):
         status, payload = self.request(
@@ -166,6 +173,56 @@ class AudioConfigurationTest(unittest.TestCase):
             self.assertFalse(RobotController._has_sound(sound_dir, "howling"))
             (sound_dir / "howling.wav").touch()
             self.assertTrue(RobotController._has_sound(sound_dir, "howling"))
+
+
+class LocalVoiceControlTest(unittest.TestCase):
+    def test_matches_safe_local_voice_commands(self):
+        self.assertEqual("local_voice_on", match_local_voice_command(
+            "Пидог, пожалуйста, перейди в режим слушать!"))
+        self.assertEqual("sit", match_local_voice_command("Пидог, сядь"))
+        self.assertEqual("local_voice_off", match_local_voice_command("перестань слушать"))
+        self.assertIsNone(match_local_voice_command("похожи немного вперед"))
+
+    def test_listener_executes_commands_and_can_stop_by_voice(self):
+        results = iter(("сядь", {"final": "перестань слушать"}))
+        received = []
+        completed = threading.Event()
+
+        class Recognizer:
+            def listen(self, stream=False):
+                self.assert_stream = stream
+                return next(results)
+
+        listener = None
+
+        def execute(command, phrase):
+            received.append((command, phrase))
+            if command == "local_voice_off":
+                listener.stop()
+                completed.set()
+
+        listener = LocalVoiceListener(execute, Recognizer)
+        self.assertTrue(listener.start())
+        self.assertTrue(completed.wait(2))
+        listener.close()
+
+        self.assertEqual(["sit", "local_voice_off"], [item[0] for item in received])
+        self.assertEqual("off", listener.status["state"])
+
+    def test_listener_reports_recognizer_startup_error(self):
+        failed = threading.Event()
+
+        def fail():
+            failed.set()
+            raise RuntimeError("Vosk model unavailable")
+
+        listener = LocalVoiceListener(lambda *_: None, fail)
+        listener.start()
+        self.assertTrue(failed.wait(2))
+        listener.close()
+
+        self.assertEqual("error", listener.status["state"])
+        self.assertIn("Vosk model unavailable", listener.status["error"])
 
 
 class PowerStatusTest(unittest.TestCase):

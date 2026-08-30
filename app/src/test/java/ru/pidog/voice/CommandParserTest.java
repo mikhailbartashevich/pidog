@@ -60,8 +60,49 @@ public class CommandParserTest {
         assertCommand(RobotCommand.SHOW_BATTERY, "покажи заряд светодиодами");
     }
 
+    @Test
+    public void switchesCommandsToPiDogMicrophone() {
+        assertCommand(RobotCommand.LOCAL_VOICE_ON, "Пидог, перейди в режим слушать");
+    }
+
+    @Test
+    public void switchesCommandsBackToPhone() {
+        assertCommand(RobotCommand.LOCAL_VOICE_OFF, "принимай команды с телефона");
+    }
+
+    @Test
+    public void recognizesPoliteEnglishCommand() {
+        assertEnglishCommand(RobotCommand.FORWARD, "PiDog, please go forward!");
+    }
+
+    @Test
+    public void recognizesEnglishHighFive() {
+        assertEnglishCommand(RobotCommand.HIGH_FIVE, "hey robot give me five");
+    }
+
+    @Test
+    public void recognizesEnglishLightCommand() {
+        assertEnglishCommand(RobotCommand.LIGHT_PURPLE, "turn on purple");
+    }
+
+    @Test
+    public void switchesToLocalMicrophoneInEnglish() {
+        assertEnglishCommand(RobotCommand.LOCAL_VOICE_ON, "PiDog, listen for commands");
+    }
+
+    @Test
+    public void rejectsNegatedEnglishMovement() {
+        assertNull(CommandParser.findBest("do not go forward", "en-US"));
+        assertNull(CommandParser.findBest("don't go back", "en-US"));
+    }
+
     private static void assertCommand(RobotCommand expected, String phrase) {
         CommandParser.Match match = CommandParser.findBest(phrase);
+        assertEquals(expected, match.command);
+    }
+
+    private static void assertEnglishCommand(RobotCommand expected, String phrase) {
+        CommandParser.Match match = CommandParser.findBest(phrase, "en-US");
         assertEquals(expected, match.command);
     }
 }

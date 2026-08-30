@@ -12,15 +12,20 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * Converts imperfect Russian speech recognition hypotheses into a small allow-list
+ * Converts imperfect Russian or English speech recognition hypotheses into a small allow-list
  * of robot commands. Conservative thresholds are intentional: an unknown phrase
  * must never start the robot moving.
  */
 public final class CommandParser {
-    private static final Map<RobotCommand, List<String>> ALIASES = new EnumMap<>(RobotCommand.class);
-    private static final Set<String> FILLERS = new HashSet<>(Arrays.asList(
+    private static final Map<RobotCommand, List<String>> RUSSIAN_ALIASES = new EnumMap<>(RobotCommand.class);
+    private static final Map<RobotCommand, List<String>> ENGLISH_ALIASES = new EnumMap<>(RobotCommand.class);
+    private static final Set<String> RUSSIAN_FILLERS = new HashSet<>(Arrays.asList(
             "пидог", "пайдог", "пес", "песик", "собака", "собачка", "робот",
             "эй", "ну", "давай", "пожалуйста", "команда", "теперь", "быстро"
+    ));
+    private static final Set<String> ENGLISH_FILLERS = new HashSet<>(Arrays.asList(
+            "pidog", "pie", "dog", "puppy", "robot", "hey", "please", "command",
+            "now", "quickly", "can", "you"
     ));
 
     static {
@@ -67,6 +72,12 @@ public final class CommandParser {
                 "измерь расстояние", "какое расстояние", "дистанция", "что впереди");
         put(RobotCommand.LISTEN_SOUND,
                 "слушай звук", "найди звук", "откуда звук", "слушай хлопок");
+        put(RobotCommand.LOCAL_VOICE_ON,
+                "слушай меня", "слушай команды", "включи голосовое управление",
+                "перейди в режим слушать", "принимай команды с микрофона");
+        put(RobotCommand.LOCAL_VOICE_OFF,
+                "перестань слушать", "хватит слушать", "выключи голосовое управление",
+                "отключи голосовое управление", "принимай команды с телефона");
         put(RobotCommand.SHOW_BATTERY,
                 "покажи заряд", "сколько заряда", "заряд батареи", "покажи батарею",
                 "покажи заряд светодиодами");
@@ -109,6 +120,60 @@ public final class CommandParser {
                 "мигай светом", "моргай светом", "мигай лампочками");
         put(RobotCommand.LIGHT_OFF,
                 "выключи свет", "погаси свет", "свет выключить");
+
+        putEnglish(RobotCommand.STOP,
+                "stop", "halt", "freeze", "stop moving", "do not move", "cancel");
+        putEnglish(RobotCommand.FORWARD,
+                "forward", "go forward", "move forward", "walk forward", "go straight");
+        putEnglish(RobotCommand.BACKWARD,
+                "back", "backward", "go back", "move backward", "step back");
+        putEnglish(RobotCommand.TURN_LEFT,
+                "left", "turn left", "go left", "rotate left");
+        putEnglish(RobotCommand.TURN_RIGHT,
+                "right", "turn right", "go right", "rotate right");
+        putEnglish(RobotCommand.SIT, "sit", "sit down", "take a seat");
+        putEnglish(RobotCommand.STAND, "stand", "stand up", "get up");
+        putEnglish(RobotCommand.LIE, "lie", "lie down", "lay down");
+        putEnglish(RobotCommand.BARK, "bark", "speak", "make a sound", "woof");
+        putEnglish(RobotCommand.WAG_TAIL, "wag tail", "wag your tail", "move your tail");
+        putEnglish(RobotCommand.SHAKE_HEAD, "shake head", "shake your head");
+        putEnglish(RobotCommand.NOD_YES, "nod", "nod yes", "say yes");
+        putEnglish(RobotCommand.STRETCH, "stretch", "do a stretch");
+        putEnglish(RobotCommand.PUSH_UP, "push up", "push ups", "do push ups");
+        putEnglish(RobotCommand.HANDSHAKE, "shake hands", "give paw", "paw");
+        putEnglish(RobotCommand.HIGH_FIVE, "high five", "give me five");
+        putEnglish(RobotCommand.HOWL, "howl", "start howling");
+        putEnglish(RobotCommand.SLEEP, "sleep", "go to sleep", "take a nap", "rest");
+        putEnglish(RobotCommand.MEASURE_DISTANCE,
+                "measure distance", "what is the distance", "distance", "what is ahead");
+        putEnglish(RobotCommand.LISTEN_SOUND,
+                "listen", "listen for sound", "find sound", "where is the sound");
+        putEnglish(RobotCommand.LOCAL_VOICE_ON,
+                "listen to me", "listen for commands", "use your microphone",
+                "turn on local voice control");
+        putEnglish(RobotCommand.LOCAL_VOICE_OFF,
+                "stop listening", "use the phone microphone", "turn off local voice control");
+        putEnglish(RobotCommand.SHOW_BATTERY,
+                "show battery", "battery level", "show charge", "how much battery");
+        putEnglish(RobotCommand.FIND_ORANGE, "find orange", "show orange", "where is orange");
+        putEnglish(RobotCommand.FIND_RED, "find red", "show red", "where is red");
+        putEnglish(RobotCommand.FIND_YELLOW, "find yellow", "show yellow", "where is yellow");
+        putEnglish(RobotCommand.FIND_GREEN, "find green", "show green", "where is green");
+        putEnglish(RobotCommand.FIND_BLUE, "find blue", "show blue", "where is blue");
+        putEnglish(RobotCommand.FIND_PURPLE, "find purple", "show purple", "where is purple");
+        putEnglish(RobotCommand.CAMERA_ON, "turn camera on", "start camera", "show camera");
+        putEnglish(RobotCommand.CAMERA_OFF, "turn camera off", "stop camera", "close camera");
+        putEnglish(RobotCommand.LIGHT_RED, "red light", "turn on red", "light red");
+        putEnglish(RobotCommand.LIGHT_ORANGE, "orange light", "turn on orange", "light orange");
+        putEnglish(RobotCommand.LIGHT_YELLOW, "yellow light", "turn on yellow", "light yellow");
+        putEnglish(RobotCommand.LIGHT_GREEN, "green light", "turn on green", "light green");
+        putEnglish(RobotCommand.LIGHT_BLUE, "blue light", "turn on blue", "light blue");
+        putEnglish(RobotCommand.LIGHT_PURPLE, "purple light", "turn on purple", "light purple");
+        putEnglish(RobotCommand.LIGHT_PINK, "pink light", "turn on pink", "light pink");
+        putEnglish(RobotCommand.LIGHT_CYAN, "cyan light", "turn on cyan", "light cyan");
+        putEnglish(RobotCommand.LIGHT_WHITE, "white light", "turn on white", "light white");
+        putEnglish(RobotCommand.LIGHT_BLINK, "blink lights", "flash lights", "blinking lights");
+        putEnglish(RobotCommand.LIGHT_OFF, "turn lights off", "lights off", "switch off lights");
     }
 
     private CommandParser() {
@@ -119,10 +184,22 @@ public final class CommandParser {
         for (String alias : aliases) {
             normalized.add(normalize(alias));
         }
-        ALIASES.put(command, Collections.unmodifiableList(normalized));
+        RUSSIAN_ALIASES.put(command, Collections.unmodifiableList(normalized));
+    }
+
+    private static void putEnglish(RobotCommand command, String... aliases) {
+        List<String> normalized = new ArrayList<>();
+        for (String alias : aliases) {
+            normalized.add(normalize(alias));
+        }
+        ENGLISH_ALIASES.put(command, Collections.unmodifiableList(normalized));
     }
 
     public static Match findBest(List<String> hypotheses) {
+        return findBest(hypotheses, "ru-RU");
+    }
+
+    public static Match findBest(List<String> hypotheses, String languageTag) {
         if (hypotheses == null || hypotheses.isEmpty()) {
             return null;
         }
@@ -132,7 +209,7 @@ public final class CommandParser {
         int limit = Math.min(hypotheses.size(), 8);
         for (int i = 0; i < limit; i++) {
             String source = hypotheses.get(i);
-            Candidate candidate = findBestCandidate(source);
+            Candidate candidate = findBestCandidate(source, languageTag);
             if (candidate == null) {
                 continue;
             }
@@ -161,23 +238,36 @@ public final class CommandParser {
         return findBest(Collections.singletonList(phrase));
     }
 
+    public static Match findBest(String phrase, String languageTag) {
+        return findBest(Collections.singletonList(phrase), languageTag);
+    }
+
     public static List<String> biasingPhrases() {
+        return biasingPhrases("ru-RU");
+    }
+
+    public static List<String> biasingPhrases(String languageTag) {
+        boolean english = isEnglish(languageTag);
+        Map<RobotCommand, List<String>> aliases = english ? ENGLISH_ALIASES : RUSSIAN_ALIASES;
         List<String> phrases = new ArrayList<>();
-        for (List<String> aliases : ALIASES.values()) {
-            phrases.addAll(aliases);
+        for (List<String> commandAliases : aliases.values()) {
+            phrases.addAll(commandAliases);
         }
-        phrases.add("Пидог");
+        phrases.add(english ? "PiDog" : "Пидог");
         return phrases;
     }
 
-    private static Candidate findBestCandidate(String source) {
-        String candidate = removeFillers(normalize(source));
+    private static Candidate findBestCandidate(String source, String languageTag) {
+        boolean english = isEnglish(languageTag);
+        Map<RobotCommand, List<String>> aliases = english ? ENGLISH_ALIASES : RUSSIAN_ALIASES;
+        Set<String> fillers = english ? ENGLISH_FILLERS : RUSSIAN_FILLERS;
+        String candidate = removeFillers(normalize(source), fillers);
         if (candidate.isEmpty()) {
             return null;
         }
 
         Candidate best = null;
-        for (Map.Entry<RobotCommand, List<String>> entry : ALIASES.entrySet()) {
+        for (Map.Entry<RobotCommand, List<String>> entry : aliases.entrySet()) {
             for (String alias : entry.getValue()) {
                 double score = score(candidate, alias);
                 double threshold = isMovement(entry.getKey()) ? 0.91 : 0.86;
@@ -196,7 +286,9 @@ public final class CommandParser {
 
         // Negated or cancelled phrases are never fuzzily interpreted.
         if (containsToken(candidate, "не") || containsToken(candidate, "нет")
-                || containsToken(candidate, "отмена")) {
+                || containsToken(candidate, "отмена") || containsToken(candidate, "not")
+                || containsToken(candidate, "don") || containsToken(candidate, "never")
+                || containsToken(candidate, "cancel")) {
             return 0.0;
         }
 
@@ -229,14 +321,18 @@ public final class CommandParser {
         return normalized;
     }
 
-    private static String removeFillers(String value) {
+    private static String removeFillers(String value, Set<String> fillers) {
         List<String> kept = new ArrayList<>();
         for (String token : value.split(" ")) {
-            if (!FILLERS.contains(token)) {
+            if (!fillers.contains(token)) {
                 kept.add(token);
             }
         }
         return String.join(" ", kept);
+    }
+
+    private static boolean isEnglish(String languageTag) {
+        return languageTag != null && languageTag.startsWith("en");
     }
 
     private static boolean containsPhrase(String text, String phrase) {

@@ -6,12 +6,14 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.res.ColorStateList;
+import android.content.res.Configuration;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.LocaleList;
 import android.speech.RecognitionListener;
 import android.speech.RecognizerIntent;
 import android.speech.SpeechRecognizer;
@@ -23,6 +25,7 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.HorizontalScrollView;
 import android.widget.ArrayAdapter;
+import android.widget.AdapterView;
 import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -38,6 +41,8 @@ import java.util.Locale;
 public final class MainActivity extends Activity implements RecognitionListener {
     private static final int MICROPHONE_PERMISSION_REQUEST = 41;
     private static final String PREFS = "pidog_voice_settings";
+    private static final String PREF_LANGUAGE = "language";
+    private static final String DEFAULT_LANGUAGE = "ru";
 
     private EditText hostInput;
     private EditText portInput;
@@ -48,6 +53,7 @@ public final class MainActivity extends Activity implements RecognitionListener 
     private TextView commandText;
     private Button micButton;
     private Spinner commandSpinner;
+    private Spinner languageSpinner;
     private ViewFlipper servicePages;
     private TextView sensorsText;
     private SensorDashboardView sensorDashboard;
@@ -64,7 +70,7 @@ public final class MainActivity extends Activity implements RecognitionListener 
     private TextView powerIndicatorBadge;
 
     private SpeechRecognizer speechRecognizer;
-    private final RobotClient robotClient = new RobotClient();
+    private RobotClient robotClient;
     private final RobotCommand[] manualCommands = RobotCommand.values();
     private final Deque<String> visionEntries = new ArrayDeque<>();
     private final SimpleDateFormat logTime = new SimpleDateFormat("HH:mm:ss", Locale.US);
@@ -77,10 +83,25 @@ public final class MainActivity extends Activity implements RecognitionListener 
     };
     private boolean listening;
     private boolean cameraStreaming;
+    private String currentLanguageTag;
+
+    @Override
+    protected void attachBaseContext(Context newBase) {
+        SharedPreferences preferences = newBase.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
+        String languageTag = preferences.getString(PREF_LANGUAGE, DEFAULT_LANGUAGE);
+        Locale locale = Locale.forLanguageTag(languageTag);
+        Configuration configuration = new Configuration(newBase.getResources().getConfiguration());
+        configuration.setLocale(locale);
+        configuration.setLocales(new LocaleList(locale));
+        super.attachBaseContext(newBase.createConfigurationContext(configuration));
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        currentLanguageTag = getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+                .getString(PREF_LANGUAGE, DEFAULT_LANGUAGE);
+        robotClient = new RobotClient(isEnglish());
         setContentView(R.layout.activity_main);
 
         bindViews();
@@ -101,6 +122,7 @@ public final class MainActivity extends Activity implements RecognitionListener 
         commandText = findViewById(R.id.commandText);
         micButton = findViewById(R.id.micButton);
         commandSpinner = findViewById(R.id.commandSpinner);
+        languageSpinner = findViewById(R.id.languageSpinner);
         servicePages = findViewById(R.id.servicePages);
         sensorsText = findViewById(R.id.sensorsText);
         sensorDashboard = findViewById(R.id.sensorDashboard);
@@ -122,6 +144,7 @@ public final class MainActivity extends Activity implements RecognitionListener 
     }
 
     private void bindActions() {
+        bindLanguageSpinner();
         bindNavigation();
         bindCommandSpinner();
         findViewById(R.id.connectButton).setOnClickListener(view -> checkConnection());
@@ -165,6 +188,38 @@ public final class MainActivity extends Activity implements RecognitionListener 
         bindManual(R.id.lightWhiteButton, RobotCommand.LIGHT_WHITE);
         bindManual(R.id.lightBlinkButton, RobotCommand.LIGHT_BLINK);
         bindManual(R.id.lightOffButton, RobotCommand.LIGHT_OFF);
+    }
+
+    private void bindLanguageSpinner() {
+        ArrayAdapter<CharSequence> adapter = ArrayAdapter.createFromResource(
+                this, R.array.language_options, android.R.layout.simple_spinner_item);
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        languageSpinner.setAdapter(adapter);
+        languageSpinner.setSelection(isEnglish() ? 1 : 0, false);
+        languageSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                String selectedLanguage = position == 1 ? "en" : "ru";
+                if (selectedLanguage.equals(currentLanguageTag)) {
+                    return;
+                }
+                saveSettings();
+                getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+                        .putString(PREF_LANGUAGE, selectedLanguage)
+                        .apply();
+                recreate();
+            }
+
+            @Override public void onNothingSelected(AdapterView<?> parent) { }
+        });
+    }
+
+    private boolean isEnglish() {
+        return currentLanguageTag != null && currentLanguageTag.startsWith("en");
+    }
+
+    private String recognitionLanguageTag() {
+        return isEnglish() ? "en-US" : "ru-RU";
     }
 
     @SuppressWarnings("deprecation")
@@ -228,7 +283,7 @@ public final class MainActivity extends Activity implements RecognitionListener 
         settings.setUseWideViewPort(true);
         settings.setCacheMode(WebSettings.LOAD_NO_CACHE);
         cameraView.setWebViewClient(new WebViewClient());
-        showCameraPlaceholder("Поток камеры пока не запущен");
+        showCameraPlaceholder(getString(R.string.camera_not_started));
     }
 
     private void refreshSensors() {
@@ -246,7 +301,7 @@ public final class MainActivity extends Activity implements RecognitionListener 
         }
         saveSettings();
         if (announce) {
-            sensorsText.setText("Читаю датчики…");
+            sensorsText.setText(R.string.reading_sensors);
         }
         robotClient.sensors(endpoint.host, endpoint.port, endpoint.token, (success, message, data) -> {
             if (success) {
@@ -255,7 +310,7 @@ public final class MainActivity extends Activity implements RecognitionListener 
                 updatePowerIndicator(data);
             }
             if (announce) {
-                setConnectionState(success ? "Датчики обновлены" : message,
+                setConnectionState(success ? getString(R.string.sensors_updated) : message,
                         success ? R.color.brand : R.color.danger);
             }
         });
@@ -271,9 +326,9 @@ public final class MainActivity extends Activity implements RecognitionListener 
             powerIndicatorIcon.setTextColor(getColor(R.color.muted));
             powerIndicatorIcon.setBackgroundTintList(
                     ColorStateList.valueOf(getColor(R.color.surface_variant)));
-            powerIndicatorTitle.setText("Определяю источник питания");
-            powerIndicatorDetail.setText("Для определения по напряжению нужно около 20 секунд");
-            setPowerBadge("ПРОВЕРКА", R.color.muted, R.color.surface_variant);
+            powerIndicatorTitle.setText(R.string.determining_power);
+            powerIndicatorDetail.setText(R.string.power_detection_wait);
+            setPowerBadge(getString(R.string.checking_badge), R.color.muted, R.color.surface_variant);
             return;
         }
 
@@ -286,13 +341,13 @@ public final class MainActivity extends Activity implements RecognitionListener 
             powerIndicatorIcon.setTextColor(getColor(R.color.brand_dark));
             powerIndicatorIcon.setBackgroundTintList(
                     ColorStateList.valueOf(getColor(R.color.brand_soft)));
-            powerIndicatorTitle.setText("Внешнее питание подключено");
+            powerIndicatorTitle.setText(R.string.external_power_connected);
             if (data.chargingKnown && data.charging) {
-                powerIndicatorDetail.setText("Аккумулятор заряжается от внешнего источника");
-                setPowerBadge("ЗАРЯДКА", R.color.brand_dark, R.color.brand_soft);
+                powerIndicatorDetail.setText(R.string.battery_charging_detail);
+                setPowerBadge(getString(R.string.charging_badge), R.color.brand_dark, R.color.brand_soft);
             } else {
-                powerIndicatorDetail.setText("PiDog питается от внешнего источника");
-                setPowerBadge("ПОДКЛЮЧЕНО", R.color.brand_dark, R.color.brand_soft);
+                powerIndicatorDetail.setText(R.string.external_power_detail);
+                setPowerBadge(getString(R.string.connected_badge), R.color.brand_dark, R.color.brand_soft);
             }
         } else {
             headerPowerIndicator.setText("🔋 BAT");
@@ -303,9 +358,9 @@ public final class MainActivity extends Activity implements RecognitionListener 
             powerIndicatorIcon.setTextColor(getColor(R.color.warning));
             powerIndicatorIcon.setBackgroundTintList(
                     ColorStateList.valueOf(getColor(R.color.surface_variant)));
-            powerIndicatorTitle.setText("Работа от аккумулятора");
-            powerIndicatorDetail.setText("Внешний источник питания не обнаружен");
-            setPowerBadge("БАТАРЕЯ", R.color.warning, R.color.surface_variant);
+            powerIndicatorTitle.setText(R.string.battery_power);
+            powerIndicatorDetail.setText(R.string.external_power_not_found);
+            setPowerBadge(getString(R.string.battery_badge), R.color.warning, R.color.surface_variant);
         }
     }
 
@@ -322,20 +377,21 @@ public final class MainActivity extends Activity implements RecognitionListener 
             return;
         }
         saveSettings();
-        cameraStatus.setText("ПОДКЛЮЧЕНИЕ");
-        showCameraPlaceholder("Запускаю камеру PiDog…");
-        setConnectionState("Запускаю камеру…", R.color.muted);
+        cameraStatus.setText(R.string.camera_connecting_status);
+        showCameraPlaceholder(getString(R.string.camera_starting));
+        setConnectionState(getString(R.string.camera_starting_short), R.color.muted);
         robotClient.send(endpoint.host, endpoint.port, endpoint.token, RobotCommand.CAMERA_ON,
-                "открыть видеопоток", (success, message) -> {
+                getString(R.string.camera_phrase_on), (success, message) -> {
                     setConnectionState(message, success ? R.color.brand : R.color.danger);
                     if (success) {
                         cameraStreaming = true;
                         loadCameraStream(endpoint.host);
-                        appendVisionLog("Камера", "видеопоток запущен", true);
+                        appendVisionLog(getString(R.string.camera_subject),
+                                getString(R.string.stream_started), true);
                     } else {
-                        cameraStatus.setText("НЕТ СИГНАЛА");
+                        cameraStatus.setText(R.string.no_signal_status);
                         showCameraPlaceholder(message);
-                        appendVisionLog("Камера", message, false);
+                        appendVisionLog(getString(R.string.camera_subject), message, false);
                     }
                 });
     }
@@ -347,7 +403,7 @@ public final class MainActivity extends Activity implements RecognitionListener 
         }
         Endpoint endpoint = readEndpoint();
         if (endpoint != null) {
-            cameraStatus.setText("ОБНОВЛЕНИЕ");
+            cameraStatus.setText(R.string.refreshing_status);
             loadCameraStream(endpoint.host);
         }
     }
@@ -360,12 +416,12 @@ public final class MainActivity extends Activity implements RecognitionListener 
         cameraStreaming = false;
         cameraView.stopLoading();
         cameraView.loadUrl("about:blank");
-        cameraStatus.setText("ВЫКЛЮЧЕНА");
-        showCameraPlaceholder("Камера выключена");
+        cameraStatus.setText(R.string.off_status);
+        showCameraPlaceholder(getString(R.string.camera_off));
         robotClient.send(endpoint.host, endpoint.port, endpoint.token, RobotCommand.CAMERA_OFF,
-                "выключить камеру", (success, message) -> {
+                getString(R.string.camera_phrase_off), (success, message) -> {
                     setConnectionState(message, success ? R.color.brand : R.color.danger);
-                    appendVisionLog("Камера", message, success);
+                    appendVisionLog(getString(R.string.camera_subject), message, success);
                 });
     }
 
@@ -407,7 +463,7 @@ public final class MainActivity extends Activity implements RecognitionListener 
     private void bindCommandSpinner() {
         String[] labels = new String[manualCommands.length];
         for (int i = 0; i < manualCommands.length; i++) {
-            labels[i] = manualCommands[i].displayName;
+            labels[i] = manualCommands[i].displayName(currentLanguageTag);
         }
         ArrayAdapter<String> adapter = new ArrayAdapter<>(
                 this, android.R.layout.simple_spinner_item, labels);
@@ -421,22 +477,23 @@ public final class MainActivity extends Activity implements RecognitionListener 
             return;
         }
         RobotCommand command = manualCommands[position];
-        commandText.setText(command.displayName);
+        String displayName = command.displayName(currentLanguageTag);
+        commandText.setText(displayName);
         commandText.setTextColor(getColor(R.color.brand_dark));
-        sendCommand(command, "выбрано вручную: " + command.displayName);
+        sendCommand(command, getString(R.string.manual_selected, displayName));
     }
 
     private void bindManual(int viewId, RobotCommand command) {
         findViewById(viewId).setOnClickListener(view -> {
-            commandText.setText(command.displayName);
-            sendCommand(command, "ручная кнопка");
+            commandText.setText(command.displayName(currentLanguageTag));
+            sendCommand(command, getString(R.string.manual_button_phrase));
         });
     }
 
     private void prepareRecognizer() {
         if (!SpeechRecognizer.isRecognitionAvailable(this)) {
             micButton.setEnabled(false);
-            listeningStatus.setText("На устройстве нет службы распознавания речи");
+            listeningStatus.setText(R.string.recognizer_unavailable);
             return;
         }
         speechRecognizer = SpeechRecognizer.createSpeechRecognizer(this);
@@ -453,24 +510,24 @@ public final class MainActivity extends Activity implements RecognitionListener 
                     MICROPHONE_PERMISSION_REQUEST);
             return;
         }
-        startRussianRecognition();
+        startRecognition();
     }
 
-    private void startRussianRecognition() {
+    private void startRecognition() {
         if (speechRecognizer == null) {
             return;
         }
         Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
         intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,
                 RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
-        intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, "ru-RU");
+        intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, recognitionLanguageTag());
         intent.putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true);
         intent.putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 8);
         intent.putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, false);
-        intent.putExtra(RecognizerIntent.EXTRA_PROMPT, "Скажите команду для PiDog");
+        intent.putExtra(RecognizerIntent.EXTRA_PROMPT, getString(R.string.recognizer_prompt));
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             intent.putStringArrayListExtra(RecognizerIntent.EXTRA_BIASING_STRINGS,
-                    new ArrayList<>(CommandParser.biasingPhrases()));
+                    new ArrayList<>(CommandParser.biasingPhrases(currentLanguageTag)));
             intent.putExtra(RecognizerIntent.EXTRA_ENABLE_BIASING_DEVICE_CONTEXT, true);
         }
         listening = true;
@@ -495,14 +552,14 @@ public final class MainActivity extends Activity implements RecognitionListener 
             return;
         }
 
-        CommandParser.Match match = CommandParser.findBest(phrases);
+        CommandParser.Match match = CommandParser.findBest(phrases, currentLanguageTag);
         if (match == null) {
-            commandText.setText("Команда не распознана — ничего не отправлено");
+            commandText.setText(R.string.command_not_recognized);
             commandText.setTextColor(getColor(R.color.warning));
             return;
         }
-        commandText.setText(String.format(Locale.forLanguageTag("ru-RU"), "%s · %.0f%%",
-                match.command.displayName, match.score * 100));
+        commandText.setText(String.format(Locale.forLanguageTag(recognitionLanguageTag()),
+                "%s · %.0f%%", match.command.displayName(currentLanguageTag), match.score * 100));
         commandText.setTextColor(getColor(R.color.brand_dark));
         recognizedText.setText(match.sourcePhrase);
         sendCommand(match.command, match.sourcePhrase);
@@ -514,7 +571,7 @@ public final class MainActivity extends Activity implements RecognitionListener 
             return;
         }
         saveSettings();
-        setConnectionState("Проверяю связь…", R.color.muted);
+        setConnectionState(getString(R.string.checking_connection), R.color.muted);
         robotClient.check(endpoint.host, endpoint.port, endpoint.token,
                 (success, message) -> setConnectionState(message,
                         success ? R.color.brand : R.color.danger));
@@ -538,7 +595,8 @@ public final class MainActivity extends Activity implements RecognitionListener 
             return;
         }
         saveSettings();
-        setConnectionState("Отправляю: " + command.displayName + "…", R.color.muted);
+        setConnectionState(getString(R.string.sending_command,
+                command.displayName(currentLanguageTag)), R.color.muted);
         robotClient.send(endpoint.host, endpoint.port, endpoint.token, command, phrase,
                 (success, message) -> setConnectionState(message,
                         success ? R.color.brand : R.color.danger));
@@ -551,12 +609,13 @@ public final class MainActivity extends Activity implements RecognitionListener 
         }
         saveSettings();
         String color = colorName(command);
-        setConnectionState("Камера ищет: " + color + "…", R.color.muted);
+        setConnectionState(getString(R.string.camera_searching, color), R.color.muted);
         robotClient.sendVision(endpoint.host, endpoint.port, endpoint.token, command, phrase,
                 (success, message, data) -> {
                     setConnectionState(message, success ? R.color.brand : R.color.danger);
                     if (success && data != null) {
-                        String details = data.found ? "обнаружен" : "не найден";
+                        String details = getString(data.found
+                                ? R.string.vision_found : R.string.vision_not_found);
                         if (data.found && data.x >= 0 && data.y >= 0) {
                             details += " · x=" + data.x + ", y=" + data.y;
                         }
@@ -581,7 +640,7 @@ public final class MainActivity extends Activity implements RecognitionListener 
 
     private void clearVisionLog() {
         visionEntries.clear();
-        visionLog.setText("Событий пока нет. Выберите цвет для поиска.");
+        visionLog.setText(R.string.vision_log_empty);
         visionLog.setTextColor(getColor(R.color.muted));
     }
 
@@ -591,34 +650,35 @@ public final class MainActivity extends Activity implements RecognitionListener 
                 || command == RobotCommand.FIND_BLUE || command == RobotCommand.FIND_PURPLE;
     }
 
-    private static String colorName(RobotCommand command) {
+    private String colorName(RobotCommand command) {
         switch (command) {
-            case FIND_ORANGE: return "Оранжевый";
-            case FIND_RED: return "Красный";
-            case FIND_YELLOW: return "Жёлтый";
-            case FIND_GREEN: return "Зелёный";
-            case FIND_BLUE: return "Синий";
-            case FIND_PURPLE: return "Фиолетовый";
-            default: return command.displayName;
+            case FIND_ORANGE: return getString(R.string.color_orange);
+            case FIND_RED: return getString(R.string.color_red);
+            case FIND_YELLOW: return getString(R.string.color_yellow);
+            case FIND_GREEN: return getString(R.string.color_green);
+            case FIND_BLUE: return getString(R.string.color_blue);
+            case FIND_PURPLE: return getString(R.string.color_purple);
+            default: return command.displayName(currentLanguageTag);
         }
     }
 
-    private static String colorName(String color) {
+    private String colorName(String color) {
         switch (color) {
-            case "orange": return "Оранжевый";
-            case "red": return "Красный";
-            case "yellow": return "Жёлтый";
-            case "green": return "Зелёный";
-            case "blue": return "Синий";
-            case "purple": return "Фиолетовый";
-            default: return color == null || color.isEmpty() ? "Цвет" : color;
+            case "orange": return getString(R.string.color_orange);
+            case "red": return getString(R.string.color_red);
+            case "yellow": return getString(R.string.color_yellow);
+            case "green": return getString(R.string.color_green);
+            case "blue": return getString(R.string.color_blue);
+            case "purple": return getString(R.string.color_purple);
+            default: return color == null || color.isEmpty()
+                    ? getString(R.string.color_unknown) : color;
         }
     }
 
     private Endpoint readEndpoint() {
         String host = hostInput.getText().toString().trim();
         if (host.isEmpty()) {
-            hostInput.setError("Введите IP-адрес Raspberry Pi");
+            hostInput.setError(getString(R.string.host_required));
             hostInput.requestFocus();
             return null;
         }
@@ -629,7 +689,7 @@ public final class MainActivity extends Activity implements RecognitionListener 
                 throw new NumberFormatException();
             }
         } catch (NumberFormatException error) {
-            portInput.setError("Порт от 1 до 65535");
+            portInput.setError(getString(R.string.port_invalid));
             portInput.requestFocus();
             return null;
         }
@@ -662,20 +722,20 @@ public final class MainActivity extends Activity implements RecognitionListener 
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if (requestCode == MICROPHONE_PERMISSION_REQUEST) {
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                startRussianRecognition();
+                startRecognition();
             } else {
-                Toast.makeText(this, "Без доступа к микрофону голосовые команды недоступны",
+                Toast.makeText(this, R.string.microphone_denied,
                         Toast.LENGTH_LONG).show();
             }
         }
     }
 
     @Override public void onReadyForSpeech(Bundle params) {
-        listeningStatus.setText("Говорите…");
+        listeningStatus.setText(R.string.speak_now);
     }
 
     @Override public void onBeginningOfSpeech() {
-        listeningStatus.setText("Слышу вас…");
+        listeningStatus.setText(R.string.hearing_you);
     }
 
     @Override public void onRmsChanged(float rmsdB) {
@@ -687,7 +747,7 @@ public final class MainActivity extends Activity implements RecognitionListener 
     @Override public void onBufferReceived(byte[] buffer) { }
 
     @Override public void onEndOfSpeech() {
-        listeningStatus.setText("Распознаю…");
+        listeningStatus.setText(R.string.recognizing);
     }
 
     @Override public void onError(int error) {
@@ -697,26 +757,26 @@ public final class MainActivity extends Activity implements RecognitionListener 
         String message;
         switch (error) {
             case SpeechRecognizer.ERROR_NO_MATCH:
-                message = "Не удалось разобрать фразу. Попробуйте ещё раз.";
+                message = getString(R.string.recognition_no_match);
                 break;
             case SpeechRecognizer.ERROR_SPEECH_TIMEOUT:
-                message = "Речь не услышана";
+                message = getString(R.string.recognition_timeout);
                 break;
             case SpeechRecognizer.ERROR_NETWORK:
             case SpeechRecognizer.ERROR_NETWORK_TIMEOUT:
-                message = "Ошибка сети при распознавании речи";
+                message = getString(R.string.recognition_network_error);
                 break;
             case SpeechRecognizer.ERROR_RECOGNIZER_BUSY:
-                message = "Распознавание занято. Нажмите ещё раз.";
+                message = getString(R.string.recognizer_busy);
                 break;
             case SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS:
-                message = "Нет доступа к микрофону";
+                message = getString(R.string.microphone_unavailable);
                 break;
             case SpeechRecognizer.ERROR_CLIENT:
-                message = "Распознавание остановлено";
+                message = getString(R.string.recognition_stopped);
                 break;
             default:
-                message = "Ошибка распознавания: " + error;
+                message = getString(R.string.recognition_error, error);
         }
         listeningStatus.setText(message);
     }
