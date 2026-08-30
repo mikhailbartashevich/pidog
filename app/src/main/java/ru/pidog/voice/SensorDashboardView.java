@@ -2,10 +2,11 @@ package ru.pidog.voice;
 
 import android.content.Context;
 import android.graphics.Canvas;
-import android.graphics.Color;
+import android.graphics.LinearGradient;
 import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.RectF;
+import android.graphics.Shader;
 import android.util.AttributeSet;
 import android.view.View;
 
@@ -22,10 +23,30 @@ public final class SensorDashboardView extends View {
     private float distanceCm = -1;
     private float soundDirection = -1;
     private final float density;
+    private final int inkColor;
+    private final int mutedColor;
+    private final int panelColor;
+    private final int surfaceVariantColor;
+    private final int strokeColor;
+    private final int strokeBrightColor;
+    private final int brandColor;
+    private final int dangerColor;
+    private final int warningColor;
+    private final int successColor;
 
     public SensorDashboardView(Context context, AttributeSet attrs) {
         super(context, attrs);
         density = getResources().getDisplayMetrics().density;
+        inkColor = context.getColor(R.color.ink);
+        mutedColor = context.getColor(R.color.muted);
+        panelColor = context.getColor(R.color.panel);
+        surfaceVariantColor = context.getColor(R.color.surface_variant);
+        strokeColor = context.getColor(R.color.stroke);
+        strokeBrightColor = context.getColor(R.color.stroke_bright);
+        brandColor = context.getColor(R.color.brand);
+        dangerColor = context.getColor(R.color.danger);
+        warningColor = context.getColor(R.color.warning);
+        successColor = context.getColor(R.color.success);
         setLayerType(View.LAYER_TYPE_SOFTWARE, null);
     }
 
@@ -58,33 +79,40 @@ public final class SensorDashboardView extends View {
 
     private void drawCard(Canvas canvas, float left, float top, float right, float bottom) {
         paint.setStyle(Paint.Style.FILL);
-        paint.setColor(Color.WHITE);
-        paint.setShadowLayer(dp(8), 0, dp(3), 0x18000000);
-        canvas.drawRoundRect(new RectF(left, top, right, bottom), dp(18), dp(18), paint);
+        paint.setShader(new LinearGradient(left, bottom, right, top,
+                panelColor, surfaceVariantColor, Shader.TileMode.CLAMP));
+        paint.setShadowLayer(dp(8), 0, dp(3), 0x66000000);
+        RectF card = new RectF(left, top, right, bottom);
+        canvas.drawRoundRect(card, dp(18), dp(18), paint);
         paint.clearShadowLayer();
+        paint.setShader(null);
+        paint.setStyle(Paint.Style.STROKE);
+        paint.setStrokeWidth(dp(1));
+        paint.setColor(strokeBrightColor);
+        canvas.drawRoundRect(card, dp(18), dp(18), paint);
     }
 
     private void drawBattery(Canvas canvas, float cx, float cy) {
         paint.setStyle(Paint.Style.STROKE);
         paint.setStrokeWidth(dp(9));
         paint.setStrokeCap(Paint.Cap.ROUND);
-        paint.setColor(0xFFE5E7F0);
+        paint.setColor(strokeColor);
         RectF arc = new RectF(cx - dp(38), cy - dp(38), cx + dp(38), cy + dp(38));
         canvas.drawArc(arc, 135, 270, false, paint);
         if (batteryPercent >= 0) {
-            paint.setColor(batteryPercent < 25 ? 0xFFE5484D
-                    : batteryPercent < 55 ? 0xFFFFA91F : 0xFF17A673);
+            paint.setColor(batteryPercent < 25 ? dangerColor
+                    : batteryPercent < 55 ? warningColor : successColor);
             canvas.drawArc(arc, 135, 270 * batteryPercent / 100f, false, paint);
         }
         paint.setStyle(Paint.Style.FILL);
         paint.setTextAlign(Paint.Align.CENTER);
         paint.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
         paint.setTextSize(dp(22));
-        paint.setColor(0xFF181B2E);
+        paint.setColor(inkColor);
         canvas.drawText(batteryPercent < 0 ? "—" : Math.round(batteryPercent) + "%", cx, cy + dp(6), paint);
         paint.setTextSize(dp(11));
         paint.setTypeface(android.graphics.Typeface.DEFAULT);
-        paint.setColor(0xFF667085);
+        paint.setColor(mutedColor);
         String voltage = batteryVoltage < 0
                 ? getResources().getString(R.string.dashboard_battery)
                 : getResources().getString(R.string.dashboard_voltage_format, batteryVoltage);
@@ -94,7 +122,7 @@ public final class SensorDashboardView extends View {
     private void drawSound(Canvas canvas, float cx, float cy) {
         paint.setStyle(Paint.Style.STROKE);
         paint.setStrokeWidth(dp(2));
-        paint.setColor(0xFFDFE2EC);
+        paint.setColor(strokeColor);
         canvas.drawCircle(cx, cy, dp(39), paint);
         canvas.drawCircle(cx, cy, dp(21), paint);
         canvas.drawLine(cx, cy - dp(44), cx, cy + dp(44), paint);
@@ -103,7 +131,7 @@ public final class SensorDashboardView extends View {
             double angle = Math.toRadians(soundDirection - 90);
             float ex = cx + (float) Math.cos(angle) * dp(34);
             float ey = cy + (float) Math.sin(angle) * dp(34);
-            paint.setColor(0xFF8A4DFF);
+            paint.setColor(brandColor);
             paint.setStrokeWidth(dp(5));
             paint.setStrokeCap(Paint.Cap.ROUND);
             canvas.drawLine(cx, cy, ex, ey, paint);
@@ -112,7 +140,7 @@ public final class SensorDashboardView extends View {
         paint.setStyle(Paint.Style.FILL);
         paint.setTextAlign(Paint.Align.CENTER);
         paint.setTextSize(dp(11));
-        paint.setColor(0xFF667085);
+        paint.setColor(mutedColor);
         canvas.drawText(soundDirection < 0
                         ? getResources().getString(R.string.dashboard_sound_not_found)
                         : getResources().getString(R.string.dashboard_sound_format,
@@ -125,18 +153,18 @@ public final class SensorDashboardView extends View {
         paint.setTextAlign(Paint.Align.LEFT);
         paint.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
         paint.setTextSize(dp(12));
-        paint.setColor(0xFF667085);
+        paint.setColor(mutedColor);
         canvas.drawText(getResources().getString(R.string.dashboard_distance), left, top, paint);
         paint.setTextAlign(Paint.Align.RIGHT);
         paint.setTextSize(dp(20));
-        paint.setColor(0xFF5B5BD6);
+        paint.setColor(brandColor);
         canvas.drawText(distanceCm < 0 ? "—"
                 : getResources().getString(R.string.centimeters_format, distanceCm), right, top, paint);
 
         float graphTop = top + dp(15);
         paint.setStyle(Paint.Style.STROKE);
         paint.setStrokeWidth(dp(1));
-        paint.setColor(0xFFE5E7F0);
+        paint.setColor(strokeColor);
         for (int i = 0; i < 3; i++) {
             float y = graphTop + (bottom - graphTop) * i / 2f;
             canvas.drawLine(left, y, right, y, paint);
@@ -151,7 +179,7 @@ public final class SensorDashboardView extends View {
             if (index == 0) path.moveTo(x, y); else path.lineTo(x, y);
             index++;
         }
-        paint.setColor(0xFF5B5BD6);
+        paint.setColor(brandColor);
         paint.setStrokeWidth(dp(3));
         canvas.drawPath(path, paint);
     }

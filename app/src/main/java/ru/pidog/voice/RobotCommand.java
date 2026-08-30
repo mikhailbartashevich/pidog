@@ -33,6 +33,8 @@ public enum RobotCommand {
     FIND_PURPLE("find_purple", "Найти фиолетовый", "Find purple"),
     FOLLOW_FACE("follow_face", "Следить за лицом", "Follow face"),
     STOP_FACE_FOLLOW("stop_face_follow", "Остановить слежение за лицом", "Stop face tracking"),
+    FOLLOW_OBJECT("follow_object", "Следить за предметом в центре", "Follow centered object"),
+    STOP_OBJECT_FOLLOW("stop_object_follow", "Остановить слежение за предметом", "Stop object tracking"),
     CAMERA_ON("camera_on", "Включить камеру", "Turn camera on"),
     CAMERA_OFF("camera_off", "Выключить камеру", "Turn camera off"),
     LIGHT_RED("light_red", "Свет: красный", "Light: red"),

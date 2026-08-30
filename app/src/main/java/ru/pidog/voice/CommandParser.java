@@ -110,6 +110,12 @@ public final class CommandParser {
         put(RobotCommand.STOP_FACE_FOLLOW,
                 "перестань следить за лицом", "не следи за лицом",
                 "останови слежение за лицом");
+        put(RobotCommand.FOLLOW_OBJECT,
+                "следи за предметом", "следуй за предметом", "следи за объектом",
+                "следи за тем что в центре", "запомни предмет в центре");
+        put(RobotCommand.STOP_OBJECT_FOLLOW,
+                "перестань следить за предметом", "не следи за предметом",
+                "останови слежение за предметом", "перестань следить за объектом");
         put(RobotCommand.CAMERA_ON,
                 "включи камеру", "запусти камеру", "покажи камеру");
         put(RobotCommand.CAMERA_OFF,
@@ -183,6 +189,11 @@ public final class CommandParser {
         putEnglish(RobotCommand.FOLLOW_FACE, "follow face", "track face", "look at me");
         putEnglish(RobotCommand.STOP_FACE_FOLLOW,
                 "stop following face", "stop face tracking", "do not track face");
+        putEnglish(RobotCommand.FOLLOW_OBJECT,
+                "follow object", "track object", "follow centered object",
+                "track what is in the center");
+        putEnglish(RobotCommand.STOP_OBJECT_FOLLOW,
+                "stop following object", "stop object tracking", "do not track object");
         putEnglish(RobotCommand.CAMERA_ON, "turn camera on", "start camera", "show camera");
         putEnglish(RobotCommand.CAMERA_OFF, "turn camera off", "stop camera", "close camera");
         putEnglish(RobotCommand.LIGHT_RED, "red light", "turn on red", "light red");

@@ -180,6 +180,105 @@ class VisionMixin:
         self._dog.head_move([[0, 0, 0]], immediately=True, speed=65)
         return {"active": False, "message": "Слежение за лицом остановлено"}
 
+    def _follow_object(self) -> dict[str, Any]:
+        """Lock onto the image patch centered in the frame and follow it."""
+        self._ensure_camera()
+        try:
+            self._vilib.close_color_detection()
+        except Exception:
+            LOG.debug("could not pause color detection for object tracking", exc_info=True)
+        try:
+            self._set_face_detection(False)
+        except Exception:
+            LOG.debug("could not pause face detection for object tracking", exc_info=True)
+
+        frame = self._camera_frame()
+        box = self._center_tracking_box(frame)
+        tracker, tracker_name = self._create_object_tracker()
+        initialized = tracker.init(frame, box)
+        if initialized is False:
+            raise RuntimeError("не удалось зафиксировать предмет в центре кадра")
+        self._start_behavior(
+            "follow-object",
+            lambda stop_event: self._follow_object_worker(stop_event, tracker),
+        )
+        LOG.info("object tracking tracker=%s box=%s", tracker_name, box)
+        return {
+            "active": True,
+            "target_box": [round(value) for value in box],
+            "message": "Пайдог следит за предметом в центре кадра",
+        }
+
+    def _stop_object_follow(self) -> dict[str, Any]:
+        self._cancel_behavior()
+        self._dog.head_move([[0, 0, 0]], immediately=True, speed=65)
+        return {"active": False, "message": "Слежение за предметом остановлено"}
+
+    def _camera_frame(self, timeout: float = 2.0) -> Any:
+        deadline = time.monotonic() + timeout
+        while time.monotonic() < deadline:
+            frame = getattr(self._vilib, "img", None)
+            if len(getattr(frame, "shape", ())) >= 2:
+                return frame.copy()
+            time.sleep(0.05)
+        raise RuntimeError("камера не передаёт кадры для слежения за предметом")
+
+    @staticmethod
+    def _center_tracking_box(frame: Any) -> tuple[int, int, int, int]:
+        height, width = frame.shape[:2]
+        side = max(64, round(min(width, height) * 0.35))
+        side = min(side, width, height)
+        return (
+            (width - side) // 2,
+            (height - side) // 2,
+            side, side,
+        )
+
+    @staticmethod
+    def _create_object_tracker() -> tuple[Any, str]:
+        try:
+            import cv2
+
+            namespaces = (cv2, getattr(cv2, "legacy", None))
+            for tracker_name in ("CSRT", "KCF", "MIL"):
+                factory_name = f"Tracker{tracker_name}_create"
+                for namespace in namespaces:
+                    factory = getattr(namespace, factory_name, None) if namespace else None
+                    if factory is not None:
+                        return factory(), tracker_name
+        except Exception as error:
+            raise RuntimeError(f"OpenCV-трекер недоступен: {error}") from error
+        raise RuntimeError("OpenCV не поддерживает слежение за произвольным предметом")
+
+    def _follow_object_worker(self, stop_event: threading.Event,
+                              tracker: Any) -> None:
+        yaw = 0.0
+        pitch = 0.0
+        center_x, center_y = self._camera_center()
+        misses = 0
+        while not stop_event.wait(0.04):
+            frame = getattr(self._vilib, "img", None)
+            if len(getattr(frame, "shape", ())) < 2:
+                continue
+            found, box = tracker.update(frame.copy())
+            if not found:
+                misses += 1
+                if misses >= 12:
+                    LOG.info("object tracking stopped: target lost")
+                    return
+                continue
+            misses = 0
+            x, y, width, height = (float(value) for value in box)
+            target_x = x + width / 2
+            target_y = y + height / 2
+            error_x = center_x - target_x
+            error_y = center_y - target_y
+            if abs(error_x) < 8 and abs(error_y) < 6:
+                continue
+            yaw = self._clamp(yaw + error_x * 0.045, -80, 80)
+            pitch = self._clamp(pitch + error_y * 0.035, -30, 30)
+            self._dog.head_move([[yaw, 0, pitch]], immediately=True, speed=75)
+
     def _set_face_detection(self, enabled: bool) -> None:
         """Toggle face detection across current and legacy Vilib releases."""
         # Current Vilib calls this face detection. Older PiDog images expose

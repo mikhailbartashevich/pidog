@@ -108,6 +108,8 @@ class RobotController(AudioMixin, VisionMixin, SensorsMixin):
             "find_purple": lambda: self._find_color("purple"),
             "follow_face": self._follow_face,
             "stop_face_follow": self._stop_face_follow,
+            "follow_object": self._follow_object,
+            "stop_object_follow": self._stop_object_follow,
             "camera_on": self._camera_on,
             "camera_off": self._camera_off,
         }
@@ -177,7 +179,7 @@ class RobotController(AudioMixin, VisionMixin, SensorsMixin):
                 return {"message": f"Команда принята: {command}"}
             # Long-running modes use a single cooperative background worker.
             # Any new command takes control immediately and stops the old mode.
-            if command not in {"stop_face_follow"}:
+            if command not in {"stop_face_follow", "stop_object_follow"}:
                 self._cancel_behavior()
             if command in COMMAND_COLORS:
                 self._set_light("breath", COMMAND_COLORS[command], bps=1.2, brightness=0.8)

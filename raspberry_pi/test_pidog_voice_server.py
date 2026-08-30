@@ -296,6 +296,9 @@ class LocalVoiceControlTest(unittest.TestCase):
         self.assertEqual("measure_distance", match_local_voice_command(
             "расстояние до предмета"))
         self.assertEqual("follow_face", match_local_voice_command("следи за лицом"))
+        self.assertEqual("follow_object", match_local_voice_command("следи за предметом"))
+        self.assertEqual("stop_object_follow", match_local_voice_command(
+            "останови слежение за предметом"))
         self.assertEqual("approach_obstacle", match_local_voice_command(
             "иди вперед до препятствия"))
 
@@ -428,6 +431,13 @@ class VisionCompatibilityTest(unittest.TestCase):
             self.controller._follow_face_worker(stop_event, detector=object())
 
         self.controller._bark_once.assert_called_once_with(yaw=0.0, pitch=0.0)
+
+    def test_center_object_tracking_box_uses_middle_of_frame(self):
+        frame = SimpleNamespace(shape=(480, 640, 3))
+
+        box = self.controller._center_tracking_box(frame)
+
+        self.assertEqual((236, 156, 168, 168), box)
 
 
 class AssistantRoutingTest(unittest.TestCase):

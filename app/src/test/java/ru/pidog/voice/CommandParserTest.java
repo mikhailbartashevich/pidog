@@ -68,6 +68,8 @@ public class CommandParserTest {
         assertCommand(RobotCommand.APPROACH_OBSTACLE, "иди вперёд до препятствия");
         assertCommand(RobotCommand.FOLLOW_FACE, "следи за лицом");
         assertCommand(RobotCommand.STOP_FACE_FOLLOW, "перестань следить за лицом");
+        assertCommand(RobotCommand.FOLLOW_OBJECT, "следи за предметом");
+        assertCommand(RobotCommand.STOP_OBJECT_FOLLOW, "останови слежение за предметом");
         assertCommand(RobotCommand.MEASURE_DISTANCE, "расстояние до предмета");
     }
 
