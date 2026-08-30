@@ -15,7 +15,6 @@ final class SensorController {
     private final RobotConnection connection;
     private final TextView sensorsText;
     private final SensorDashboardView dashboard;
-    private final TextView headerPowerIndicator;
     private final TextView powerIndicatorIcon;
     private final TextView powerIndicatorTitle;
     private final TextView powerIndicatorDetail;
@@ -34,7 +33,6 @@ final class SensorController {
         this.connection = connection;
         sensorsText = activity.findViewById(R.id.sensorsText);
         dashboard = activity.findViewById(R.id.sensorDashboard);
-        headerPowerIndicator = activity.findViewById(R.id.headerPowerIndicator);
         powerIndicatorIcon = activity.findViewById(R.id.powerIndicatorIcon);
         powerIndicatorTitle = activity.findViewById(R.id.powerIndicatorTitle);
         powerIndicatorDetail = activity.findViewById(R.id.powerIndicatorDetail);
@@ -84,8 +82,6 @@ final class SensorController {
 
     private void updatePowerIndicator(RobotClient.SensorData data) {
         if (data == null || !data.powerKnown) {
-            styleIndicator(headerPowerIndicator, R.string.power_header_unknown,
-                    R.color.muted, R.color.surface_variant);
             styleIndicator(powerIndicatorIcon, R.string.icon_unknown,
                     R.color.muted, R.color.surface_variant);
             powerIndicatorTitle.setText(R.string.determining_power);
@@ -96,9 +92,6 @@ final class SensorController {
         }
 
         if (data.externalPower) {
-            styleIndicator(headerPowerIndicator, data.charging
-                            ? R.string.power_header_charging : R.string.power_header_external,
-                    R.color.brand_dark, R.color.brand_soft);
             styleIndicator(powerIndicatorIcon, R.string.icon_power,
                     R.color.brand_dark, R.color.brand_soft);
             powerIndicatorTitle.setText(R.string.external_power_connected);
@@ -114,8 +107,6 @@ final class SensorController {
             return;
         }
 
-        styleIndicator(headerPowerIndicator, R.string.power_header_battery,
-                R.color.warning, R.color.surface_variant);
         styleIndicator(powerIndicatorIcon, R.string.icon_battery,
                 R.color.warning, R.color.surface_variant);
         powerIndicatorTitle.setText(R.string.battery_power);

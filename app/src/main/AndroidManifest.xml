@@ -13,8 +13,9 @@
 
     <application
         android:allowBackup="true"
-        android:icon="@drawable/ic_launcher"
+        android:icon="@drawable/pidog_app_icon"
         android:label="@string/app_name"
+        android:roundIcon="@drawable/pidog_app_icon"
         android:supportsRtl="true"
         android:theme="@style/Theme.PiDogVoice"
         android:usesCleartextTraffic="true">

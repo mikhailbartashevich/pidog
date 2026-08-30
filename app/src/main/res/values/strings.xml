@@ -8,6 +8,10 @@
     <string name="status_mascot_content_description">Собачка Пайдог показывает состояние</string>
     <string name="status_idle">ГОТОВ К РАБОТЕ</string>
     <string name="status_working">ВЫПОЛНЯЮ</string>
+    <string name="status_listening">СЛУШАЮ</string>
+    <string name="status_thinking">ДУМАЮ</string>
+    <string name="status_searching">ИЩУ</string>
+    <string name="status_speaking">ОТВЕЧАЮ</string>
     <string name="status_success">ГОТОВО</string>
     <string name="status_error">НУЖНО ВНИМАНИЕ</string>
     <string name="status_mark_idle" translatable="false">●</string>
@@ -52,6 +56,7 @@
     <string name="assistant_checking">Проверяю локальную LLM…</string>
     <string name="assistant_action_running">Выполняю: %1$s…</string>
     <string name="assistant_asking">Пайдог ищет и думает…</string>
+    <string name="assistant_answering">Пайдог отвечает</string>
     <string name="assistant_question_required">Введите или продиктуйте вопрос</string>
     <string name="assistant_sources_title">Источники:</string>
     <string name="assistant_sources_format">%1$s\n%2$s</string>
@@ -107,15 +112,16 @@
     <string name="approach_obstacle_button">▶ Идти вперёд до препятствия</string>
 
     <string name="commands_page_title">Все команды</string>
-    <string name="commands_page_subtitle">Тот же полный набор, что доступен голосом</string>
-    <string name="quick_control">Быстрые действия</string>
-    <string name="grouped_commands">КОМАНДЫ ПО ГРУППАМ</string>
-    <string name="sit_button">Сесть</string>
-    <string name="stand_button">Встать</string>
-    <string name="lie_button">Лечь</string>
-    <string name="bark_button">🔊 Голос</string>
-    <string name="tail_button">Хвост</string>
-    <string name="stop_button">■ СТОП</string>
+    <string name="commands_page_subtitle">Выберите группу, затем нужную команду</string>
+    <string name="grouped_commands">ГРУППЫ КОМАНД</string>
+    <string name="command_groups_back">← Все группы</string>
+    <string name="command_group_chevron" translatable="false">›</string>
+    <plurals name="command_count">
+        <item quantity="one">%1$d команда</item>
+        <item quantity="few">%1$d команды</item>
+        <item quantity="many">%1$d команд</item>
+        <item quantity="other">%1$d команды</item>
+    </plurals>
 
     <string name="camera_page_title">Камера и цвета</string>
     <string name="camera_page_subtitle">Живой поток и журнал распознавания Пайдог</string>

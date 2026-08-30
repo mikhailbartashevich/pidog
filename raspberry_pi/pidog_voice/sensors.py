@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 import os
 import threading
 import time
@@ -12,6 +13,84 @@ from .constants import LOG
 
 
 class SensorsMixin:
+    _TOUCH_POLL_SECONDS = 0.1
+
+    def _start_touch_monitor(self) -> None:
+        """Continuously watch the head sensor for petting gestures."""
+        if self._touch_thread is not None and self._touch_thread.is_alive():
+            return
+        self._touch_stop.clear()
+        self._touch_thread = threading.Thread(
+            target=self._watch_head_touch,
+            name="pidog-head-touch",
+            daemon=True,
+        )
+        self._touch_thread.start()
+        LOG.info("PiDog head-touch reaction enabled")
+
+    def _stop_touch_monitor(self) -> None:
+        self._touch_stop.set()
+        thread = self._touch_thread
+        if thread is not None and thread is not threading.current_thread():
+            thread.join(timeout=1.5)
+        self._touch_thread = None
+
+    def _watch_head_touch(self) -> None:
+        """Debounce touches and celebrate once until the sensor is released."""
+        armed = True
+        touch_samples = 0
+        while not self._touch_stop.wait(self._TOUCH_POLL_SECONDS):
+            try:
+                with self._lock:
+                    if self._dog is None:
+                        return
+                    touch = str(self._dog.dual_touch.read()).strip().upper()
+            except Exception:
+                LOG.exception("head-touch sensor read failed")
+                continue
+
+            if touch == "N":
+                armed = True
+                touch_samples = 0
+                continue
+            if touch not in {"L", "R", "LS", "RS"}:
+                touch_samples = 0
+                continue
+
+            touch_samples += 1
+            # LS/RS is a completed stroke reported by PiDog. Require two polls
+            # for a plain L/R touch to reject a brief electrical glitch.
+            if not armed or (touch not in {"LS", "RS"} and touch_samples < 2):
+                continue
+            armed = False
+
+            with self._behavior_lock:
+                behavior = self._behavior_thread
+                behavior_active = behavior is not None and behavior.is_alive()
+            if behavior_active:
+                LOG.debug("head-touch reaction skipped during active behavior")
+                continue
+
+            try:
+                with self._lock:
+                    if self._dog is None or self._touch_stop.is_set():
+                        return
+                    self._happy_head_touch()
+            except Exception:
+                LOG.exception("head-touch reaction failed")
+
+    def _happy_head_touch(self) -> None:
+        """Show the same relaxed, happy response as SunFounder's demo."""
+        head_angles = []
+        for index in range(20):
+            roll = round(10 * math.sin(index * 0.314), 2)
+            pitch = round(20 * math.sin(index * 0.314) + 10, 2)
+            head_angles.append([0, roll, pitch])
+        self._dog.head_move(head_angles, immediately=False, speed=80)
+        self._dog.do_action("wag_tail", step_count=10, speed=80)
+        self._set_light("listen", "#8A2BE2", bps=0.35, brightness=0.8)
+        LOG.info("PiDog is happy after a head touch")
+
     def sensors(self) -> dict[str, Any]:
         with self._lock:
             if self._dry_run:

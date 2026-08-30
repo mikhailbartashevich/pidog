@@ -1,23 +1,25 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="ink">#181B2E</color>
-    <color name="muted">#667085</color>
-    <color name="canvas">#F6F6FC</color>
-    <color name="panel">#FFFFFF</color>
-    <color name="surface_variant">#F0F1F7</color>
-    <color name="brand">#5B5BD6</color>
-    <color name="brand_dark">#3F3F9E</color>
-    <color name="brand_soft">#E9E9FF</color>
-    <color name="danger">#E5484D</color>
-    <color name="danger_dark">#B4232A</color>
-    <color name="warning">#D97706</color>
-    <color name="success">#198754</color>
-    <color name="status_idle_background">#F7F8FC</color>
-    <color name="status_working_background">#EEF4FF</color>
-    <color name="status_success_background">#ECFDF3</color>
-    <color name="status_error_background">#FFF1F1</color>
-    <color name="stroke">#DFE2EC</color>
-    <color name="camera">#0E1020</color>
-    <color name="camera_muted">#AFB5D0</color>
+    <color name="ink">#F1FBFF</color>
+    <color name="muted">#8DADBD</color>
+    <color name="canvas">#020811</color>
+    <color name="panel">#071522</color>
+    <color name="surface_variant">#0B2031</color>
+    <color name="brand">#13CFF4</color>
+    <color name="brand_dark">#6DE8FF</color>
+    <color name="brand_soft">#10334A</color>
+    <color name="on_brand">#00131D</color>
+    <color name="danger">#FF5263</color>
+    <color name="danger_dark">#FF9DA7</color>
+    <color name="warning">#FFBE55</color>
+    <color name="success">#42E6A4</color>
+    <color name="status_idle_background">#071522</color>
+    <color name="status_working_background">#08263A</color>
+    <color name="status_success_background">#092B2B</color>
+    <color name="status_error_background">#301923</color>
+    <color name="stroke">#17445B</color>
+    <color name="stroke_bright">#2B7895</color>
+    <color name="camera">#01050A</color>
+    <color name="camera_muted">#7399AA</color>
     <color name="white">#FFFFFF</color>
 </resources>

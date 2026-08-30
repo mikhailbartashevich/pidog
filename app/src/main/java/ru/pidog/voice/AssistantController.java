@@ -162,14 +162,16 @@ final class AssistantController {
         answerView.setText(R.string.assistant_asking);
         answerView.setTextColor(activity.getColor(R.color.muted));
         sourcesView.setText(R.string.assistant_sources_empty);
-        connection.showStatus(
-                activity.getString(R.string.assistant_asking), R.color.muted);
+        connection.showThinkingStatus(activity.getString(R.string.assistant_asking));
         client.assistantChat(endpoint.host, endpoint.port, endpoint.token, question,
                 webSwitch.isChecked(), speakSwitch.isChecked(), (success, message, reply) -> {
                     setControlsEnabled(true);
-                    connection.showStatus(success
-                                    ? activity.getString(R.string.assistant_running) : message,
-                            success ? R.color.brand : R.color.danger);
+                    if (success) {
+                        connection.showSpeakingStatus(
+                                activity.getString(R.string.assistant_answering));
+                    } else {
+                        connection.showStatus(message, R.color.danger);
+                    }
                     if (!success || reply == null) {
                         answerView.setText(message);
                         answerView.setTextColor(activity.getColor(R.color.danger));

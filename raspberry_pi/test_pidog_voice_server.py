@@ -229,6 +229,57 @@ class AudioConfigurationTest(unittest.TestCase):
             self.assertTrue(RobotController._has_sound(sound_dir, "howling"))
 
 
+class HeadTouchReactionTest(unittest.TestCase):
+    def setUp(self):
+        self.controller = object.__new__(RobotController)
+        self.controller._lock = threading.RLock()
+        self.controller._behavior_lock = threading.Lock()
+        self.controller._behavior_thread = None
+        self.controller._touch_stop = threading.Event()
+        self.controller._set_light = Mock()
+
+    def test_happy_reaction_moves_head_tail_and_lights(self):
+        self.controller._dog = SimpleNamespace(
+            head_move=Mock(),
+            do_action=Mock(),
+        )
+
+        self.controller._happy_head_touch()
+
+        head_angles = self.controller._dog.head_move.call_args.args[0]
+        self.assertEqual(20, len(head_angles))
+        self.controller._dog.head_move.assert_called_once_with(
+            head_angles, immediately=False, speed=80)
+        self.controller._dog.do_action.assert_called_once_with(
+            "wag_tail", step_count=10, speed=80)
+        self.controller._set_light.assert_called_once_with(
+            "listen", "#8A2BE2", bps=0.35, brightness=0.8)
+
+    def test_touch_is_debounced_and_rearmed_after_release(self):
+        readings = iter(("L", "L", "R", "N", "RS", "N"))
+        self.controller._dog = SimpleNamespace(
+            dual_touch=SimpleNamespace(read=lambda: next(readings)))
+        self.controller._happy_head_touch = Mock()
+
+        class FiniteStopEvent:
+            def __init__(self):
+                self.waits = 0
+
+            def wait(self, _timeout):
+                self.waits += 1
+                return self.waits > 6
+
+            @staticmethod
+            def is_set():
+                return False
+
+        self.controller._touch_stop = FiniteStopEvent()
+
+        self.controller._watch_head_touch()
+
+        self.assertEqual(2, self.controller._happy_head_touch.call_count)
+
+
 class LocalVoiceControlTest(unittest.TestCase):
     def test_matches_safe_local_voice_commands(self):
         self.assertEqual("local_voice_on", match_local_voice_command(
@@ -312,6 +363,71 @@ class LocalVoiceControlTest(unittest.TestCase):
         self.assertTrue(completed.wait(2))
         listener.close()
         self.assertEqual(["какая сегодня погода"], received)
+
+
+class VisionCompatibilityTest(unittest.TestCase):
+    def setUp(self):
+        self.controller = object.__new__(RobotController)
+
+    def test_uses_current_vilib_face_switch(self):
+        current_switch = Mock()
+        self.controller._vilib = SimpleNamespace(
+            face_detect_switch=current_switch,
+            human_detect_switch=Mock(),
+        )
+
+        self.controller._set_face_detection(True)
+
+        current_switch.assert_called_once_with(True)
+        self.controller._vilib.human_detect_switch.assert_not_called()
+
+    def test_falls_back_to_legacy_vilib_human_switch(self):
+        legacy_switch = Mock()
+        self.controller._vilib = SimpleNamespace(human_detect_switch=legacy_switch)
+
+        self.controller._set_face_detection(False)
+
+        legacy_switch.assert_called_once_with(False)
+
+    def test_face_tracking_uses_actual_camera_center(self):
+        self.controller._vilib = SimpleNamespace(camera_width=640, camera_height=480)
+
+        self.assertEqual((320.0, 240.0), self.controller._camera_center())
+
+    def test_yunet_parameters_select_largest_face(self):
+        faces = [
+            [10, 20, 30, 40, 0, 0, 0, 0, 0, 0, 0.8],
+            [100, 120, 80, 60, 0, 0, 0, 0, 0, 0, 0.7],
+        ]
+
+        parameters = self.controller._face_parameters(faces)
+
+        self.assertEqual(2, parameters["human_n"])
+        self.assertEqual(140, parameters["human_x"])
+        self.assertEqual(150, parameters["human_y"])
+        self.assertEqual(80, parameters["human_w"])
+        self.assertEqual(60, parameters["human_h"])
+
+    def test_yunet_parameters_report_no_face(self):
+        self.assertEqual({"human_n": 0}, self.controller._face_parameters(None))
+
+    def test_lost_face_barks_once(self):
+        self.controller._vilib = SimpleNamespace(camera_width=640, camera_height=480)
+        self.controller._dog = SimpleNamespace(head_move=Mock())
+        self.controller._clamp = lambda value, minimum, maximum: max(
+            minimum, min(maximum, value))
+        self.controller._bark_once = Mock()
+        self.controller._detect_face_yunet = Mock(side_effect=[
+            {"human_n": 1, "human_x": 320, "human_y": 240},
+            {"human_n": 0},
+            {"human_n": 0},
+        ])
+        stop_event = SimpleNamespace(wait=Mock(side_effect=[False, False, False, True]))
+
+        with patch("pidog_voice.vision.time.monotonic", side_effect=[0.0, 2.1]):
+            self.controller._follow_face_worker(stop_event, detector=object())
+
+        self.controller._bark_once.assert_called_once_with(yaw=0.0, pitch=0.0)
 
 
 class AssistantRoutingTest(unittest.TestCase):

@@ -1,13 +1,16 @@
 package ru.pidog.voice;
 
 import android.app.Activity;
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.content.res.ColorStateList;
 import android.content.res.Configuration;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.LocaleList;
 import android.view.View;
+import android.window.OnBackInvokedDispatcher;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
@@ -27,6 +30,7 @@ public final class MainActivity extends Activity {
     private static final String DEFAULT_LANGUAGE = "ru";
     private static final int PAGE_VOICE = 1;
     private static final int PAGE_MOVEMENT = 2;
+    private static final int PAGE_COMMANDS = 3;
     private static final int PAGE_ASSISTANT = 6;
 
     private String currentLanguageTag;
@@ -71,6 +75,7 @@ public final class MainActivity extends Activity {
         applySystemBarInsets();
         createControllers();
         bindActions();
+        bindBackNavigation();
     }
 
     private void bindActivityViews() {
@@ -132,12 +137,6 @@ public final class MainActivity extends Activity {
             sendCommand(command, getString(R.string.manual_button_phrase));
         });
 
-        bindManual(R.id.sitButton, RobotCommand.SIT);
-        bindManual(R.id.standButton, RobotCommand.STAND);
-        bindManual(R.id.lieButton, RobotCommand.LIE);
-        bindManual(R.id.barkButton, RobotCommand.BARK);
-        bindManual(R.id.tailButton, RobotCommand.WAG_TAIL);
-        bindManual(R.id.stopButton, RobotCommand.STOP);
         bindManual(R.id.approachObstacleButton, RobotCommand.APPROACH_OBSTACLE);
 
         bindManual(R.id.findOrangeButton, RobotCommand.FIND_ORANGE);
@@ -185,8 +184,13 @@ public final class MainActivity extends Activity {
             return;
         }
         connection.save();
-        connection.showStatus(getString(R.string.sending_command,
-                command.displayName(currentLanguageTag)), R.color.muted);
+        String progressMessage = getString(R.string.sending_command,
+                command.displayName(currentLanguageTag));
+        if (command == RobotCommand.LISTEN_SOUND) {
+            connection.showListeningStatus(progressMessage);
+        } else {
+            connection.showStatus(progressMessage, R.color.muted);
+        }
         robotClient.send(endpoint.host, endpoint.port, endpoint.token, command, phrase,
                 (success, message) -> connection.showStatus(message,
                         success ? R.color.brand : R.color.danger));
@@ -201,8 +205,8 @@ public final class MainActivity extends Activity {
         Button localMicButton = findViewById(R.id.localMicButton);
         localMicButton.setEnabled(false);
         localMicButton.setText(R.string.built_in_microphone_starting);
-        connection.showStatus(getString(R.string.sending_command,
-                RobotCommand.LOCAL_VOICE_ON.displayName(currentLanguageTag)), R.color.muted);
+        connection.showListeningStatus(getString(R.string.sending_command,
+                RobotCommand.LOCAL_VOICE_ON.displayName(currentLanguageTag)));
         robotClient.send(endpoint.host, endpoint.port, endpoint.token,
                 RobotCommand.LOCAL_VOICE_ON, getString(R.string.built_in_microphone_phrase),
                 (success, message) -> {
@@ -251,6 +255,9 @@ public final class MainActivity extends Activity {
             movementController.stop();
         }
         servicePages.setDisplayedChild(page);
+        if (page == PAGE_COMMANDS) {
+            groupedCommands.showGroups();
+        }
         if (page == PAGE_ASSISTANT) {
             assistantController.refreshStatus(false);
         }
@@ -259,7 +266,7 @@ public final class MainActivity extends Activity {
             navButtons[index].setBackgroundTintList(ColorStateList.valueOf(
                     getColor(selected ? R.color.brand : R.color.brand_soft)));
             navButtons[index].setTextColor(getColor(
-                    selected ? R.color.white : R.color.brand_dark));
+                    selected ? R.color.on_brand : R.color.brand_dark));
         }
         navScroll.post(() -> {
             int inset = Math.round(12 * getResources().getDisplayMetrics().density);
@@ -271,22 +278,46 @@ public final class MainActivity extends Activity {
         return currentLanguageTag != null && currentLanguageTag.startsWith("en");
     }
 
+    @SuppressLint("GestureBackNavigation")
+    @Override
+    public void onBackPressed() {
+        if (!handleBackNavigation()) {
+            super.onBackPressed();
+        }
+    }
+
+    private void bindBackNavigation() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            getOnBackInvokedDispatcher().registerOnBackInvokedCallback(
+                    OnBackInvokedDispatcher.PRIORITY_DEFAULT, () -> {
+                        if (!handleBackNavigation()) {
+                            finishAfterTransition();
+                        }
+                    });
+        }
+    }
+
+    private boolean handleBackNavigation() {
+        return servicePages.getDisplayedChild() == PAGE_COMMANDS
+                && groupedCommands.navigateUp();
+    }
+
     @SuppressWarnings("deprecation")
     private void applySystemBarInsets() {
-        View topBar = findViewById(R.id.topBar);
+        View statusBar = findViewById(R.id.globalStatusBar);
         View mainRoot = findViewById(R.id.mainRoot);
-        int topStart = topBar.getPaddingStart();
-        int topTop = topBar.getPaddingTop();
-        int topEnd = topBar.getPaddingEnd();
-        int topBottom = topBar.getPaddingBottom();
+        int statusStart = statusBar.getPaddingStart();
+        int statusTop = statusBar.getPaddingTop();
+        int statusEnd = statusBar.getPaddingEnd();
+        int statusBottom = statusBar.getPaddingBottom();
         int rootStart = mainRoot.getPaddingStart();
         int rootTop = mainRoot.getPaddingTop();
         int rootEnd = mainRoot.getPaddingEnd();
         int rootBottom = mainRoot.getPaddingBottom();
 
-        topBar.setOnApplyWindowInsetsListener((view, insets) -> {
-            view.setPaddingRelative(topStart, topTop + insets.getSystemWindowInsetTop(),
-                    topEnd, topBottom);
+        statusBar.setOnApplyWindowInsetsListener((view, insets) -> {
+            view.setPaddingRelative(statusStart,
+                    statusTop + insets.getSystemWindowInsetTop(), statusEnd, statusBottom);
             return insets;
         });
         mainRoot.setOnApplyWindowInsetsListener((view, insets) -> {
@@ -294,7 +325,7 @@ public final class MainActivity extends Activity {
                     rootBottom + insets.getSystemWindowInsetBottom());
             return insets;
         });
-        topBar.requestApplyInsets();
+        statusBar.requestApplyInsets();
         mainRoot.requestApplyInsets();
     }
 

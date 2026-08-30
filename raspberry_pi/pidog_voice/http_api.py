@@ -117,10 +117,13 @@ class RequestHandler(BaseHTTPRequestHandler):
                 "detail": str(error), "command": command,
             })
             return
-        except Exception:
+        except Exception as error:
             LOG.exception("PiDog command failed: %s", command)
-            self._json(HTTPStatus.CONFLICT,
-                       {"ok": False, "error": "robot command failed", "command": command})
+            detail = str(error).strip() or error.__class__.__name__
+            self._json(HTTPStatus.CONFLICT, {
+                "ok": False, "error": "robot command failed",
+                "detail": detail[:300], "command": command,
+            })
             return
         self._json(HTTPStatus.ACCEPTED, {"ok": True, "command": command, **result})
 

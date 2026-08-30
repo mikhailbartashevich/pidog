@@ -26,7 +26,7 @@ class _DeferredMusic:
 
 class AudioMixin:
     def _bark(self) -> dict[str, Any]:
-        """Bark three times for the voice command and lost-face alert."""
+        """Bark three times for the explicit voice command."""
         self._require_audio()
         from pidog.preset_actions import bark
 

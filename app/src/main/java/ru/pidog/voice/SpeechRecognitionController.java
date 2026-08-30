@@ -131,12 +131,12 @@ final class SpeechRecognitionController implements RecognitionListener {
             assistantAnswer.setText(R.string.assistant_listening);
             assistantAnswer.setTextColor(activity.getColor(R.color.muted));
             assistantMicButton.setText(R.string.icon_stop);
-            connection.showStatus(
-                    activity.getString(R.string.assistant_listening), R.color.muted);
+            connection.showListeningStatus(
+                    activity.getString(R.string.assistant_listening));
         } else {
             listeningStatus.setText(R.string.listening);
             micButton.setText(R.string.icon_stop);
-            connection.showStatus(activity.getString(R.string.listening), R.color.muted);
+            connection.showListeningStatus(activity.getString(R.string.listening));
         }
         recognizer.startListening(intent);
     }
@@ -191,13 +191,13 @@ final class SpeechRecognitionController implements RecognitionListener {
 
     @Override public void onReadyForSpeech(Bundle params) {
         listeningStatus.setText(R.string.speak_now);
-        connection.showStatus(activity.getString(assistantMode
-                ? R.string.assistant_listening : R.string.speak_now), R.color.muted);
+        connection.showListeningStatus(activity.getString(assistantMode
+                ? R.string.assistant_listening : R.string.speak_now));
     }
 
     @Override public void onBeginningOfSpeech() {
         listeningStatus.setText(R.string.hearing_you);
-        connection.showStatus(activity.getString(R.string.hearing_you), R.color.muted);
+        connection.showListeningStatus(activity.getString(R.string.hearing_you));
     }
 
     @Override public void onRmsChanged(float rmsdB) {
@@ -211,7 +211,7 @@ final class SpeechRecognitionController implements RecognitionListener {
 
     @Override public void onEndOfSpeech() {
         listeningStatus.setText(R.string.recognizing);
-        connection.showStatus(activity.getString(R.string.recognizing), R.color.muted);
+        connection.showThinkingStatus(activity.getString(R.string.recognizing));
     }
 
     @Override public void onError(int error) {

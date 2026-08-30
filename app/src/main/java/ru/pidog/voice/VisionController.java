@@ -170,7 +170,7 @@ final class VisionController {
         }
         connection.save();
         String color = colorName(command);
-        connection.showStatus(activity.getString(R.string.camera_searching, color), R.color.muted);
+        connection.showSearchingStatus(activity.getString(R.string.camera_searching, color));
         client.sendVision(endpoint.host, endpoint.port, endpoint.token, command, phrase,
                 (success, message, data) -> {
                     connection.showStatus(message, success ? R.color.brand : R.color.danger);

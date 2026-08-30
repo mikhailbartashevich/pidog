@@ -12,7 +12,9 @@ This native Android app recognizes speech, selects a command from a safe allowli
 - conservative fuzzy matching, so uncertain phrases are not sent to the robot;
 - manual controls for connection testing and an emergency `STOP` button;
 - a shared secret token to prevent accidental commands from other devices on the local network;
-- a server-side `--dry-run` mode that never moves the robot.
+- a server-side `--dry-run` mode that never moves the robot;
+- an automatic happy response when the head touch sensor is stroked: PiDog
+  nods comfortably, wags its tail, and lights up purple.
 
 Supported actions: move forward, move backward, turn left or right, stop, sit, stand, lie down, bark, wag the tail, shake the head, stretch, do push-ups, shake hands, high-five, howl, and sleep.
 

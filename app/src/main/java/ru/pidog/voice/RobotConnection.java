@@ -103,33 +103,82 @@ final class RobotConnection {
         renderStatus(message, state);
     }
 
+    void showListeningStatus(String message) {
+        renderStatus(message, StatusState.LISTENING);
+    }
+
+    void showThinkingStatus(String message) {
+        renderStatus(message, StatusState.THINKING);
+    }
+
+    void showSearchingStatus(String message) {
+        renderStatus(message, StatusState.SEARCHING);
+    }
+
+    void showSpeakingStatus(String message) {
+        renderStatus(message, StatusState.SPEAKING);
+    }
+
     private void renderStatus(String message, StatusState state) {
         final int titleResource;
         final int markResource;
+        final int mascotResource;
         final int accentColor;
         final int backgroundColor;
         switch (state) {
+            case LISTENING:
+                titleResource = R.string.status_listening;
+                markResource = R.string.status_mark_working;
+                mascotResource = R.drawable.pidog_status_listening;
+                accentColor = R.color.brand;
+                backgroundColor = R.color.status_working_background;
+                break;
+            case THINKING:
+                titleResource = R.string.status_thinking;
+                markResource = R.string.status_mark_working;
+                mascotResource = R.drawable.pidog_status_thinking;
+                accentColor = R.color.brand;
+                backgroundColor = R.color.status_working_background;
+                break;
+            case SEARCHING:
+                titleResource = R.string.status_searching;
+                markResource = R.string.status_mark_working;
+                mascotResource = R.drawable.pidog_status_searching;
+                accentColor = R.color.brand;
+                backgroundColor = R.color.status_working_background;
+                break;
+            case SPEAKING:
+                titleResource = R.string.status_speaking;
+                markResource = R.string.status_mark_working;
+                mascotResource = R.drawable.pidog_status_speaking;
+                accentColor = R.color.brand;
+                backgroundColor = R.color.status_working_background;
+                break;
             case WORKING:
                 titleResource = R.string.status_working;
                 markResource = R.string.status_mark_working;
+                mascotResource = R.drawable.pidog_status_thinking;
                 accentColor = R.color.brand;
                 backgroundColor = R.color.status_working_background;
                 break;
             case SUCCESS:
                 titleResource = R.string.status_success;
                 markResource = R.string.status_mark_success;
+                mascotResource = R.drawable.pidog_status_mascot;
                 accentColor = R.color.success;
                 backgroundColor = R.color.status_success_background;
                 break;
             case ERROR:
                 titleResource = R.string.status_error;
                 markResource = R.string.status_mark_error;
+                mascotResource = R.drawable.pidog_status_error;
                 accentColor = R.color.danger;
                 backgroundColor = R.color.status_error_background;
                 break;
             default:
                 titleResource = R.string.status_idle;
                 markResource = R.string.status_mark_idle;
+                mascotResource = R.drawable.pidog_status_mascot;
                 accentColor = R.color.muted;
                 backgroundColor = R.color.status_idle_background;
         }
@@ -146,10 +195,21 @@ final class RobotConnection {
                 activity.getColor(backgroundColor)));
         statusProgress.setIndeterminateTintList(ColorStateList.valueOf(accent));
         statusProgress.setVisibility(state == StatusState.WORKING
+                        || state == StatusState.LISTENING
+                        || state == StatusState.THINKING
+                        || state == StatusState.SEARCHING
+                        || state == StatusState.SPEAKING
                 ? View.VISIBLE : View.INVISIBLE);
         statusBar.setContentDescription(
                 activity.getString(titleResource) + ". " + message);
-        setMascotWorking(state == StatusState.WORKING);
+        statusMascot.setImageResource(mascotResource);
+        statusMascot.setContentDescription(
+                activity.getString(titleResource) + ". " + message);
+        setMascotWorking(state == StatusState.WORKING
+                || state == StatusState.LISTENING
+                || state == StatusState.THINKING
+                || state == StatusState.SEARCHING
+                || state == StatusState.SPEAKING);
     }
 
     void destroy() {
@@ -203,6 +263,6 @@ final class RobotConnection {
     }
 
     private enum StatusState {
-        IDLE, WORKING, SUCCESS, ERROR
+        IDLE, WORKING, LISTENING, THINKING, SEARCHING, SPEAKING, SUCCESS, ERROR
     }
 }

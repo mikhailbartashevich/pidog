@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import time
 import threading
+from pathlib import Path
 from typing import Any
 
 from .constants import LOG
@@ -53,7 +54,7 @@ class VisionMixin:
         except Exception:
             LOG.debug("could not stop color detection", exc_info=True)
         try:
-            self._vilib.human_detect_switch(False)
+            self._set_face_detection(False)
         except Exception:
             LOG.debug("could not stop face detection", exc_info=True)
         try:
@@ -67,7 +68,7 @@ class VisionMixin:
         """Scan for a confirmed color, point with a paw and bark when found."""
         self._ensure_camera()
         try:
-            self._vilib.human_detect_switch(False)
+            self._set_face_detection(False)
         except Exception:
             LOG.debug("could not pause face detection for color search", exc_info=True)
         self._vilib.color_detect(color=color)
@@ -161,34 +162,115 @@ class VisionMixin:
             self._vilib.close_color_detection()
         except Exception:
             LOG.debug("could not pause color detection for face tracking", exc_info=True)
-        self._vilib.human_detect_switch(True)
-        self._start_behavior("follow-face", self._follow_face_worker)
+        detector = self._create_face_detector()
+        # YuNet is substantially more reliable than Vilib's frontal-only Haar
+        # cascade for side views and backlit rooms. Avoid running both at once
+        # on the Raspberry Pi; retain Vilib as a fallback for older OpenCV.
+        self._set_face_detection(detector is None)
+        self._start_behavior(
+            "follow-face",
+            lambda stop_event: self._follow_face_worker(stop_event, detector),
+        )
         return {"active": True, "message": "Пайдог следит за лицом"}
 
     def _stop_face_follow(self) -> dict[str, Any]:
         self._cancel_behavior()
         if self._vilib is not None:
-            self._vilib.human_detect_switch(False)
+            self._set_face_detection(False)
         self._dog.head_move([[0, 0, 0]], immediately=True, speed=65)
         return {"active": False, "message": "Слежение за лицом остановлено"}
 
-    def _follow_face_worker(self, stop_event: threading.Event) -> None:
+    def _set_face_detection(self, enabled: bool) -> None:
+        """Toggle face detection across current and legacy Vilib releases."""
+        # Current Vilib calls this face detection. Older PiDog images expose
+        # the same detector as human_detect_switch, so retain that fallback.
+        switch = getattr(self._vilib, "face_detect_switch", None)
+        if switch is None:
+            switch = getattr(self._vilib, "human_detect_switch", None)
+        if switch is None:
+            raise RuntimeError("установленная Vilib не поддерживает распознавание лиц")
+        switch(enabled)
+
+    def _camera_center(self) -> tuple[float, float]:
+        """Return the center used by Vilib's detection coordinates."""
+        width = float(getattr(self._vilib, "camera_width", 640) or 640)
+        height = float(getattr(self._vilib, "camera_height", 480) or 480)
+        return width / 2, height / 2
+
+    def _create_face_detector(self) -> Any | None:
+        """Create the bundled YuNet detector, or use Vilib on older images."""
+        model_path = Path(__file__).with_name("face_detection_yunet_2023mar.onnx")
+        if not model_path.is_file():
+            LOG.warning("YuNet face model is missing; using Vilib face detection")
+            return None
+        try:
+            import cv2
+
+            factory = getattr(cv2, "FaceDetectorYN", None)
+            if factory is None:
+                LOG.warning("OpenCV has no FaceDetectorYN; using Vilib face detection")
+                return None
+            center_x, center_y = self._camera_center()
+            detector = factory.create(
+                str(model_path), "", (round(center_x * 2), round(center_y * 2)),
+                0.5, 0.3, 5000,
+            )
+            LOG.info("face tracking detector=YuNet model=%s", model_path.name)
+            return detector
+        except Exception:
+            LOG.exception("could not initialize YuNet; using Vilib face detection")
+            return None
+
+    def _detect_face_yunet(self, detector: Any) -> dict[str, float | int]:
+        frame = getattr(self._vilib, "img", None)
+        shape = getattr(frame, "shape", ())
+        if len(shape) < 2:
+            return {"human_n": 0}
+        # Vilib replaces img atomically for each camera frame. Copy it so its
+        # next processing pass cannot modify the pixels during inference.
+        frame = frame.copy()
+        height, width = frame.shape[:2]
+        detector.setInputSize((int(width), int(height)))
+        _, faces = detector.detect(frame)
+        return self._face_parameters(faces)
+
+    @staticmethod
+    def _face_parameters(faces: Any) -> dict[str, float | int]:
+        if faces is None or len(faces) == 0:
+            return {"human_n": 0}
+        face = max(faces, key=lambda item: float(item[2]) * float(item[3]))
+        x, y, width, height = (float(face[index]) for index in range(4))
+        return {
+            "human_n": len(faces),
+            "human_x": x + width / 2,
+            "human_y": y + height / 2,
+            "human_w": width,
+            "human_h": height,
+        }
+
+    def _follow_face_worker(self, stop_event: threading.Event,
+                            detector: Any | None = None) -> None:
         yaw = 0.0
         pitch = 0.0
+        center_x, center_y = self._camera_center()
         seen_face = False
         lost_since: float | None = None
         barked_for_loss = False
         while not stop_event.wait(0.08):
-            parameters = dict(self._vilib.detect_obj_parameter)
+            parameters = (
+                self._detect_face_yunet(detector)
+                if detector is not None
+                else dict(self._vilib.detect_obj_parameter)
+            )
             faces = int(parameters.get("human_n", 0) or 0)
             if faces > 0:
                 seen_face = True
                 lost_since = None
                 barked_for_loss = False
-                x = float(parameters.get("human_x", 160) or 160)
-                y = float(parameters.get("human_y", 120) or 120)
-                yaw = self._clamp(yaw + (160 - x) * 0.045, -80, 80)
-                pitch = self._clamp(pitch + (120 - y) * 0.035, -30, 30)
+                x = float(parameters.get("human_x", center_x) or center_x)
+                y = float(parameters.get("human_y", center_y) or center_y)
+                yaw = self._clamp(yaw + (center_x - x) * 0.045, -80, 80)
+                pitch = self._clamp(pitch + (center_y - y) * 0.035, -30, 30)
                 self._dog.head_move([[yaw, 0, pitch]], immediately=True, speed=80)
                 continue
 
@@ -198,4 +280,4 @@ class VisionMixin:
                 lost_since = time.monotonic()
             elif not barked_for_loss and time.monotonic() - lost_since >= 2.0:
                 barked_for_loss = True
-                self._bark()
+                self._bark_once(yaw=yaw, pitch=pitch)

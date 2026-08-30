@@ -3,11 +3,13 @@
     <item android:state_pressed="true">
         <shape android:shape="oval">
             <solid android:color="@color/brand_dark" />
+            <stroke android:width="5dp" android:color="@color/brand_soft" />
         </shape>
     </item>
     <item>
         <shape android:shape="oval">
             <solid android:color="@color/brand" />
+            <stroke android:width="5dp" android:color="@color/brand_dark" />
         </shape>
     </item>
 </selector>

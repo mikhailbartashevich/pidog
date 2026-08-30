@@ -36,6 +36,8 @@ class RobotController(AudioMixin, VisionMixin, SensorsMixin):
         self._behavior_lock = threading.Lock()
         self._behavior_stop = threading.Event()
         self._behavior_thread: threading.Thread | None = None
+        self._touch_stop = threading.Event()
+        self._touch_thread: threading.Thread | None = None
         self._power_samples: deque[tuple[float, float]] = deque()
         self._external_power: bool | None = None
         self._assistant = AssistantManager(dry_run=dry_run)
@@ -109,6 +111,8 @@ class RobotController(AudioMixin, VisionMixin, SensorsMixin):
             "camera_on": self._camera_on,
             "camera_off": self._camera_off,
         }
+        if not dry_run:
+            self._start_touch_monitor()
 
     @property
     def dry_run(self) -> bool:
@@ -181,6 +185,7 @@ class RobotController(AudioMixin, VisionMixin, SensorsMixin):
             return result or {"message": "Команда выполнена"}
 
     def close(self) -> None:
+        self._stop_touch_monitor()
         self._local_voice.close()
         self._cancel_behavior()
         with self._lock:

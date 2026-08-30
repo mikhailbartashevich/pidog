@@ -8,6 +8,10 @@
     <string name="status_mascot_content_description">PiDog mascot showing the current status</string>
     <string name="status_idle">READY</string>
     <string name="status_working">IN PROGRESS</string>
+    <string name="status_listening">LISTENING</string>
+    <string name="status_thinking">THINKING</string>
+    <string name="status_searching">SEARCHING</string>
+    <string name="status_speaking">ANSWERING</string>
     <string name="status_success">DONE</string>
     <string name="status_error">NEEDS ATTENTION</string>
     <string name="nav_connection">Connection</string>
@@ -48,6 +52,7 @@
     <string name="assistant_checking">Checking the local LLM…</string>
     <string name="assistant_action_running">Running: %1$s…</string>
     <string name="assistant_asking">PiDog is searching and thinking…</string>
+    <string name="assistant_answering">PiDog is answering</string>
     <string name="assistant_question_required">Enter or dictate a question</string>
     <string name="assistant_sources_title">Sources:</string>
     <string name="assistant_sources_format">%1$s\n%2$s</string>
@@ -103,15 +108,13 @@
     <string name="approach_obstacle_button">▶ Walk forward to obstacle</string>
 
     <string name="commands_page_title">All commands</string>
-    <string name="commands_page_subtitle">The same complete set that is available by voice</string>
-    <string name="quick_control">Quick actions</string>
-    <string name="grouped_commands">COMMANDS BY GROUP</string>
-    <string name="sit_button">Sit</string>
-    <string name="stand_button">Stand</string>
-    <string name="lie_button">Lie down</string>
-    <string name="bark_button">🔊 Bark</string>
-    <string name="tail_button">Tail</string>
-    <string name="stop_button">■ STOP</string>
+    <string name="commands_page_subtitle">Choose a group, then select a command</string>
+    <string name="grouped_commands">COMMAND GROUPS</string>
+    <string name="command_groups_back">← All groups</string>
+    <plurals name="command_count">
+        <item quantity="one">%1$d command</item>
+        <item quantity="other">%1$d commands</item>
+    </plurals>
 
     <string name="camera_page_title">Camera and colors</string>
     <string name="camera_page_subtitle">Live video and PiDog recognition log</string>

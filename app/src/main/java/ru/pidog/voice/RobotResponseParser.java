@@ -127,11 +127,20 @@ final class RobotResponseParser {
                 return text("Локальный Пайдог недоступен: ",
                         "Local PiDog is unavailable: ") + detail;
             }
+            if ("robot command failed".equals(json.optString("error"))) {
+                String detail = json.optString("detail", "").trim();
+                if (!detail.isEmpty()) {
+                    return text("Команда Пайдог не выполнена: ",
+                            "PiDog command failed: ") + detail;
+                }
+                return text("Команда Пайдог не выполнена",
+                        "PiDog command failed");
+            }
         } catch (JSONException ignored) {
             // Keep the generic message for legacy or non-JSON server responses.
         }
-        return text("Пайдог занят или команда не выполнена",
-                "PiDog is busy or the command could not be completed");
+        return text("Команда Пайдог не выполнена",
+                "PiDog command could not be completed");
     }
 
     String readableError(Exception error) {
