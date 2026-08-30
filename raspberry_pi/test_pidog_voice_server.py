@@ -16,6 +16,7 @@ from pidog_voice_server import (
     VoiceServer,
     match_local_voice_command,
 )
+from pidog_voice.assistant import AssistantManager
 
 
 class ServerTest(unittest.TestCase):
@@ -54,6 +55,34 @@ class ServerTest(unittest.TestCase):
         self.assertEqual("dry-run", payload["local_voice"]["state"])
         self.assertIn("sit", payload["commands"])
         self.assertIn("local_voice_on", payload["commands"])
+        self.assertTrue(payload["assistant"]["installed"])
+
+    def test_assistant_status(self):
+        status, payload = self.request("GET", "/assistant/status")
+        self.assertEqual(200, status)
+        self.assertTrue(payload["assistant"]["running"])
+        self.assertEqual("dry-run", payload["assistant"]["state"])
+
+    def test_assistant_chat(self):
+        status, payload = self.request(
+            "POST", "/assistant/chat",
+            {"message": "Кто ты?", "search": False, "speak": False},
+        )
+        self.assertEqual(200, status)
+        self.assertIn("Тестовый ответ", payload["answer"])
+        self.assertFalse(payload["searched"])
+
+    def test_assistant_control(self):
+        status, payload = self.request(
+            "POST", "/assistant/control", {"action": "start"})
+        self.assertEqual(200, status)
+        self.assertIn("assistant", payload)
+
+    def test_assistant_rejects_oversized_question(self):
+        status, payload = self.request(
+            "POST", "/assistant/chat", {"message": "x" * 601})
+        self.assertEqual(400, status)
+        self.assertFalse(payload["ok"])
 
     def test_valid_command(self):
         status, payload = self.request(
@@ -226,6 +255,34 @@ class LocalVoiceControlTest(unittest.TestCase):
 
     def test_listener_accepts_json_text_returned_by_vosk(self):
         self.assertEqual("сядь", LocalVoiceListener._extract_phrase('{"text": "сядь"}'))
+
+    def test_listener_routes_unknown_phrase_to_assistant(self):
+        received = []
+        completed = threading.Event()
+
+        class Recognizer:
+            def listen(self, stream=False):
+                return "какая сегодня погода"
+
+        listener = None
+
+        def conversation(phrase):
+            received.append(phrase)
+            listener.stop()
+            completed.set()
+
+        listener = LocalVoiceListener(lambda *_: None, Recognizer, conversation)
+        listener.start()
+        self.assertTrue(completed.wait(2))
+        listener.close()
+        self.assertEqual(["какая сегодня погода"], received)
+
+
+class AssistantRoutingTest(unittest.TestCase):
+    def test_fresh_information_uses_web(self):
+        self.assertTrue(AssistantManager._needs_web("Какая погода сегодня?"))
+        self.assertTrue(AssistantManager._needs_web("Find the latest news"))
+        self.assertFalse(AssistantManager._needs_web("Расскажи сказку про собаку"))
 
 
 class PowerStatusTest(unittest.TestCase):

@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any, Callable
 
 from .audio import AudioMixin, _DeferredMusic
+from .assistant import AssistantManager
 from .constants import COMMAND_COLORS, LOG
 from .sensors import SensorsMixin
 from .vision import VisionMixin
@@ -30,9 +31,12 @@ class RobotController(AudioMixin, VisionMixin, SensorsMixin):
         self._sound_dir: Path | None = None
         self._audio_player: str | None = None
         self._audio_processes: list[subprocess.Popen[str]] = []
+        self._audio_lock = threading.Lock()
         self._power_samples: deque[tuple[float, float]] = deque()
         self._external_power: bool | None = None
-        self._local_voice = LocalVoiceListener(self._execute_local_voice)
+        self._assistant = AssistantManager(dry_run=dry_run)
+        self._local_voice = LocalVoiceListener(
+            self._execute_local_voice, conversation=self._execute_local_conversation)
         if not dry_run:
             # PiDog constructs pygame even though this service routes sounds
             # through SoX. The dummy driver avoids a silent 30-second ALSA open
@@ -128,6 +132,26 @@ class RobotController(AudioMixin, VisionMixin, SensorsMixin):
             }
         return self._local_voice.status
 
+    @property
+    def assistant_status(self) -> dict[str, Any]:
+        return self._assistant.status
+
+    def assistant_control(self, action: str) -> dict[str, Any]:
+        return self._assistant.control(action)
+
+    def assistant_chat(self, message: str, use_web: bool | None,
+                       speak: bool = False) -> dict[str, Any]:
+        result = self._assistant.chat(message, use_web=use_web)
+        if speak:
+            self._speak_text(result["answer"])
+            result["spoken"] = True
+        else:
+            result["spoken"] = False
+        return result
+
+    def assistant_clear_history(self) -> dict[str, Any]:
+        return self._assistant.clear_history()
+
     def execute(self, command: str) -> dict[str, Any]:
         action = self._actions.get(command)
         if action is None:
@@ -161,6 +185,13 @@ class RobotController(AudioMixin, VisionMixin, SensorsMixin):
             self.execute(command)
         except Exception:
             LOG.exception("local voice command failed command=%s phrase=%r", command, phrase[:200])
+
+    def _execute_local_conversation(self, phrase: str) -> None:
+        try:
+            result = self._assistant.chat(phrase, use_web=None)
+            self._speak_text(result["answer"])
+        except Exception:
+            LOG.exception("local assistant conversation failed phrase=%r", phrase[:200])
 
     def _start_local_voice(self) -> dict[str, Any]:
         started = self._local_voice.start()
@@ -202,5 +233,4 @@ class RobotController(AudioMixin, VisionMixin, SensorsMixin):
         from pidog.preset_actions import nod
 
         nod(self._dog)
-
 

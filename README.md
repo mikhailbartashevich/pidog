@@ -16,6 +16,46 @@ This native Android app recognizes speech, selects a command from a safe allowli
 
 Supported actions: move forward, move backward, turn left or right, stop, sit, stand, lie down, bark, wag the tail, shake the head, stretch, do push-ups, shake hands, high-five, howl, and sleep.
 
+## Local PiDog assistant
+
+PiDog can also hold a short conversation entirely on the Raspberry Pi. The stack is sized for a
+64-bit Raspberry Pi 4B with 4 GB RAM:
+
+- `llama.cpp` bound to loopback only (`127.0.0.1:8081`);
+- Qwen3.5-0.8B Q4_0 with a 2048-token context;
+- the existing Vosk recognizer for microphone input;
+- Piper with the Russian `irina-medium` voice for replies;
+- isolated DDGS web search, with optional Brave Search or SearXNG overrides.
+
+The LLM never receives direct access to PiDog motors. Exact allow-listed phrases still go to the
+robot controller; other phrases go to the conversational assistant. While Piper is speaking, the
+Vosk loop is paused so PiDog does not answer its own voice.
+
+Install the model and its user service on the Raspberry Pi without `sudo`:
+
+```bash
+cd /home/mikhail/pidog-voice
+./install_local_llm.sh
+systemctl --user status pidog-llm
+curl --silent http://127.0.0.1:8081/health
+```
+
+The installer pins the llama.cpp source revision, verifies the Qwen model checksum, installs the
+search dependency in a dedicated virtual environment, and enables `pidog-llm.service` at login.
+The model server is not reachable from the LAN; only the authenticated PiDog API can use it.
+
+For more reliable web search, add one of these optional variables to
+`~/.config/pidog-voice.env` and restart `pidog-voice`:
+
+```text
+BRAVE_SEARCH_API_KEY=...
+# or
+PIDOG_SEARXNG_URL=https://your-searxng.example
+```
+
+The Android **LLM** screen shows installation and runtime state, starts or stops the model, accepts
+typed or dictated questions, controls web search and spoken replies, and displays source URLs.
+
 ## 1. Run the server on PiDog
 
 First, install the official `robot-hat`, `vilib`, and `pidog` modules. See SunFounder’s [Install All the Modules](https://docs.sunfounder.com/projects/pidog/en/latest/python/python_start/install_all_modules.html) guide.

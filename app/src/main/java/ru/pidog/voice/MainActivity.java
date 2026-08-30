@@ -27,6 +27,7 @@ import android.widget.HorizontalScrollView;
 import android.widget.ArrayAdapter;
 import android.widget.AdapterView;
 import android.widget.Spinner;
+import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
 import android.widget.ViewFlipper;
@@ -72,6 +73,18 @@ public final class MainActivity extends Activity implements RecognitionListener 
     private JoystickView driveJoystick;
     private JoystickView turnJoystick;
     private TextView movementStatus;
+    private TextView assistantState;
+    private TextView assistantModel;
+    private TextView assistantDetails;
+    private EditText assistantQuestion;
+    private TextView assistantAnswer;
+    private TextView assistantSources;
+    private Switch assistantWebSwitch;
+    private Switch assistantSpeakSwitch;
+    private Button assistantStartButton;
+    private Button assistantStopButton;
+    private Button assistantAskButton;
+    private Button assistantMicButton;
 
     private SpeechRecognizer speechRecognizer;
     private RobotClient robotClient;
@@ -91,6 +104,7 @@ public final class MainActivity extends Activity implements RecognitionListener 
     private int turnDirection;
     private RobotCommand activeMovementCommand;
     private String currentLanguageTag;
+    private boolean assistantRecognition;
 
     @Override
     protected void attachBaseContext(Context newBase) {
@@ -146,10 +160,23 @@ public final class MainActivity extends Activity implements RecognitionListener 
         driveJoystick = findViewById(R.id.driveJoystick);
         turnJoystick = findViewById(R.id.turnJoystick);
         movementStatus = findViewById(R.id.movementStatus);
+        assistantState = findViewById(R.id.assistantState);
+        assistantModel = findViewById(R.id.assistantModel);
+        assistantDetails = findViewById(R.id.assistantDetails);
+        assistantQuestion = findViewById(R.id.assistantQuestion);
+        assistantAnswer = findViewById(R.id.assistantAnswer);
+        assistantSources = findViewById(R.id.assistantSources);
+        assistantWebSwitch = findViewById(R.id.assistantWebSwitch);
+        assistantSpeakSwitch = findViewById(R.id.assistantSpeakSwitch);
+        assistantStartButton = findViewById(R.id.assistantStartButton);
+        assistantStopButton = findViewById(R.id.assistantStopButton);
+        assistantAskButton = findViewById(R.id.assistantAskButton);
+        assistantMicButton = findViewById(R.id.assistantMicButton);
         navButtons = new Button[]{
                 findViewById(R.id.navConnection), findViewById(R.id.navVoice),
                 findViewById(R.id.navMovement), findViewById(R.id.navCommands),
-                findViewById(R.id.navVision), findViewById(R.id.navSensors)
+                findViewById(R.id.navVision), findViewById(R.id.navSensors),
+                findViewById(R.id.navAssistant)
         };
         navScroll = findViewById(R.id.navScroll);
     }
@@ -198,6 +225,14 @@ public final class MainActivity extends Activity implements RecognitionListener 
         bindManual(R.id.lightWhiteButton, RobotCommand.LIGHT_WHITE);
         bindManual(R.id.lightBlinkButton, RobotCommand.LIGHT_BLINK);
         bindManual(R.id.lightOffButton, RobotCommand.LIGHT_OFF);
+        assistantStartButton.setOnClickListener(view -> controlAssistant("start"));
+        assistantStopButton.setOnClickListener(view -> controlAssistant("stop"));
+        findViewById(R.id.assistantRefreshButton).setOnClickListener(
+                view -> refreshAssistantStatus(true));
+        assistantAskButton.setOnClickListener(view -> askAssistant());
+        assistantMicButton.setOnClickListener(view -> toggleAssistantListening());
+        findViewById(R.id.assistantClearButton).setOnClickListener(
+                view -> clearAssistantHistory());
     }
 
     private void bindLanguageSpinner() {
@@ -266,6 +301,7 @@ public final class MainActivity extends Activity implements RecognitionListener 
         findViewById(R.id.navCommands).setOnClickListener(view -> showPage(3));
         findViewById(R.id.navVision).setOnClickListener(view -> showPage(4));
         findViewById(R.id.navSensors).setOnClickListener(view -> showPage(5));
+        findViewById(R.id.navAssistant).setOnClickListener(view -> showPage(6));
         showPage(1);
     }
 
@@ -275,6 +311,9 @@ public final class MainActivity extends Activity implements RecognitionListener 
             stopMovement();
         }
         servicePages.setDisplayedChild(page);
+        if (page == 6) {
+            refreshAssistantStatus(false);
+        }
         for (int index = 0; index < navButtons.length; index++) {
             boolean selected = index == page;
             navButtons[index].setBackgroundTintList(ColorStateList.valueOf(
@@ -598,9 +637,170 @@ public final class MainActivity extends Activity implements RecognitionListener 
         });
     }
 
+    private void refreshAssistantStatus(boolean announce) {
+        Endpoint endpoint = readEndpoint();
+        if (endpoint == null) {
+            return;
+        }
+        if (announce) {
+            assistantState.setText(R.string.assistant_checking);
+            assistantState.setTextColor(getColor(R.color.muted));
+        }
+        robotClient.assistantStatus(endpoint.host, endpoint.port, endpoint.token,
+                (success, message, status) -> {
+                    if (success && status != null) {
+                        updateAssistantStatus(status);
+                    } else if (announce) {
+                        assistantState.setText(message);
+                        assistantState.setTextColor(getColor(R.color.danger));
+                    }
+                });
+    }
+
+    private void updateAssistantStatus(RobotClient.AssistantStatus status) {
+        int stateText;
+        int stateColor;
+        if (!status.installed) {
+            stateText = R.string.assistant_not_installed;
+            stateColor = R.color.danger;
+        } else if (status.running) {
+            stateText = R.string.assistant_running;
+            stateColor = R.color.brand;
+        } else if ("starting".equals(status.state) || "activating".equals(status.state)) {
+            stateText = R.string.assistant_starting;
+            stateColor = R.color.warning;
+        } else {
+            stateText = R.string.assistant_stopped;
+            stateColor = R.color.muted;
+        }
+        assistantState.setText(stateText);
+        assistantState.setTextColor(getColor(stateColor));
+        assistantModel.setText(getString(R.string.assistant_model_format,
+                status.model, status.contextTokens));
+        String search = status.webAvailable
+                ? status.webProvider : getString(R.string.assistant_unavailable);
+        String voice = getString(status.ttsReady
+                ? R.string.assistant_available : R.string.assistant_unavailable);
+        String details = getString(R.string.assistant_details_format, search, voice);
+        if (!status.error.isEmpty()) {
+            details += "\n" + status.error;
+        }
+        assistantDetails.setText(details);
+        assistantStartButton.setEnabled(status.installed && !status.running);
+        assistantStopButton.setEnabled(status.running || "starting".equals(status.state));
+        assistantAskButton.setEnabled(status.running && !status.busy);
+        assistantMicButton.setEnabled(status.running && !status.busy);
+        assistantWebSwitch.setEnabled(status.webAvailable);
+        assistantSpeakSwitch.setEnabled(status.ttsReady);
+    }
+
+    private void controlAssistant(String action) {
+        Endpoint endpoint = readEndpoint();
+        if (endpoint == null) {
+            return;
+        }
+        setAssistantControlsEnabled(false);
+        assistantState.setText(getString(R.string.assistant_action_running, action));
+        assistantState.setTextColor(getColor(R.color.muted));
+        robotClient.assistantControl(endpoint.host, endpoint.port, endpoint.token, action,
+                (success, message, status) -> {
+                    setConnectionState(message, success ? R.color.brand : R.color.danger);
+                    if (success && status != null) {
+                        updateAssistantStatus(status);
+                    } else {
+                        assistantState.setText(message);
+                        assistantState.setTextColor(getColor(R.color.danger));
+                        setAssistantControlsEnabled(true);
+                    }
+                });
+    }
+
+    private void askAssistant() {
+        Endpoint endpoint = readEndpoint();
+        if (endpoint == null) {
+            return;
+        }
+        String question = assistantQuestion.getText().toString().trim();
+        if (question.isEmpty()) {
+            assistantQuestion.setError(getString(R.string.assistant_question_required));
+            assistantQuestion.requestFocus();
+            return;
+        }
+        saveSettings();
+        setAssistantControlsEnabled(false);
+        assistantAnswer.setText(R.string.assistant_asking);
+        assistantAnswer.setTextColor(getColor(R.color.muted));
+        assistantSources.setText(R.string.assistant_sources_empty);
+        robotClient.assistantChat(endpoint.host, endpoint.port, endpoint.token, question,
+                assistantWebSwitch.isChecked(), assistantSpeakSwitch.isChecked(),
+                (success, message, reply) -> {
+                    setAssistantControlsEnabled(true);
+                    setConnectionState(success ? getString(R.string.assistant_running) : message,
+                            success ? R.color.brand : R.color.danger);
+                    if (!success || reply == null) {
+                        assistantAnswer.setText(message);
+                        assistantAnswer.setTextColor(getColor(R.color.danger));
+                        refreshAssistantStatus(false);
+                        return;
+                    }
+                    assistantAnswer.setText(reply.answer);
+                    assistantAnswer.setTextColor(getColor(R.color.ink));
+                    if (reply.sources.isEmpty()) {
+                        if (reply.warning.isEmpty()) {
+                            assistantSources.setText(R.string.assistant_no_sources);
+                        } else {
+                            assistantSources.setText(reply.warning);
+                        }
+                    } else {
+                        assistantSources.setText(getString(R.string.assistant_sources_title)
+                                + "\n" + reply.sources);
+                    }
+                });
+    }
+
+    private void clearAssistantHistory() {
+        Endpoint endpoint = readEndpoint();
+        if (endpoint == null) {
+            return;
+        }
+        robotClient.clearAssistantHistory(endpoint.host, endpoint.port, endpoint.token,
+                (success, message) -> {
+                    if (success) {
+                        assistantAnswer.setText(R.string.assistant_answer_empty);
+                        assistantAnswer.setTextColor(getColor(R.color.muted));
+                        assistantSources.setText(R.string.assistant_sources_empty);
+                        setConnectionState(getString(R.string.assistant_history_cleared), R.color.brand);
+                    } else {
+                        setConnectionState(message, R.color.danger);
+                    }
+                });
+    }
+
+    private void setAssistantControlsEnabled(boolean enabled) {
+        assistantAskButton.setEnabled(enabled);
+        assistantMicButton.setEnabled(enabled);
+        assistantStartButton.setEnabled(enabled);
+        assistantStopButton.setEnabled(enabled);
+    }
+
+    private void toggleAssistantListening() {
+        if (listening) {
+            speechRecognizer.stopListening();
+            return;
+        }
+        assistantRecognition = true;
+        if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+            requestPermissions(new String[]{Manifest.permission.RECORD_AUDIO},
+                    MICROPHONE_PERMISSION_REQUEST);
+            return;
+        }
+        startRecognition();
+    }
+
     private void prepareRecognizer() {
         if (!SpeechRecognizer.isRecognitionAvailable(this)) {
             micButton.setEnabled(false);
+            assistantMicButton.setEnabled(false);
             listeningStatus.setText(R.string.recognizer_unavailable);
             return;
         }
@@ -613,6 +813,7 @@ public final class MainActivity extends Activity implements RecognitionListener 
             speechRecognizer.stopListening();
             return;
         }
+        assistantRecognition = false;
         if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
             requestPermissions(new String[]{Manifest.permission.RECORD_AUDIO},
                     MICROPHONE_PERMISSION_REQUEST);
@@ -632,15 +833,22 @@ public final class MainActivity extends Activity implements RecognitionListener 
         intent.putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true);
         intent.putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 8);
         intent.putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, false);
-        intent.putExtra(RecognizerIntent.EXTRA_PROMPT, getString(R.string.recognizer_prompt));
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        intent.putExtra(RecognizerIntent.EXTRA_PROMPT, getString(assistantRecognition
+                ? R.string.assistant_mic_description : R.string.recognizer_prompt));
+        if (!assistantRecognition && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             intent.putStringArrayListExtra(RecognizerIntent.EXTRA_BIASING_STRINGS,
                     new ArrayList<>(CommandParser.biasingPhrases(currentLanguageTag)));
             intent.putExtra(RecognizerIntent.EXTRA_ENABLE_BIASING_DEVICE_CONTEXT, true);
         }
         listening = true;
-        listeningStatus.setText(R.string.listening);
-        micButton.setText("■");
+        if (assistantRecognition) {
+            assistantAnswer.setText(R.string.assistant_listening);
+            assistantAnswer.setTextColor(getColor(R.color.muted));
+            assistantMicButton.setText("■");
+        } else {
+            listeningStatus.setText(R.string.listening);
+            micButton.setText("■");
+        }
         speechRecognizer.startListening(intent);
     }
 
@@ -648,6 +856,7 @@ public final class MainActivity extends Activity implements RecognitionListener 
         listening = false;
         listeningStatus.setText(R.string.tap_to_speak);
         micButton.setText("🎙");
+        assistantMicButton.setText("🎙");
     }
 
     private void handleResults(Bundle results, boolean partial) {
@@ -655,8 +864,17 @@ public final class MainActivity extends Activity implements RecognitionListener 
         if (phrases == null || phrases.isEmpty()) {
             return;
         }
-        recognizedText.setText(phrases.get(0));
+        if (assistantRecognition) {
+            assistantQuestion.setText(phrases.get(0));
+        } else {
+            recognizedText.setText(phrases.get(0));
+        }
         if (partial) {
+            return;
+        }
+
+        if (assistantRecognition) {
+            askAssistant();
             return;
         }
 
@@ -832,6 +1050,7 @@ public final class MainActivity extends Activity implements RecognitionListener 
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 startRecognition();
             } else {
+                assistantRecognition = false;
                 Toast.makeText(this, R.string.microphone_denied,
                         Toast.LENGTH_LONG).show();
             }
@@ -848,8 +1067,9 @@ public final class MainActivity extends Activity implements RecognitionListener 
 
     @Override public void onRmsChanged(float rmsdB) {
         float scale = Math.max(1.0f, Math.min(1.12f, 1.0f + (rmsdB / 100.0f)));
-        micButton.setScaleX(scale);
-        micButton.setScaleY(scale);
+        Button activeMic = assistantRecognition ? assistantMicButton : micButton;
+        activeMic.setScaleX(scale);
+        activeMic.setScaleY(scale);
     }
 
     @Override public void onBufferReceived(byte[] buffer) { }
@@ -859,9 +1079,12 @@ public final class MainActivity extends Activity implements RecognitionListener 
     }
 
     @Override public void onError(int error) {
+        boolean wasAssistantRecognition = assistantRecognition;
         finishListening();
         micButton.setScaleX(1.0f);
         micButton.setScaleY(1.0f);
+        assistantMicButton.setScaleX(1.0f);
+        assistantMicButton.setScaleY(1.0f);
         String message;
         switch (error) {
             case SpeechRecognizer.ERROR_NO_MATCH:
@@ -887,13 +1110,21 @@ public final class MainActivity extends Activity implements RecognitionListener 
                 message = getString(R.string.recognition_error, error);
         }
         listeningStatus.setText(message);
+        if (wasAssistantRecognition) {
+            assistantAnswer.setText(message);
+            assistantAnswer.setTextColor(getColor(R.color.warning));
+        }
+        assistantRecognition = false;
     }
 
     @Override public void onResults(Bundle results) {
         finishListening();
         micButton.setScaleX(1.0f);
         micButton.setScaleY(1.0f);
+        assistantMicButton.setScaleX(1.0f);
+        assistantMicButton.setScaleY(1.0f);
         handleResults(results, false);
+        assistantRecognition = false;
     }
 
     @Override public void onPartialResults(Bundle partialResults) {

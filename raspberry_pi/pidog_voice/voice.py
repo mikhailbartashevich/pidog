@@ -91,9 +91,11 @@ class LocalVoiceListener:
     """Runs PiDog's offline Vosk recognizer without blocking the HTTP server."""
 
     def __init__(self, execute: Callable[[str, str], None],
-                 recognizer_factory: Callable[[], Any] | None = None) -> None:
+                 recognizer_factory: Callable[[], Any] | None = None,
+                 conversation: Callable[[str], None] | None = None) -> None:
         self._execute = execute
         self._recognizer_factory = recognizer_factory or self._create_recognizer
+        self._conversation = conversation
         self._lock = threading.Lock()
         self._stop_event = threading.Event()
         self._thread: threading.Thread | None = None
@@ -173,6 +175,8 @@ class LocalVoiceListener:
                     self._last_command = command
                 if command is None:
                     LOG.info("local_voice_phrase=%r command=unmatched", phrase[:200])
+                    if self._conversation is not None:
+                        self._conversation(phrase)
                     continue
                 LOG.info("local_voice_phrase=%r command=%s", phrase[:200], command)
                 self._execute(command, phrase)
@@ -204,4 +208,3 @@ class LocalVoiceListener:
                 if isinstance(value, str) and value.strip():
                     return value.strip()
         return ""
-

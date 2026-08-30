@@ -4,6 +4,7 @@ import android.os.Handler;
 import android.os.Looper;
 
 import org.json.JSONException;
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
@@ -37,6 +38,59 @@ public final class RobotClient {
 
     public interface VisionCallback {
         void onResult(boolean success, String message, VisionData data);
+    }
+
+    public interface AssistantStatusCallback {
+        void onResult(boolean success, String message, AssistantStatus data);
+    }
+
+    public interface AssistantChatCallback {
+        void onResult(boolean success, String message, AssistantReply data);
+    }
+
+    public static final class AssistantStatus {
+        public final boolean installed;
+        public final boolean running;
+        public final String state;
+        public final String model;
+        public final int contextTokens;
+        public final boolean webAvailable;
+        public final String webProvider;
+        public final boolean ttsReady;
+        public final boolean busy;
+        public final String error;
+
+        AssistantStatus(boolean installed, boolean running, String state, String model,
+                        int contextTokens, boolean webAvailable, String webProvider,
+                        boolean ttsReady, boolean busy, String error) {
+            this.installed = installed;
+            this.running = running;
+            this.state = state;
+            this.model = model;
+            this.contextTokens = contextTokens;
+            this.webAvailable = webAvailable;
+            this.webProvider = webProvider;
+            this.ttsReady = ttsReady;
+            this.busy = busy;
+            this.error = error;
+        }
+    }
+
+    public static final class AssistantReply {
+        public final String answer;
+        public final String sources;
+        public final boolean searched;
+        public final boolean spoken;
+        public final String warning;
+
+        AssistantReply(String answer, String sources, boolean searched,
+                       boolean spoken, String warning) {
+            this.answer = answer;
+            this.sources = sources;
+            this.searched = searched;
+            this.spoken = spoken;
+            this.warning = warning;
+        }
     }
 
     public static final class SensorData {
@@ -143,6 +197,98 @@ public final class RobotClient {
         });
     }
 
+    public void assistantStatus(String host, int port, String token,
+                                AssistantStatusCallback callback) {
+        assistantRequest("GET", host, port, token, "/assistant/status", null, callback);
+    }
+
+    public void assistantControl(String host, int port, String token, String action,
+                                 AssistantStatusCallback callback) {
+        String body = "{\"action\":\"" + escape(action) + "\"}";
+        assistantRequest("POST", host, port, token, "/assistant/control", body, callback);
+    }
+
+    public void assistantChat(String host, int port, String token, String message,
+                              boolean search, boolean speak, AssistantChatCallback callback) {
+        String body = "{\"message\":\"" + escape(message) + "\",\"search\":"
+                + search + ",\"speak\":" + speak + "}";
+        executor.execute(() -> {
+            Result result;
+            AssistantReply reply = null;
+            try {
+                result = request("POST", host, port, token, "/assistant/chat", body);
+                if (result.success && result.response != null) {
+                    JSONObject json = new JSONObject(result.response);
+                    StringBuilder sources = new StringBuilder();
+                    JSONArray items = json.optJSONArray("sources");
+                    if (items != null) {
+                        for (int index = 0; index < items.length(); index++) {
+                            JSONObject item = items.optJSONObject(index);
+                            if (item == null) continue;
+                            if (sources.length() > 0) sources.append("\n\n");
+                            sources.append('[').append(index + 1).append("] ")
+                                    .append(item.optString("title", ""));
+                            String url = item.optString("url", "");
+                            if (!url.isEmpty()) sources.append('\n').append(url);
+                        }
+                    }
+                    reply = new AssistantReply(
+                            json.optString("answer", ""), sources.toString(),
+                            json.optBoolean("searched", false),
+                            json.optBoolean("spoken", false),
+                            json.optString("search_warning", ""));
+                }
+            } catch (Exception error) {
+                result = new Result(false, readableError(error), null);
+            }
+            Result finalResult = result;
+            AssistantReply finalReply = reply;
+            mainHandler.post(() -> callback.onResult(
+                    finalResult.success, finalResult.message, finalReply));
+        });
+    }
+
+    public void clearAssistantHistory(String host, int port, String token, Callback callback) {
+        execute(() -> request("POST", host, port, token, "/assistant/history",
+                "{\"action\":\"clear\"}"), callback);
+    }
+
+    private void assistantRequest(String method, String host, int port, String token,
+                                  String path, String body, AssistantStatusCallback callback) {
+        executor.execute(() -> {
+            Result result;
+            AssistantStatus status = null;
+            try {
+                result = request(method, host, port, token, path, body);
+                if (result.success && result.response != null) {
+                    JSONObject root = new JSONObject(result.response);
+                    JSONObject assistant = root.optJSONObject("assistant");
+                    if (assistant != null) {
+                        JSONObject web = assistant.optJSONObject("web_search");
+                        JSONObject tts = assistant.optJSONObject("tts");
+                        status = new AssistantStatus(
+                                assistant.optBoolean("installed", false),
+                                assistant.optBoolean("running", false),
+                                assistant.optString("state", "unknown"),
+                                assistant.optString("model", "—"),
+                                assistant.optInt("context_tokens", 0),
+                                web != null && web.optBoolean("available", false),
+                                web == null ? "—" : web.optString("provider", "—"),
+                                tts != null && tts.optBoolean("ready", false),
+                                assistant.optBoolean("busy", false),
+                                assistant.optString("last_error", ""));
+                    }
+                }
+            } catch (Exception error) {
+                result = new Result(false, readableError(error), null);
+            }
+            Result finalResult = result;
+            AssistantStatus finalStatus = status;
+            mainHandler.post(() -> callback.onResult(
+                    finalResult.success, finalResult.message, finalStatus));
+        });
+    }
+
     public void close() {
         executor.shutdownNow();
     }
@@ -183,7 +329,8 @@ public final class RobotClient {
         connection.setRequestMethod(method);
         connection.setConnectTimeout(2500);
         // Color scanning and sound direction listening intentionally take a few seconds.
-        connection.setReadTimeout(20000);
+        connection.setReadTimeout("/assistant/chat".equals(path) ? 150000
+                : "/assistant/control".equals(path) ? 40000 : 20000);
         connection.setRequestProperty("Accept", "application/json");
         if (token != null && !token.trim().isEmpty()) {
             connection.setRequestProperty("X-PiDog-Token", token.trim());
@@ -294,6 +441,12 @@ public final class RobotClient {
                 String detail = json.optString("detail",
                         text("проверьте динамик и ALSA", "check the speaker and ALSA")).trim();
                 return text("Звук Пайдог недоступен: ", "PiDog audio is unavailable: ") + detail;
+            }
+            if ("assistant unavailable".equals(json.optString("error"))) {
+                String detail = json.optString("detail",
+                        text("локальная модель недоступна", "the local model is unavailable"));
+                return text("Локальный Пайдог недоступен: ", "Local PiDog is unavailable: ")
+                        + detail;
             }
         } catch (JSONException ignored) {
             // Keep the generic message for legacy or non-JSON server responses.

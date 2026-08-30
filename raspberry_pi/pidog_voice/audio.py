@@ -6,6 +6,8 @@ import os
 import pwd
 import shutil
 import subprocess
+import tempfile
+import threading
 from pathlib import Path
 from typing import Any, Callable
 
@@ -93,6 +95,14 @@ class AudioMixin:
 
     def _play_with_speaker(self, action: Callable[[], Any]) -> None:
         """Run a preset action while routing its speak() calls through ALSA."""
+        audio_lock = getattr(self, "_audio_lock", None)
+        if audio_lock is None:
+            self._play_with_speaker_unlocked(action)
+            return
+        with audio_lock:
+            self._play_with_speaker_unlocked(action)
+
+    def _play_with_speaker_unlocked(self, action: Callable[[], Any]) -> None:
         had_instance_speak = "speak" in vars(self._dog)
         previous_instance_speak = vars(self._dog).get("speak")
         self._audio_processes = []
@@ -108,6 +118,50 @@ class AudioMixin:
             else:
                 delattr(self._dog, "speak")
             self._disable_speaker()
+
+    def _speak_text(self, text: str) -> None:
+        """Synthesize a short assistant response with Piper and play it safely."""
+        if self._dry_run:
+            return
+        piper = shutil.which("piper")
+        voice = Path(os.environ.get(
+            "PIDOG_PIPER_MODEL",
+            str(Path.home() / ".local/share/pidog-llm/voices/ru_RU-irina-medium.onnx"),
+        )).expanduser()
+        if piper is None or not voice.is_file():
+            raise AudioUnavailableError("Piper или русский голос не установлен")
+        self._require_audio()
+        clean_text = " ".join(text.strip().split())[:1800]
+        if not clean_text:
+            return
+        audio_lock = getattr(self, "_audio_lock", None)
+        if audio_lock is None:
+            audio_lock = threading.Lock()
+        with audio_lock:
+            with tempfile.NamedTemporaryFile(prefix="pidog-answer-", suffix=".wav") as wav_file:
+                generated = subprocess.run(
+                    [piper, "--model", str(voice), "--output-file", wav_file.name,
+                     "--sentence-silence", "0.15", "--length-scale", "1.05"],
+                    input=clean_text + "\n", text=True, capture_output=True,
+                    timeout=90, check=False,
+                )
+                if generated.returncode != 0:
+                    detail = generated.stderr.strip()[-300:]
+                    raise AudioUnavailableError(detail or "Piper не создал аудио")
+                environment = os.environ.copy()
+                environment["AUDIODEV"] = os.environ.get("PIDOG_ALSA_DEVICE", "robothat")
+                self._enable_speaker()
+                try:
+                    played = subprocess.run(
+                        [self._audio_player, "-q", "-v", "0.95", wav_file.name],
+                        capture_output=True, text=True, env=environment,
+                        timeout=90, check=False,
+                    )
+                    if played.returncode != 0:
+                        detail = played.stderr.strip()[-300:]
+                        raise AudioUnavailableError(detail or "не удалось воспроизвести ответ")
+                finally:
+                    self._disable_speaker()
 
     def _speak_via_alsa(self, name: str, volume: int = 100) -> bool:
         sound_path = self._resolve_sound_file(name)
@@ -250,5 +304,4 @@ class AudioMixin:
             self._prepare_audio()
         if not self._audio_ready:
             raise AudioUnavailableError(self._audio_error or "аудио недоступно")
-
 
