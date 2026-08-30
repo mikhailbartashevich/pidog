@@ -5,6 +5,7 @@ from __future__ import annotations
 import os
 import subprocess
 import threading
+import time
 from collections import deque
 from pathlib import Path
 from typing import Any, Callable
@@ -32,6 +33,9 @@ class RobotController(AudioMixin, VisionMixin, SensorsMixin):
         self._audio_player: str | None = None
         self._audio_processes: list[subprocess.Popen[str]] = []
         self._audio_lock = threading.Lock()
+        self._behavior_lock = threading.Lock()
+        self._behavior_stop = threading.Event()
+        self._behavior_thread: threading.Thread | None = None
         self._power_samples: deque[tuple[float, float]] = deque()
         self._external_power: bool | None = None
         self._assistant = AssistantManager(dry_run=dry_run)
@@ -56,10 +60,15 @@ class RobotController(AudioMixin, VisionMixin, SensorsMixin):
 
         self._actions: dict[str, Callable[[], dict[str, Any] | None]] = {
             "stop": self._stop,
-            "forward": lambda: self._action("forward", 80),
-            "backward": lambda: self._action("backward", 80),
-            "turn_left": lambda: self._action("turn_left", 80),
-            "turn_right": lambda: self._action("turn_right", 80),
+            "forward": lambda: self._action("forward", 98),
+            "backward": lambda: self._action("backward", 98),
+            "turn_left": lambda: self._action("turn_left", 98),
+            "turn_right": lambda: self._action("turn_right", 98),
+            "drive_forward": lambda: self._continuous_motion("forward"),
+            "drive_backward": lambda: self._continuous_motion("backward"),
+            "drive_left": lambda: self._continuous_motion("turn_left"),
+            "drive_right": lambda: self._continuous_motion("turn_right"),
+            "approach_obstacle": self._approach_obstacle,
             "sit": lambda: self._action("sit", 65),
             "stand": lambda: self._action("stand", 65),
             "lie": lambda: self._action("lie", 65),
@@ -72,7 +81,7 @@ class RobotController(AudioMixin, VisionMixin, SensorsMixin):
             "handshake": self._handshake,
             "high_five": self._high_five,
             "howl": self._howl,
-            "sleep": lambda: self._action("doze_off", 65),
+            "sleep": self._sleep_until_clap,
             "measure_distance": self._measure_distance,
             "listen_sound": self._listen_sound,
             "show_battery": self._show_battery,
@@ -95,6 +104,8 @@ class RobotController(AudioMixin, VisionMixin, SensorsMixin):
             "find_green": lambda: self._find_color("green"),
             "find_blue": lambda: self._find_color("blue"),
             "find_purple": lambda: self._find_color("purple"),
+            "follow_face": self._follow_face,
+            "stop_face_follow": self._stop_face_follow,
             "camera_on": self._camera_on,
             "camera_off": self._camera_off,
         }
@@ -160,6 +171,10 @@ class RobotController(AudioMixin, VisionMixin, SensorsMixin):
             LOG.info("command=%s dry_run=%s", command, self._dry_run)
             if self._dry_run:
                 return {"message": f"Команда принята: {command}"}
+            # Long-running modes use a single cooperative background worker.
+            # Any new command takes control immediately and stops the old mode.
+            if command not in {"stop_face_follow"}:
+                self._cancel_behavior()
             if command in COMMAND_COLORS:
                 self._set_light("breath", COMMAND_COLORS[command], bps=1.2, brightness=0.8)
             result = action()
@@ -167,6 +182,7 @@ class RobotController(AudioMixin, VisionMixin, SensorsMixin):
 
     def close(self) -> None:
         self._local_voice.close()
+        self._cancel_behavior()
         with self._lock:
             self._close_camera()
             try:
@@ -179,6 +195,67 @@ class RobotController(AudioMixin, VisionMixin, SensorsMixin):
 
     def _action(self, name: str, speed: int) -> None:
         self._dog.do_action(name, speed=speed)
+
+    def _continuous_motion(self, action_name: str) -> dict[str, Any]:
+        self._start_behavior(
+            f"joystick-{action_name}",
+            lambda stop_event: self._continuous_motion_worker(action_name, stop_event),
+        )
+        return {"active": True, "message": "Непрерывное движение включено"}
+
+    def _continuous_motion_worker(self, action_name: str,
+                                  stop_event: threading.Event) -> None:
+        self._dog.do_action("stand", speed=90)
+        self._dog.wait_legs_done()
+        # Fail-safe for a dropped phone connection: no joystick request may
+        # leave the robot walking forever.
+        deadline = time.monotonic() + 20
+        while not stop_event.is_set() and time.monotonic() < deadline:
+            self._dog.do_action(action_name, step_count=1, speed=100)
+            self._dog.wait_legs_done()
+        self._dog.body_stop()
+
+    def _start_behavior(self, name: str,
+                        target: Callable[[threading.Event], None]) -> None:
+        self._cancel_behavior()
+        stop_event = threading.Event()
+
+        def run() -> None:
+            try:
+                target(stop_event)
+            except Exception:
+                LOG.exception("background behavior failed: %s", name)
+                try:
+                    self._dog.body_stop()
+                except Exception:
+                    LOG.debug("could not stop body after behavior error", exc_info=True)
+            finally:
+                with self._behavior_lock:
+                    if self._behavior_thread is threading.current_thread():
+                        self._behavior_thread = None
+
+        thread = threading.Thread(
+            target=run, name=f"pidog-{name}", daemon=True)
+        with self._behavior_lock:
+            self._behavior_stop = stop_event
+            self._behavior_thread = thread
+        thread.start()
+
+    def _cancel_behavior(self) -> None:
+        with self._behavior_lock:
+            stop_event = self._behavior_stop
+            thread = self._behavior_thread
+            stop_event.set()
+        if thread is not None and thread is not threading.current_thread():
+            if thread.is_alive() and self._dog is not None:
+                try:
+                    self._dog.body_stop()
+                except Exception:
+                    LOG.debug("could not stop active behavior immediately", exc_info=True)
+            thread.join(timeout=1.5)
+        with self._behavior_lock:
+            if self._behavior_thread is thread and (thread is None or not thread.is_alive()):
+                self._behavior_thread = None
 
     def _execute_local_voice(self, command: str, phrase: str) -> None:
         try:
@@ -215,6 +292,7 @@ class RobotController(AudioMixin, VisionMixin, SensorsMixin):
         }
 
     def _stop(self) -> dict[str, Any]:
+        self._cancel_behavior()
         self._dog.body_stop()
         self._light_off()
         return {"message": "Пайдог остановлен"}
@@ -233,4 +311,3 @@ class RobotController(AudioMixin, VisionMixin, SensorsMixin):
         from pidog.preset_actions import nod
 
         nod(self._dog)
-

@@ -35,6 +35,9 @@ public final class CommandParser {
         put(RobotCommand.FORWARD,
                 "вперед", "иди вперед", "шагай вперед", "двигайся вперед", "пошел вперед",
                 "прямо", "иди прямо");
+        put(RobotCommand.APPROACH_OBSTACLE,
+                "иди до препятствия", "иди вперед до препятствия", "найди препятствие",
+                "остановись перед препятствием", "подойди к предмету");
         put(RobotCommand.BACKWARD,
                 "назад", "иди назад", "шагай назад", "двигайся назад", "отойди назад",
                 "сдай назад");
@@ -49,27 +52,29 @@ public final class CommandParser {
         put(RobotCommand.LIE,
                 "лежать", "лечь", "ляг", "ложись", "приляг");
         put(RobotCommand.BARK,
-                "голос", "подай голос", "гав", "гавкни", "лай", "залаяй");
+                "голос", "подай голос", "гав", "гавкни", "лай", "залаяй", "лай три раза");
         put(RobotCommand.WAG_TAIL,
-                "хвост", "виляй хвостом", "помаши хвостом", "махай хвостом");
+                "хвост", "виляй хвостом", "повиляй хвостом", "вильни хвостом",
+                "помаши хвостом", "махай хвостом");
         put(RobotCommand.SHAKE_HEAD,
                 "покачай головой", "потряси головой", "качай головой");
         put(RobotCommand.NOD_YES,
                 "кивни", "скажи да", "покажи да", "да головой");
         put(RobotCommand.STRETCH,
-                "потянись", "растяжка", "сделай растяжку");
+                "потянись", "потягушки", "сделай потягушки", "растяжка", "сделай растяжку");
         put(RobotCommand.PUSH_UP,
                 "отжимайся", "отожмись", "сделай отжимание", "сделай отжимания");
         put(RobotCommand.HANDSHAKE,
                 "дай лапу", "лапу", "пожми руку");
         put(RobotCommand.HIGH_FIVE,
-                "дай пять", "пять", "ладушки");
+                "дай пять", "дай мне пять", "пять", "ладушки", "хай файв");
         put(RobotCommand.HOWL,
                 "вой", "завой", "выть", "повой");
         put(RobotCommand.SLEEP,
                 "спать", "засыпай", "усни", "дремать", "отдыхай");
         put(RobotCommand.MEASURE_DISTANCE,
-                "измерь расстояние", "какое расстояние", "дистанция", "что впереди");
+                "измерь расстояние", "расстояние до предмета", "скажи расстояние",
+                "какое расстояние", "дистанция", "что впереди");
         put(RobotCommand.LISTEN_SOUND,
                 "слушай звук", "найди звук", "откуда звук", "слушай хлопок");
         put(RobotCommand.LOCAL_VOICE_ON,
@@ -82,18 +87,29 @@ public final class CommandParser {
                 "покажи заряд", "сколько заряда", "заряд батареи", "покажи батарею",
                 "покажи заряд светодиодами");
         put(RobotCommand.FIND_ORANGE,
-                "найди оранжевый", "покажи оранжевый", "где оранжевая банка",
+                "найди оранжевый", "найди оранжевый цвет", "найти оранжевый цвет",
+                "покажи оранжевый", "где оранжевая банка",
                 "найди оранжевую баночку", "выбери оранжевую банку");
         put(RobotCommand.FIND_RED,
-                "найди красный", "покажи красный", "где красная банка");
+                "найди красный", "найди красный цвет", "найти красный цвет",
+                "покажи красный", "где красная банка");
         put(RobotCommand.FIND_YELLOW,
-                "найди желтый", "покажи желтый", "где желтая банка");
+                "найди желтый", "найди желтый цвет", "найти желтый цвет",
+                "покажи желтый", "где желтая банка");
         put(RobotCommand.FIND_GREEN,
-                "найди зеленый", "покажи зеленый", "где зеленая банка");
+                "найди зеленый", "найди зеленый цвет", "найти зеленый цвет",
+                "покажи зеленый", "где зеленая банка");
         put(RobotCommand.FIND_BLUE,
-                "найди синий", "покажи синий", "где синяя банка");
+                "найди синий", "найди синий цвет", "найти синий цвет",
+                "покажи синий", "где синяя банка");
         put(RobotCommand.FIND_PURPLE,
-                "найди фиолетовый", "покажи фиолетовый", "где фиолетовая банка");
+                "найди фиолетовый", "найди фиолетовый цвет", "найти фиолетовый цвет",
+                "покажи фиолетовый", "где фиолетовая банка");
+        put(RobotCommand.FOLLOW_FACE,
+                "следи за лицом", "следуй за лицом", "найди лицо", "смотри на меня");
+        put(RobotCommand.STOP_FACE_FOLLOW,
+                "перестань следить за лицом", "не следи за лицом",
+                "останови слежение за лицом");
         put(RobotCommand.CAMERA_ON,
                 "включи камеру", "запусти камеру", "покажи камеру");
         put(RobotCommand.CAMERA_OFF,
@@ -125,6 +141,9 @@ public final class CommandParser {
                 "stop", "halt", "freeze", "stop moving", "do not move", "cancel");
         putEnglish(RobotCommand.FORWARD,
                 "forward", "go forward", "move forward", "walk forward", "go straight");
+        putEnglish(RobotCommand.APPROACH_OBSTACLE,
+                "go until obstacle", "walk to the obstacle", "stop before the obstacle",
+                "approach object");
         putEnglish(RobotCommand.BACKWARD,
                 "back", "backward", "go back", "move backward", "step back");
         putEnglish(RobotCommand.TURN_LEFT,
@@ -161,6 +180,9 @@ public final class CommandParser {
         putEnglish(RobotCommand.FIND_GREEN, "find green", "show green", "where is green");
         putEnglish(RobotCommand.FIND_BLUE, "find blue", "show blue", "where is blue");
         putEnglish(RobotCommand.FIND_PURPLE, "find purple", "show purple", "where is purple");
+        putEnglish(RobotCommand.FOLLOW_FACE, "follow face", "track face", "look at me");
+        putEnglish(RobotCommand.STOP_FACE_FOLLOW,
+                "stop following face", "stop face tracking", "do not track face");
         putEnglish(RobotCommand.CAMERA_ON, "turn camera on", "start camera", "show camera");
         putEnglish(RobotCommand.CAMERA_OFF, "turn camera off", "stop camera", "close camera");
         putEnglish(RobotCommand.LIGHT_RED, "red light", "turn on red", "light red");

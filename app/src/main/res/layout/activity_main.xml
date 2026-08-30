@@ -420,6 +420,12 @@
                     android:textStyle="bold" />
 
                 <Button
+                    android:id="@+id/approachObstacleButton"
+                    style="@style/PrimaryButton"
+                    android:layout_marginTop="14dp"
+                    android:text="@string/approach_obstacle_button" />
+
+                <Button
                     android:id="@+id/joystickStopButton"
                     style="@style/StopButton"
                     android:layout_width="match_parent"
@@ -444,17 +450,11 @@
                 <TextView style="@style/PageSubtitle" android:text="@string/commands_page_subtitle" />
 
                 <LinearLayout style="@style/CardPanel" android:layout_marginTop="17dp" android:orientation="vertical">
-                    <TextView style="@style/CardEyebrow" android:text="@string/choose_action" />
-                    <Spinner
-                        android:id="@+id/commandSpinner"
+                    <TextView style="@style/CardEyebrow" android:text="@string/grouped_commands" />
+                    <ru.pidog.voice.GroupedCommandView
+                        android:id="@+id/groupedCommandsContainer"
                         android:layout_width="match_parent"
-                        android:layout_height="58dp"
-                        android:layout_marginTop="4dp"
-                        android:spinnerMode="dropdown" />
-                    <Button
-                        android:id="@+id/sendSelectedButton"
-                        style="@style/PrimaryButton"
-                        android:text="@string/send_to_pidog" />
+                        android:layout_height="wrap_content" />
                 </LinearLayout>
 
                 <TextView style="@style/SectionTitle" android:text="@string/quick_control" />

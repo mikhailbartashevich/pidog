@@ -51,6 +51,27 @@ public class CommandParserTest {
     }
 
     @Test
+    public void recognizesExplicitFindColorPhrases() {
+        assertCommand(RobotCommand.FIND_RED, "найти красный цвет");
+        assertCommand(RobotCommand.FIND_GREEN, "найди зелёный цвет");
+    }
+
+    @Test
+    public void recognizesRequestedGesturePhrases() {
+        assertCommand(RobotCommand.HIGH_FIVE, "дай мне пять");
+        assertCommand(RobotCommand.WAG_TAIL, "повиляй хвостом");
+        assertCommand(RobotCommand.STRETCH, "сделай потягушки");
+    }
+
+    @Test
+    public void recognizesNewAutonomousBehaviors() {
+        assertCommand(RobotCommand.APPROACH_OBSTACLE, "иди вперёд до препятствия");
+        assertCommand(RobotCommand.FOLLOW_FACE, "следи за лицом");
+        assertCommand(RobotCommand.STOP_FACE_FOLLOW, "перестань следить за лицом");
+        assertCommand(RobotCommand.MEASURE_DISTANCE, "расстояние до предмета");
+    }
+
+    @Test
     public void recognizesVoiceSelectedLightColor() {
         assertCommand(RobotCommand.LIGHT_PURPLE, "свети фиолетовым");
     }

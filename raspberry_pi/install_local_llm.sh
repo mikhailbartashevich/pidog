@@ -7,8 +7,8 @@ PIDOG_LLM_ROOT=${PIDOG_LLM_ROOT:-"$HOME/.local/share/pidog-llm"}
 PIDOG_BIN_DIR=${PIDOG_BIN_DIR:-"$HOME/.local/bin"}
 PIDOG_UNIT_DIR=${PIDOG_UNIT_DIR:-"$HOME/.config/systemd/user"}
 PIDOG_LLAMA_REF=${PIDOG_LLAMA_REF:-bebc9350ecc42a31ad119da1513998386671cf5b}
-PIDOG_MODEL_URL=${PIDOG_MODEL_URL:-https://huggingface.co/ggml-org/Qwen3.5-0.8B-GGUF/resolve/main/Qwen3.5-0.8B-Q4_0.gguf}
-PIDOG_MODEL_SHA256=${PIDOG_MODEL_SHA256:-57d1997790d1744fba5b40a731b84ea5e2acee28c47e78f0cce39c0703f8cf}
+PIDOG_MODEL_URL=${PIDOG_MODEL_URL:-https://huggingface.co/unsloth/Qwen3.5-2B-GGUF/resolve/main/Qwen3.5-2B-Q4_K_M.gguf}
+PIDOG_MODEL_SHA256=${PIDOG_MODEL_SHA256:-aaf42c8b7c3cab2bf3d69c355048d4a0ee9973d48f16c731c0520ee914699223}
 PIDOG_VOICE_BASE=${PIDOG_VOICE_BASE:-https://huggingface.co/rhasspy/piper-voices/resolve/main/ru/ru_RU/irina/medium}
 
 mkdir -p "$PIDOG_LLM_ROOT/models" "$PIDOG_LLM_ROOT/voices" \
@@ -26,26 +26,32 @@ if test ! -x "$PIDOG_SEARCH_ENV/bin/python"; then
 fi
 "$PIDOG_SEARCH_ENV/bin/pip" install --disable-pip-version-check --upgrade ddgs
 
-PIDOG_BUILD_DIR=$(mktemp -d /tmp/pidog-llama-build.XXXXXX)
-case "$PIDOG_BUILD_DIR" in
-  /tmp/pidog-llama-build.*) ;;
-  *) echo "Unsafe build directory: $PIDOG_BUILD_DIR" >&2; exit 1 ;;
-esac
-trap 'rm -rf "$PIDOG_BUILD_DIR"' EXIT HUP INT TERM
+PIDOG_INSTALLED_REF=""
+if test -f "$PIDOG_LLM_ROOT/llama.cpp-version"; then
+  PIDOG_INSTALLED_REF=$(sed -n '1p' "$PIDOG_LLM_ROOT/llama.cpp-version")
+fi
+if test ! -x "$PIDOG_BIN_DIR/llama-server" || test "$PIDOG_INSTALLED_REF" != "$PIDOG_LLAMA_REF"; then
+  PIDOG_BUILD_DIR=$(mktemp -d /tmp/pidog-llama-build.XXXXXX)
+  case "$PIDOG_BUILD_DIR" in
+    /tmp/pidog-llama-build.*) ;;
+    *) echo "Unsafe build directory: $PIDOG_BUILD_DIR" >&2; exit 1 ;;
+  esac
+  trap 'rm -rf "$PIDOG_BUILD_DIR"' EXIT HUP INT TERM
 
-git clone --filter=blob:none --no-checkout https://github.com/ggml-org/llama.cpp.git \
-  "$PIDOG_BUILD_DIR/llama.cpp"
-git -C "$PIDOG_BUILD_DIR/llama.cpp" checkout "$PIDOG_LLAMA_REF"
-"$PIDOG_BUILD_ENV/bin/cmake" -S "$PIDOG_BUILD_DIR/llama.cpp" \
-  -B "$PIDOG_BUILD_DIR/llama.cpp/build" \
-  -DCMAKE_BUILD_TYPE=Release -DGGML_NATIVE=ON -DLLAMA_CURL=OFF -DBUILD_SHARED_LIBS=OFF
-"$PIDOG_BUILD_ENV/bin/cmake" --build "$PIDOG_BUILD_DIR/llama.cpp/build" \
-  --config Release --target llama-server -j 4
-install -m 0755 "$PIDOG_BUILD_DIR/llama.cpp/build/bin/llama-server" \
-  "$PIDOG_BIN_DIR/llama-server"
-printf '%s\n' "$PIDOG_LLAMA_REF" > "$PIDOG_LLM_ROOT/llama.cpp-version"
+  git clone --filter=blob:none --no-checkout https://github.com/ggml-org/llama.cpp.git \
+    "$PIDOG_BUILD_DIR/llama.cpp"
+  git -C "$PIDOG_BUILD_DIR/llama.cpp" checkout "$PIDOG_LLAMA_REF"
+  "$PIDOG_BUILD_ENV/bin/cmake" -S "$PIDOG_BUILD_DIR/llama.cpp" \
+    -B "$PIDOG_BUILD_DIR/llama.cpp/build" \
+    -DCMAKE_BUILD_TYPE=Release -DGGML_NATIVE=ON -DLLAMA_CURL=OFF -DBUILD_SHARED_LIBS=OFF
+  "$PIDOG_BUILD_ENV/bin/cmake" --build "$PIDOG_BUILD_DIR/llama.cpp/build" \
+    --config Release --target llama-server -j 4
+  install -m 0755 "$PIDOG_BUILD_DIR/llama.cpp/build/bin/llama-server" \
+    "$PIDOG_BIN_DIR/llama-server"
+  printf '%s\n' "$PIDOG_LLAMA_REF" > "$PIDOG_LLM_ROOT/llama.cpp-version"
+fi
 
-PIDOG_MODEL="$PIDOG_LLM_ROOT/models/Qwen3.5-0.8B-Q4_0.gguf"
+PIDOG_MODEL="$PIDOG_LLM_ROOT/models/Qwen3.5-2B-Q4_K_M.gguf"
 if test ! -f "$PIDOG_MODEL" || ! printf '%s  %s\n' "$PIDOG_MODEL_SHA256" "$PIDOG_MODEL" | sha256sum -c - >/dev/null 2>&1; then
   curl --fail --location --retry 4 --continue-at - \
     --output "$PIDOG_MODEL.part" "$PIDOG_MODEL_URL"
@@ -64,7 +70,10 @@ mv "$PIDOG_VOICE_CONFIG.part" "$PIDOG_VOICE_CONFIG"
 
 install -m 0644 "$PIDOG_SCRIPT_DIR/pidog-llm.service" "$PIDOG_UNIT_DIR/pidog-llm.service"
 systemctl --user daemon-reload
-systemctl --user enable --now pidog-llm.service
+systemctl --user enable pidog-llm.service
+# `enable --now` does not restart an already running service after its unit changes.
+# Always restart so model/limits from the freshly installed unit take effect.
+systemctl --user restart pidog-llm.service
 
 PIDOG_ATTEMPT=0
 while test "$PIDOG_ATTEMPT" -lt 60; do

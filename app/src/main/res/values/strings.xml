@@ -94,12 +94,14 @@
     <string name="movement_connection_required">Сначала настройте подключение</string>
     <string name="joystick_command_phrase">сенсорный джойстик</string>
     <string name="emergency_stop">■ Аварийная остановка</string>
+    <string name="approach_obstacle_button">▶ Идти вперёд до препятствия</string>
 
     <string name="commands_page_title">Все команды</string>
     <string name="commands_page_subtitle">Тот же полный набор, что доступен голосом</string>
     <string name="choose_action">ВЫБЕРИТЕ ДЕЙСТВИЕ</string>
     <string name="send_to_pidog">Отправить Пайдог</string>
     <string name="quick_control">Быстрые действия</string>
+    <string name="grouped_commands">КОМАНДЫ ПО ГРУППАМ</string>
     <string name="sit_button">Сесть</string>
     <string name="stand_button">Встать</string>
     <string name="lie_button">Лечь</string>

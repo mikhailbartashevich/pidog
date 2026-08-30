@@ -8,6 +8,7 @@ import shutil
 import subprocess
 import tempfile
 import threading
+import time
 from pathlib import Path
 from typing import Any, Callable
 
@@ -24,11 +25,34 @@ class _DeferredMusic:
 
 
 class AudioMixin:
-    def _bark(self) -> None:
+    def _bark(self) -> dict[str, Any]:
+        """Bark three times for the voice command and lost-face alert."""
         self._require_audio()
         from pidog.preset_actions import bark
 
-        self._play_with_speaker(lambda: bark(self._dog, volume=100))
+        for index in range(3):
+            # Wait for each sample before starting the next one so the barks
+            # remain three distinct sounds instead of overlapping processes.
+            self._play_with_speaker(lambda: bark(self._dog, volume=100))
+            if index < 2:
+                time.sleep(0.18)
+        return {"barks": 3, "message": "Пайдог залаял три раза"}
+
+    def _bark_once(self, yaw: float = 0, pitch: float = 0) -> None:
+        self._require_audio()
+        from pidog.preset_actions import bark
+
+        self._play_with_speaker(
+            lambda: bark(self._dog, yrp=[yaw, 0, pitch], volume=100))
+
+    def _try_speak_text(self, text: str) -> bool:
+        """Speak required feedback when Piper is available without losing motion results."""
+        try:
+            self._speak_text(text)
+            return True
+        except AudioUnavailableError as error:
+            LOG.warning("could not speak robot feedback: %s", error)
+            return False
 
     def _howl(self) -> dict[str, Any]:
         self._require_audio()
@@ -304,4 +328,3 @@ class AudioMixin:
             self._prepare_audio()
         if not self._audio_ready:
             raise AudioUnavailableError(self._audio_error or "аудио недоступно")
-

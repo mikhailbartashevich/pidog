@@ -8,7 +8,7 @@ import logging
 LOG = logging.getLogger("pidog-voice")
 MAX_BODY_BYTES = 16 * 1024
 AUDIO_FILES = ("single_bark_1", "howling")
-SERVER_VERSION = "1.3.0"
+SERVER_VERSION = "1.4.0"
 
 COMMAND_COLORS = {
     "stop": "#FF3030", "forward": "#21D07A", "backward": "#00B8D9",
@@ -17,6 +17,8 @@ COMMAND_COLORS = {
     "wag_tail": "#FF80AB", "shake_head": "#9575CD", "nod_yes": "#66BB6A",
     "stretch": "#26A69A", "push_up": "#EF5350", "handshake": "#42A5F5",
     "high_five": "#FFCA28", "howl": "#5C6BC0", "sleep": "#3949AB",
+    "approach_obstacle": "#00A878", "follow_face": "#EC407A",
+    "stop_face_follow": "#78909C",
     "measure_distance": "#26C6DA", "listen_sound": "#AB47BC",
     "show_battery": "#66BB6A",
     "local_voice_on": "#00D9FF", "local_voice_off": "#78909C",

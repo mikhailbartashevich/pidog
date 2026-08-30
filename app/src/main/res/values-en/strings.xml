@@ -94,12 +94,14 @@
     <string name="movement_connection_required">Configure the connection first</string>
     <string name="joystick_command_phrase">touchscreen joystick</string>
     <string name="emergency_stop">■ Emergency stop</string>
+    <string name="approach_obstacle_button">▶ Walk forward to obstacle</string>
 
     <string name="commands_page_title">All commands</string>
     <string name="commands_page_subtitle">The same complete set that is available by voice</string>
     <string name="choose_action">CHOOSE AN ACTION</string>
     <string name="send_to_pidog">Send to PiDog</string>
     <string name="quick_control">Quick actions</string>
+    <string name="grouped_commands">COMMANDS BY GROUP</string>
     <string name="sit_button">Sit</string>
     <string name="stand_button">Stand</string>
     <string name="lie_button">Lie down</string>

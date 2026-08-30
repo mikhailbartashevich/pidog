@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import threading
 import time
 from pathlib import Path
 from typing import Any, Callable
@@ -123,7 +124,63 @@ class SensorsMixin:
 
     def _measure_distance(self) -> dict[str, Any]:
         distance = round(float(self._dog.read_distance()), 1)
-        return {"distance_cm": distance, "message": f"Расстояние: {distance:.1f} см"}
+        phrase = f"Расстояние до предмета {distance:.1f} сантиметра"
+        spoken = self._try_speak_text(phrase)
+        return {
+            "distance_cm": distance, "spoken": spoken,
+            "message": f"Расстояние: {distance:.1f} см"
+            + ("" if spoken else " (голос Piper недоступен)"),
+        }
+
+    def _approach_obstacle(self) -> dict[str, Any]:
+        """Walk forward in the background and stop safely before an obstacle."""
+        self._start_behavior("approach-obstacle", self._approach_obstacle_worker)
+        return {"active": True, "message": "Пайдог идёт вперёд до препятствия"}
+
+    def _approach_obstacle_worker(self, stop_event: threading.Event) -> None:
+        threshold = max(8.0, min(50.0, float(
+            os.environ.get("PIDOG_OBSTACLE_DISTANCE_CM", "18"))))
+        deadline = time.monotonic() + max(3.0, min(60.0, float(
+            os.environ.get("PIDOG_OBSTACLE_TIMEOUT_SECONDS", "20"))))
+        self._dog.do_action("stand", speed=80)
+        self._dog.wait_legs_done()
+        obstacle_distance: float | None = None
+        while not stop_event.is_set() and time.monotonic() < deadline:
+            distance = self._safe_sensor(lambda: float(self._dog.read_distance()))
+            if isinstance(distance, (int, float)) and 0 < distance <= threshold:
+                obstacle_distance = float(distance)
+                break
+            self._dog.do_action("forward", step_count=1, speed=100)
+            self._dog.wait_legs_done()
+
+        self._dog.body_stop()
+        if stop_event.is_set() or obstacle_distance is None:
+            return
+        self._dog.do_action("sit", speed=75)
+        from pidog.preset_actions import hand_shake
+
+        hand_shake(self._dog)
+        self._bark()
+
+    def _sleep_until_clap(self) -> dict[str, Any]:
+        self._dog.do_action("doze_off", speed=65)
+        self._dog.wait_all_done()
+        self._start_behavior("sleep-until-clap", self._wait_for_wake_clap)
+        return {"sleeping": True, "message": "Пайдог спит и ждёт хлопок"}
+
+    def _wait_for_wake_clap(self, stop_event: threading.Event) -> None:
+        # Servo noise can trigger the direction sensor, so discard it and add a
+        # short quiet period before accepting the wake clap.
+        if self._dog.ears.isdetected():
+            self._dog.ears.read()
+        if stop_event.wait(1.0):
+            return
+        while not stop_event.wait(0.08):
+            if self._dog.ears.isdetected():
+                self._dog.ears.read()
+                self._dog.do_action("stand", speed=85)
+                self._dog.do_action("stretch", speed=50)
+                return
 
     def _listen_sound(self) -> dict[str, Any]:
         deadline = time.monotonic() + 6
@@ -196,4 +253,3 @@ class SensorsMixin:
             "orange": "оранжевый", "red": "красный", "yellow": "жёлтый",
             "green": "зелёный", "blue": "синий", "purple": "фиолетовый",
         }.get(color, color)
-

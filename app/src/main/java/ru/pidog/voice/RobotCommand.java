@@ -3,6 +3,7 @@ package ru.pidog.voice;
 public enum RobotCommand {
     STOP("stop", "Стоп", "Stop"),
     FORWARD("forward", "Вперёд", "Move forward"),
+    APPROACH_OBSTACLE("approach_obstacle", "Идти до препятствия", "Walk to obstacle"),
     BACKWARD("backward", "Назад", "Move backward"),
     TURN_LEFT("turn_left", "Повернуть налево", "Turn left"),
     TURN_RIGHT("turn_right", "Повернуть направо", "Turn right"),
@@ -30,6 +31,8 @@ public enum RobotCommand {
     FIND_GREEN("find_green", "Найти зелёный", "Find green"),
     FIND_BLUE("find_blue", "Найти синий", "Find blue"),
     FIND_PURPLE("find_purple", "Найти фиолетовый", "Find purple"),
+    FOLLOW_FACE("follow_face", "Следить за лицом", "Follow face"),
+    STOP_FACE_FOLLOW("stop_face_follow", "Остановить слежение за лицом", "Stop face tracking"),
     CAMERA_ON("camera_on", "Включить камеру", "Turn camera on"),
     CAMERA_OFF("camera_off", "Выключить камеру", "Turn camera off"),
     LIGHT_RED("light_red", "Свет: красный", "Light: red"),

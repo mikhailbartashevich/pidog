@@ -22,7 +22,7 @@ PiDog can also hold a short conversation entirely on the Raspberry Pi. The stack
 64-bit Raspberry Pi 4B with 4 GB RAM:
 
 - `llama.cpp` bound to loopback only (`127.0.0.1:8081`);
-- Qwen3.5-0.8B Q4_0 with a 2048-token context;
+- Qwen3.5-2B Q4_K_M with a 2048-token context;
 - the existing Vosk recognizer for microphone input;
 - Piper with the Russian `irina-medium` voice for replies;
 - isolated DDGS web search, with optional Brave Search or SearXNG overrides.

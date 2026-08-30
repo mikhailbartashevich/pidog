@@ -122,12 +122,17 @@ public final class RobotClient {
         public final boolean found;
         public final int x;
         public final int y;
+        public final String position;
+        public final float distanceCm;
 
-        VisionData(String color, boolean found, int x, int y) {
+        VisionData(String color, boolean found, int x, int y,
+                   String position, float distanceCm) {
             this.color = color;
             this.found = found;
             this.x = x;
             this.y = y;
+            this.position = position;
+            this.distanceCm = distanceCm;
         }
     }
 
@@ -138,6 +143,20 @@ public final class RobotClient {
     public void send(String host, int port, String token, RobotCommand command,
                      String recognizedPhrase, Callback callback) {
         String json = commandJson(command, recognizedPhrase);
+        execute(() -> request("POST", host, port, token, "/command", json), callback);
+    }
+
+    public void sendMovement(String host, int port, String token, RobotCommand command,
+                             String recognizedPhrase, Callback callback) {
+        String wireName;
+        switch (command) {
+            case FORWARD: wireName = "drive_forward"; break;
+            case BACKWARD: wireName = "drive_backward"; break;
+            case TURN_LEFT: wireName = "drive_left"; break;
+            case TURN_RIGHT: wireName = "drive_right"; break;
+            default: wireName = RobotCommand.STOP.wireName;
+        }
+        String json = commandJson(wireName, recognizedPhrase);
         execute(() -> request("POST", host, port, token, "/command", json), callback);
     }
 
@@ -156,7 +175,10 @@ public final class RobotClient {
                                 response.optString("color", ""),
                                 response.optBoolean("found", false),
                                 response.optInt("x", -1),
-                                response.optInt("y", -1));
+                                response.optInt("y", -1),
+                                response.optString("position", ""),
+                                response.isNull("distance_cm") ? -1
+                                        : (float) response.optDouble("distance_cm"));
                     }
                 }
             } catch (Exception error) {
@@ -489,7 +511,11 @@ public final class RobotClient {
     }
 
     private static String commandJson(RobotCommand command, String recognizedPhrase) {
-        return "{\"command\":\"" + escape(command.wireName) + "\","
+        return commandJson(command.wireName, recognizedPhrase);
+    }
+
+    private static String commandJson(String wireName, String recognizedPhrase) {
+        return "{\"command\":\"" + escape(wireName) + "\","
                 + "\"phrase\":\""
                 + escape(recognizedPhrase == null ? "" : recognizedPhrase) + "\"}";
     }

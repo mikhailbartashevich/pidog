@@ -137,7 +137,9 @@ public final class JoystickView extends View {
     }
 
     static int directionForOffset(float offset, float maximum) {
-        if (maximum <= 0 || Math.abs(offset) < maximum * 0.32f) {
+        // A smaller dead zone makes movement engage promptly; gait speed is
+        // controlled independently by the Raspberry Pi command speed.
+        if (maximum <= 0 || Math.abs(offset) < maximum * 0.20f) {
             return 0;
         }
         return offset < 0 ? -1 : 1;

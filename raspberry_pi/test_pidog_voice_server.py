@@ -55,6 +55,7 @@ class ServerTest(unittest.TestCase):
         self.assertEqual("dry-run", payload["local_voice"]["state"])
         self.assertIn("sit", payload["commands"])
         self.assertIn("local_voice_on", payload["commands"])
+        self.assertIn("drive_forward", payload["commands"])
         self.assertTrue(payload["assistant"]["installed"])
 
     def test_assistant_status(self):
@@ -97,6 +98,8 @@ class ServerTest(unittest.TestCase):
         self.assertEqual(200, status)
         self.assertIn("find_orange", payload["commands"])
         self.assertIn("light_orange", payload["commands"])
+        self.assertIn("follow_face", payload["commands"])
+        self.assertIn("approach_obstacle", payload["commands"])
 
     def test_sensor_snapshot(self):
         status, payload = self.request("GET", "/sensors")
@@ -211,6 +214,17 @@ class LocalVoiceControlTest(unittest.TestCase):
         self.assertEqual("sit", match_local_voice_command("Пайдог, сядь"))
         self.assertEqual("local_voice_off", match_local_voice_command("перестань слушать"))
         self.assertIsNone(match_local_voice_command("похожи немного вперед"))
+
+    def test_matches_new_requested_local_phrases(self):
+        self.assertEqual("find_red", match_local_voice_command("найти красный цвет"))
+        self.assertEqual("high_five", match_local_voice_command("дай мне пять"))
+        self.assertEqual("wag_tail", match_local_voice_command("повиляй хвостом"))
+        self.assertEqual("stretch", match_local_voice_command("сделай потягушки"))
+        self.assertEqual("measure_distance", match_local_voice_command(
+            "расстояние до предмета"))
+        self.assertEqual("follow_face", match_local_voice_command("следи за лицом"))
+        self.assertEqual("approach_obstacle", match_local_voice_command(
+            "иди вперед до препятствия"))
 
     def test_listener_executes_commands_and_can_stop_by_voice(self):
         results = iter(("сядь", {"final": "перестань слушать"}))

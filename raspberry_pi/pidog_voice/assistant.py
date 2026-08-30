@@ -29,10 +29,10 @@ class AssistantManager:
         self._dry_run = dry_run
         self._base_url = os.environ.get("PIDOG_LLM_URL", "http://127.0.0.1:8081").rstrip("/")
         self._unit = os.environ.get("PIDOG_LLM_UNIT", "pidog-llm.service")
-        self._model_name = os.environ.get("PIDOG_LLM_NAME", "Qwen3.5-0.8B Q4_0")
+        self._model_name = os.environ.get("PIDOG_LLM_NAME", "Qwen3.5-2B Q4_K_M")
         self._model_path = Path(os.environ.get(
             "PIDOG_LLM_MODEL",
-            str(Path.home() / ".local/share/pidog-llm/models/Qwen3.5-0.8B-Q4_0.gguf"),
+            str(Path.home() / ".local/share/pidog-llm/models/Qwen3.5-2B-Q4_K_M.gguf"),
         )).expanduser()
         self._server_path = Path(os.environ.get(
             "PIDOG_LLM_SERVER", str(Path.home() / ".local/bin/llama-server")
@@ -42,7 +42,9 @@ class AssistantManager:
             str(Path.home() / ".local/share/pidog-llm/search-venv/bin/python"),
         )).expanduser()
         self._search_worker = Path(__file__).with_name("search_worker.py")
-        self._history: deque[dict[str, str]] = deque(maxlen=8)
+        # Keep just the two most recent exchanges. On a Pi 4, a short prompt history
+        # materially improves response time and still preserves conversational context.
+        self._history: deque[dict[str, str]] = deque(maxlen=4)
         self._chat_lock = threading.Lock()
         self._status_lock = threading.Lock()
         self._cached_status: tuple[float, dict[str, Any]] | None = None
@@ -183,7 +185,9 @@ class AssistantManager:
             "Ты Пайдог — дружелюбный робот-пёс. Отвечай на языке пользователя, "
             "обычно 1–4 короткими предложениями. Не выдумывай факты. Ты не управляешь "
             "мотором и не выполняешь команды робота: движение обрабатывает отдельный "
-            "безопасный контроллер. Если даны результаты поиска, опирайся только на них "
+            "безопасный контроллер. Ты работаешь локально на Raspberry Pi внутри Пайдога; "
+            "интернет используется только отдельным веб-поиском по просьбе пользователя. "
+            "Если даны результаты поиска, опирайся только на них "
             "для свежих фактов и ставь ссылки вида [1], [2]. Если данных недостаточно, "
             "честно скажи об этом. Не показывай внутренние рассуждения."
         )
@@ -202,7 +206,9 @@ class AssistantManager:
             "messages": messages,
             "temperature": 0.55,
             "top_p": 0.85,
-            "max_tokens": 180,
+            "max_tokens": 80,
+            "repeat_penalty": 1.1,
+            "chat_template_kwargs": {"enable_thinking": False},
             "stream": False,
         }, ensure_ascii=False).encode("utf-8")
         request = Request(
@@ -243,7 +249,7 @@ class AssistantManager:
         for item in raw_results[:4]:
             title = " ".join(str(item.get("title", "")).split())[:180]
             url = str(item.get("href") or item.get("url") or "").strip()[:800]
-            snippet = " ".join(str(item.get("body") or item.get("snippet") or "").split())[:650]
+            snippet = " ".join(str(item.get("body") or item.get("snippet") or "").split())[:240]
             if title and url.startswith(("http://", "https://")):
                 results.append({"title": title, "url": url, "snippet": snippet})
         if not results:
@@ -293,4 +299,3 @@ class AssistantManager:
     def _invalidate_status(self) -> None:
         with self._status_lock:
             self._cached_status = None
-
