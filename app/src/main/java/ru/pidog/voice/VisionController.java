@@ -201,7 +201,7 @@ final class VisionController {
         cameraPlaceholder.setVisibility(View.GONE);
         cameraView.setVisibility(View.VISIBLE);
         cameraView.loadDataWithBaseURL(baseUrl, html, "text/html", "UTF-8", null);
-        cameraStatus.setText("LIVE · " + cleanHost);
+        cameraStatus.setText(activity.getString(R.string.camera_live_status, cleanHost));
     }
 
     private void showPlaceholder(String message) {

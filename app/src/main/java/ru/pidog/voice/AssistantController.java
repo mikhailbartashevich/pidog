@@ -173,8 +173,8 @@ final class AssistantController {
                                 ? activity.getString(R.string.assistant_no_sources)
                                 : reply.warning);
                     } else {
-                        sourcesView.setText(activity.getString(R.string.assistant_sources_title)
-                                + "\n" + reply.sources);
+                        sourcesView.setText(activity.getString(R.string.assistant_sources_format,
+                                activity.getString(R.string.assistant_sources_title), reply.sources));
                     }
                 });
     }

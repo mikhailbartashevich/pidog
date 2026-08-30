@@ -84,7 +84,8 @@ final class SensorController {
         if (data == null || !data.powerKnown) {
             styleIndicator(headerPowerIndicator, R.string.power_header_unknown,
                     R.color.muted, R.color.surface_variant);
-            styleIndicator(powerIndicatorIcon, "…", R.color.muted, R.color.surface_variant);
+            styleIndicator(powerIndicatorIcon, R.string.icon_unknown,
+                    R.color.muted, R.color.surface_variant);
             powerIndicatorTitle.setText(R.string.determining_power);
             powerIndicatorDetail.setText(R.string.power_detection_wait);
             setPowerBadge(activity.getString(R.string.checking_badge),
@@ -96,7 +97,8 @@ final class SensorController {
             styleIndicator(headerPowerIndicator, data.charging
                             ? R.string.power_header_charging : R.string.power_header_external,
                     R.color.brand_dark, R.color.brand_soft);
-            styleIndicator(powerIndicatorIcon, "⚡", R.color.brand_dark, R.color.brand_soft);
+            styleIndicator(powerIndicatorIcon, R.string.icon_power,
+                    R.color.brand_dark, R.color.brand_soft);
             powerIndicatorTitle.setText(R.string.external_power_connected);
             if (data.chargingKnown && data.charging) {
                 powerIndicatorDetail.setText(R.string.battery_charging_detail);
@@ -112,7 +114,8 @@ final class SensorController {
 
         styleIndicator(headerPowerIndicator, R.string.power_header_battery,
                 R.color.warning, R.color.surface_variant);
-        styleIndicator(powerIndicatorIcon, "🔋", R.color.warning, R.color.surface_variant);
+        styleIndicator(powerIndicatorIcon, R.string.icon_battery,
+                R.color.warning, R.color.surface_variant);
         powerIndicatorTitle.setText(R.string.battery_power);
         powerIndicatorDetail.setText(R.string.external_power_not_found);
         setPowerBadge(activity.getString(R.string.battery_badge),
@@ -122,12 +125,6 @@ final class SensorController {
     private void styleIndicator(TextView view, int textResource,
                                 int textColor, int backgroundColor) {
         view.setText(textResource);
-        styleIndicator(view, textColor, backgroundColor);
-    }
-
-    private void styleIndicator(TextView view, String text,
-                                int textColor, int backgroundColor) {
-        view.setText(text);
         styleIndicator(view, textColor, backgroundColor);
     }
 

@@ -172,6 +172,10 @@ public final class MainActivity extends Activity {
     }
 
     private void sendCommand(RobotCommand command, String phrase) {
+        if (command == RobotCommand.STOP && movementController.isMoving()) {
+            movementController.stop();
+            return;
+        }
         if (visionController.handles(command)) {
             visionController.send(command, phrase);
             return;

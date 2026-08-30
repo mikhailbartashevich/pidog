@@ -125,10 +125,10 @@ final class SpeechRecognitionController implements RecognitionListener {
         if (assistantMode) {
             assistantAnswer.setText(R.string.assistant_listening);
             assistantAnswer.setTextColor(activity.getColor(R.color.muted));
-            assistantMicButton.setText("■");
+            assistantMicButton.setText(R.string.icon_stop);
         } else {
             listeningStatus.setText(R.string.listening);
-            micButton.setText("■");
+            micButton.setText(R.string.icon_stop);
         }
         recognizer.startListening(intent);
     }
@@ -136,8 +136,8 @@ final class SpeechRecognitionController implements RecognitionListener {
     private void finishListening() {
         listening = false;
         listeningStatus.setText(R.string.tap_to_speak);
-        micButton.setText("🎙");
-        assistantMicButton.setText("🎙");
+        micButton.setText(R.string.icon_microphone);
+        assistantMicButton.setText(R.string.icon_microphone);
         resetMicScale();
     }
 

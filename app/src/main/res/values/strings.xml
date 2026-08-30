@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Пайдог Голос</string>
-    <string name="title">Пайдог V2</string>
     <string name="top_title">Управление Пайдог</string>
     <string name="top_subtitle">Голос · камера · сенсоры</string>
     <string name="power_content_description">Состояние внешнего питания</string>
@@ -46,6 +45,7 @@
     <string name="assistant_asking">Пайдог ищет и думает…</string>
     <string name="assistant_question_required">Введите или продиктуйте вопрос</string>
     <string name="assistant_sources_title">Источники:</string>
+    <string name="assistant_sources_format">%1$s\n%2$s</string>
     <string name="assistant_no_sources">Ответ без веб-источников</string>
     <string name="assistant_listening">Слушаю вопрос…</string>
     <string name="assistant_history_cleared">История диалога очищена</string>
@@ -98,8 +98,6 @@
 
     <string name="commands_page_title">Все команды</string>
     <string name="commands_page_subtitle">Тот же полный набор, что доступен голосом</string>
-    <string name="choose_action">ВЫБЕРИТЕ ДЕЙСТВИЕ</string>
-    <string name="send_to_pidog">Отправить Пайдог</string>
     <string name="quick_control">Быстрые действия</string>
     <string name="grouped_commands">КОМАНДЫ ПО ГРУППАМ</string>
     <string name="sit_button">Сесть</string>
@@ -183,7 +181,7 @@
     <string name="refreshing_status">ОБНОВЛЕНИЕ</string>
     <string name="camera_off">Камера выключена</string>
     <string name="camera_phrase_off">выключить камеру</string>
-    <string name="manual_selected">выбрано вручную: %1$s</string>
+    <string name="camera_live_status">LIVE · %1$s</string>
     <string name="manual_button_phrase">ручная кнопка</string>
     <string name="recognizer_unavailable">На устройстве нет службы распознавания речи</string>
     <string name="recognizer_prompt">Скажите команду для Пайдог</string>
@@ -215,12 +213,18 @@
     <string name="recognition_error">Ошибка распознавания: %1$d</string>
 
     <string name="dashboard_battery">БАТАРЕЯ</string>
-    <string name="dashboard_sound">ЗВУК</string>
     <string name="dashboard_sound_not_found">ЗВУК НЕ НАЙДЕН</string>
     <string name="dashboard_sound_format">%1$d° · ЗВУК</string>
     <string name="dashboard_voltage_format">%1$.2f В · БАТАРЕЯ</string>
     <string name="dashboard_distance">ДИСТАНЦИЯ · ПОСЛЕДНИЕ ИЗМЕРЕНИЯ</string>
     <string name="centimeters_format">%1$.1f см</string>
+
+    <string name="icon_brand" translatable="false">P</string>
+    <string name="icon_microphone" translatable="false">🎙</string>
+    <string name="icon_stop" translatable="false">■</string>
+    <string name="icon_power" translatable="false">⚡</string>
+    <string name="icon_battery" translatable="false">🔋</string>
+    <string name="icon_unknown" translatable="false">…</string>
 
     <string-array name="language_options">
         <item>Русский</item>

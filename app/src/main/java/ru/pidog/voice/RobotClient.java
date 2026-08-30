@@ -3,10 +3,6 @@ package ru.pidog.voice;
 import android.os.Handler;
 import android.os.Looper;
 
-import org.json.JSONException;
-import org.json.JSONArray;
-import org.json.JSONObject;
-
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -22,10 +18,11 @@ import java.util.concurrent.Executors;
 public final class RobotClient {
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
-    private final boolean english;
+    private final RobotResponseParser responseParser;
+    private volatile boolean closed;
 
     public RobotClient(boolean english) {
-        this.english = english;
+        responseParser = new RobotResponseParser(english);
     }
 
     public interface Callback {
@@ -169,24 +166,14 @@ public final class RobotClient {
             try {
                 result = request("POST", host, port, token, "/command", json);
                 if (result.success && result.response != null) {
-                    JSONObject response = new JSONObject(result.response);
-                    if (response.has("found") && response.has("color")) {
-                        data = new VisionData(
-                                response.optString("color", ""),
-                                response.optBoolean("found", false),
-                                response.optInt("x", -1),
-                                response.optInt("y", -1),
-                                response.optString("position", ""),
-                                response.isNull("distance_cm") ? -1
-                                        : (float) response.optDouble("distance_cm"));
-                    }
+                    data = responseParser.parseVision(result.response);
                 }
             } catch (Exception error) {
-                result = new Result(false, readableError(error), null);
+                result = new Result(false, responseParser.readableError(error), null);
             }
             Result finalResult = result;
             VisionData finalData = data;
-            mainHandler.post(() -> callback.onResult(
+            postResult(() -> callback.onResult(
                     finalResult.success, finalResult.message, finalData));
         });
     }
@@ -198,23 +185,14 @@ public final class RobotClient {
             try {
                 result = request("GET", host, port, token, "/sensors", null);
                 if (result.success && result.response != null) {
-                    JSONObject json = new JSONObject(result.response);
-                    data = new SensorData(
-                            json.isNull("battery_percent") ? -1 : (float) json.optDouble("battery_percent"),
-                            json.isNull("battery_voltage") ? -1 : (float) json.optDouble("battery_voltage"),
-                            json.isNull("distance_cm") ? -1 : (float) json.optDouble("distance_cm"),
-                            json.isNull("sound_direction") ? -1 : (float) json.optDouble("sound_direction"),
-                            !json.isNull("external_power"),
-                            json.optBoolean("external_power", false),
-                            !json.isNull("charging"),
-                            json.optBoolean("charging", false));
+                    data = responseParser.parseSensors(result.response);
                 }
             } catch (Exception error) {
-                result = new Result(false, readableError(error), null);
+                result = new Result(false, responseParser.readableError(error), null);
             }
             Result finalResult = result;
             SensorData finalData = data;
-            mainHandler.post(() -> callback.onResult(
+            postResult(() -> callback.onResult(
                     finalResult.success, finalResult.message, finalData));
         });
     }
@@ -240,32 +218,14 @@ public final class RobotClient {
             try {
                 result = request("POST", host, port, token, "/assistant/chat", body);
                 if (result.success && result.response != null) {
-                    JSONObject json = new JSONObject(result.response);
-                    StringBuilder sources = new StringBuilder();
-                    JSONArray items = json.optJSONArray("sources");
-                    if (items != null) {
-                        for (int index = 0; index < items.length(); index++) {
-                            JSONObject item = items.optJSONObject(index);
-                            if (item == null) continue;
-                            if (sources.length() > 0) sources.append("\n\n");
-                            sources.append('[').append(index + 1).append("] ")
-                                    .append(item.optString("title", ""));
-                            String url = item.optString("url", "");
-                            if (!url.isEmpty()) sources.append('\n').append(url);
-                        }
-                    }
-                    reply = new AssistantReply(
-                            json.optString("answer", ""), sources.toString(),
-                            json.optBoolean("searched", false),
-                            json.optBoolean("spoken", false),
-                            json.optString("search_warning", ""));
+                    reply = responseParser.parseAssistantReply(result.response);
                 }
             } catch (Exception error) {
-                result = new Result(false, readableError(error), null);
+                result = new Result(false, responseParser.readableError(error), null);
             }
             Result finalResult = result;
             AssistantReply finalReply = reply;
-            mainHandler.post(() -> callback.onResult(
+            postResult(() -> callback.onResult(
                     finalResult.success, finalResult.message, finalReply));
         });
     }
@@ -283,35 +243,21 @@ public final class RobotClient {
             try {
                 result = request(method, host, port, token, path, body);
                 if (result.success && result.response != null) {
-                    JSONObject root = new JSONObject(result.response);
-                    JSONObject assistant = root.optJSONObject("assistant");
-                    if (assistant != null) {
-                        JSONObject web = assistant.optJSONObject("web_search");
-                        JSONObject tts = assistant.optJSONObject("tts");
-                        status = new AssistantStatus(
-                                assistant.optBoolean("installed", false),
-                                assistant.optBoolean("running", false),
-                                assistant.optString("state", "unknown"),
-                                assistant.optString("model", "—"),
-                                assistant.optInt("context_tokens", 0),
-                                web != null && web.optBoolean("available", false),
-                                web == null ? "—" : web.optString("provider", "—"),
-                                tts != null && tts.optBoolean("ready", false),
-                                assistant.optBoolean("busy", false),
-                                assistant.optString("last_error", ""));
-                    }
+                    status = responseParser.parseAssistantStatus(result.response);
                 }
             } catch (Exception error) {
-                result = new Result(false, readableError(error), null);
+                result = new Result(false, responseParser.readableError(error), null);
             }
             Result finalResult = result;
             AssistantStatus finalStatus = status;
-            mainHandler.post(() -> callback.onResult(
+            postResult(() -> callback.onResult(
                     finalResult.success, finalResult.message, finalStatus));
         });
     }
 
     public void close() {
+        closed = true;
+        mainHandler.removeCallbacksAndMessages(null);
         executor.shutdownNow();
     }
 
@@ -321,10 +267,21 @@ public final class RobotClient {
             try {
                 result = request.run();
             } catch (Exception error) {
-                result = new Result(false, readableError(error), null);
+                result = new Result(false, responseParser.readableError(error), null);
             }
             Result finalResult = result;
-            mainHandler.post(() -> callback.onResult(finalResult.success, finalResult.message));
+            postResult(() -> callback.onResult(finalResult.success, finalResult.message));
+        });
+    }
+
+    private void postResult(Runnable callback) {
+        if (closed) {
+            return;
+        }
+        mainHandler.post(() -> {
+            if (!closed) {
+                callback.run();
+            }
         });
     }
 
@@ -332,7 +289,8 @@ public final class RobotClient {
                            String path, String body) throws IOException {
         String cleanHost = host == null ? "" : host.trim();
         if (cleanHost.isEmpty()) {
-            return new Result(false, text("Укажите IP-адрес Пайдог", "Enter the PiDog IP address"), null);
+            return new Result(false, responseParser.text(
+                    "Укажите IP-адрес Пайдог", "Enter the PiDog IP address"), null);
         }
         if (cleanHost.startsWith("http://")) {
             cleanHost = cleanHost.substring(7);
@@ -343,138 +301,51 @@ public final class RobotClient {
             cleanHost = cleanHost.substring(0, cleanHost.length() - 1);
         }
         if (cleanHost.contains("/") || cleanHost.contains("?") || cleanHost.contains("#")) {
-            return new Result(false, text("Некорректный адрес робота", "Invalid robot address"), null);
+            return new Result(false, responseParser.text(
+                    "Некорректный адрес робота", "Invalid robot address"), null);
         }
 
         URL url = new URL("http", cleanHost, port, path);
         HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-        connection.setRequestMethod(method);
-        connection.setConnectTimeout(2500);
-        // Color scanning and sound direction listening intentionally take a few seconds.
-        connection.setReadTimeout("/assistant/chat".equals(path) ? 150000
-                : "/assistant/control".equals(path) ? 40000 : 20000);
-        connection.setRequestProperty("Accept", "application/json");
-        if (token != null && !token.trim().isEmpty()) {
-            connection.setRequestProperty("X-PiDog-Token", token.trim());
-        }
-        if (body != null) {
-            byte[] bytes = body.getBytes(StandardCharsets.UTF_8);
-            connection.setDoOutput(true);
-            connection.setFixedLengthStreamingMode(bytes.length);
-            connection.setRequestProperty("Content-Type", "application/json; charset=utf-8");
-            try (OutputStream output = connection.getOutputStream()) {
-                output.write(bytes);
-            }
-        }
-
-        int status = connection.getResponseCode();
-        InputStream stream = status >= 200 && status < 300
-                ? connection.getInputStream() : connection.getErrorStream();
-        String response = stream == null ? "" : readAll(stream);
-        connection.disconnect();
-        if (status >= 200 && status < 300) {
-            return new Result(true, successMessage(path, response), response);
-        }
-        if (status == 401) {
-            return new Result(false, text("Неверный секретный токен", "Incorrect secret token"), response);
-        }
-        if (status == 409) {
-            return new Result(false, conflictMessage(response), response);
-        }
-        return new Result(false, text("Ошибка Пайдог ", "PiDog error ") + status
-                + (response.isEmpty() ? "" : ": " + response), response);
-    }
-
-    private String successMessage(String path, String response) {
         try {
-            JSONObject json = new JSONObject(response);
-            if ("/health".equals(path)) {
-                JSONObject localVoice = json.optJSONObject("local_voice");
-                if (localVoice != null) {
-                    String voiceState = localVoice.optString("state", "");
-                    String voiceError = localVoice.optString("error", "").trim();
-                    if ("error".equals(voiceState) && !voiceError.isEmpty()) {
-                        return text("Пайдог на связи, но встроенный микрофон не готов: ",
-                                "PiDog connected, but the built-in microphone is not ready: ")
-                                + voiceError;
-                    }
-                    if ("listening".equals(voiceState) || "starting".equals(voiceState)) {
-                        return text("Пайдог на связи · слушает встроенный микрофон",
-                                "PiDog connected · listening through its built-in microphone");
-                    }
-                }
-                JSONObject audio = json.optJSONObject("audio");
-                if (audio != null && !audio.isNull("ready")) {
-                    if (audio.optBoolean("ready", false)) {
-                        return text("Пайдог на связи · звук готов", "PiDog connected · audio ready");
-                    }
-                    String error = audio.optString("error",
-                            text("аудио недоступно", "audio unavailable")).trim();
-                    return text("Пайдог на связи, но звук не готов: ",
-                            "PiDog connected, but audio is not ready: ") + error;
+            connection.setRequestMethod(method);
+            connection.setConnectTimeout(2500);
+            // Color scanning and sound direction listening intentionally take a few seconds.
+            connection.setReadTimeout("/assistant/chat".equals(path) ? 150000
+                    : "/assistant/control".equals(path) ? 40000 : 20000);
+            connection.setRequestProperty("Accept", "application/json");
+            if (token != null && !token.trim().isEmpty()) {
+                connection.setRequestProperty("X-PiDog-Token", token.trim());
+            }
+            if (body != null) {
+                byte[] bytes = body.getBytes(StandardCharsets.UTF_8);
+                connection.setDoOutput(true);
+                connection.setFixedLengthStreamingMode(bytes.length);
+                connection.setRequestProperty("Content-Type", "application/json; charset=utf-8");
+                try (OutputStream output = connection.getOutputStream()) {
+                    output.write(bytes);
                 }
             }
-            if ("/sensors".equals(path)) {
-                String distance = json.isNull("distance_cm")
-                        ? text("нет данных", "no data")
-                        : json.optString("distance_cm") + text(" см", " cm");
-                String touch = json.isNull("touch")
-                        ? text("нет данных", "no data") : json.optString("touch");
-                String sound;
-                if (json.optBoolean("sound_detected", false)) {
-                    sound = json.optString("sound_direction", "?") + "°";
-                } else {
-                    sound = text("не обнаружен", "not detected");
-                }
-                String camera = json.optBoolean("camera", false)
-                        ? text("включена", "on") : text("выключена", "off");
-                String power;
-                if (json.isNull("external_power")) {
-                    power = text("определяется", "detecting");
-                } else if (json.optBoolean("external_power", false)) {
-                    power = json.optBoolean("charging", false)
-                            ? text("внешнее · зарядка", "external · charging")
-                            : text("внешнее питание", "external power");
-                } else {
-                    power = text("аккумулятор", "battery");
-                }
-                return text("Расстояние: ", "Distance: ") + distance
-                        + text("\nКасание: ", "\nTouch: ") + touch
-                        + text("\nЗвук: ", "\nSound: ") + sound
-                        + text("\nПитание: ", "\nPower: ") + power
-                        + text("\nКамера: ", "\nCamera: ") + camera;
-            }
-            String message = json.optString("message", "").trim();
-            if (!message.isEmpty() && !english) {
-                return message;
-            }
-        } catch (JSONException ignored) {
-            // A successful legacy server may return no JSON message.
-        }
-        return "/health".equals(path)
-                ? text("Пайдог на связи", "PiDog connected")
-                : text("Команда принята", "Command accepted");
-    }
 
-    private String conflictMessage(String response) {
-        try {
-            JSONObject json = new JSONObject(response);
-            if ("audio unavailable".equals(json.optString("error"))) {
-                String detail = json.optString("detail",
-                        text("проверьте динамик и ALSA", "check the speaker and ALSA")).trim();
-                return text("Звук Пайдог недоступен: ", "PiDog audio is unavailable: ") + detail;
+            int status = connection.getResponseCode();
+            InputStream stream = status >= 200 && status < 300
+                    ? connection.getInputStream() : connection.getErrorStream();
+            String response = stream == null ? "" : readAll(stream);
+            if (status >= 200 && status < 300) {
+                return new Result(true, responseParser.successMessage(path, response), response);
             }
-            if ("assistant unavailable".equals(json.optString("error"))) {
-                String detail = json.optString("detail",
-                        text("локальная модель недоступна", "the local model is unavailable"));
-                return text("Локальный Пайдог недоступен: ", "Local PiDog is unavailable: ")
-                        + detail;
+            if (status == 401) {
+                return new Result(false, responseParser.text(
+                        "Неверный секретный токен", "Incorrect secret token"), response);
             }
-        } catch (JSONException ignored) {
-            // Keep the generic message for legacy or non-JSON server responses.
+            if (status == 409) {
+                return new Result(false, responseParser.conflictMessage(response), response);
+            }
+            return new Result(false, responseParser.text("Ошибка Пайдог ", "PiDog error ")
+                    + status + (response.isEmpty() ? "" : ": " + response), response);
+        } finally {
+            connection.disconnect();
         }
-        return text("Пайдог занят или команда не выполнена",
-                "PiDog is busy or the command could not be completed");
     }
 
     private static String readAll(InputStream input) throws IOException {
@@ -518,18 +389,6 @@ public final class RobotClient {
         return "{\"command\":\"" + escape(wireName) + "\","
                 + "\"phrase\":\""
                 + escape(recognizedPhrase == null ? "" : recognizedPhrase) + "\"}";
-    }
-
-    private String readableError(Exception error) {
-        String message = error.getMessage();
-        if (message == null || message.trim().isEmpty()) {
-            message = error.getClass().getSimpleName();
-        }
-        return text("Нет связи с Пайдог: ", "Could not connect to PiDog: ") + message;
-    }
-
-    private String text(String russian, String englishText) {
-        return english ? englishText : russian;
     }
 
     private interface Request {

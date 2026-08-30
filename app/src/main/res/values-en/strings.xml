@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">PiDog Voice</string>
-    <string name="title">PiDog V2</string>
     <string name="top_title">PiDog Control</string>
     <string name="top_subtitle">Voice · camera · sensors</string>
     <string name="power_content_description">External power status</string>
@@ -46,6 +45,7 @@
     <string name="assistant_asking">PiDog is searching and thinking…</string>
     <string name="assistant_question_required">Enter or dictate a question</string>
     <string name="assistant_sources_title">Sources:</string>
+    <string name="assistant_sources_format">%1$s\n%2$s</string>
     <string name="assistant_no_sources">Answer without web sources</string>
     <string name="assistant_listening">Listening for a question…</string>
     <string name="assistant_history_cleared">Conversation history cleared</string>
@@ -98,8 +98,6 @@
 
     <string name="commands_page_title">All commands</string>
     <string name="commands_page_subtitle">The same complete set that is available by voice</string>
-    <string name="choose_action">CHOOSE AN ACTION</string>
-    <string name="send_to_pidog">Send to PiDog</string>
     <string name="quick_control">Quick actions</string>
     <string name="grouped_commands">COMMANDS BY GROUP</string>
     <string name="sit_button">Sit</string>
@@ -183,7 +181,7 @@
     <string name="refreshing_status">REFRESHING</string>
     <string name="camera_off">Camera is off</string>
     <string name="camera_phrase_off">turn camera off</string>
-    <string name="manual_selected">selected manually: %1$s</string>
+    <string name="camera_live_status">LIVE · %1$s</string>
     <string name="manual_button_phrase">manual button</string>
     <string name="recognizer_unavailable">No speech recognition service is available on this device</string>
     <string name="recognizer_prompt">Say a command for PiDog</string>
@@ -215,7 +213,6 @@
     <string name="recognition_error">Recognition error: %1$d</string>
 
     <string name="dashboard_battery">BATTERY</string>
-    <string name="dashboard_sound">SOUND</string>
     <string name="dashboard_sound_not_found">NO SOUND FOUND</string>
     <string name="dashboard_sound_format">%1$d° · SOUND</string>
     <string name="dashboard_voltage_format">%1$.2f V · BATTERY</string>

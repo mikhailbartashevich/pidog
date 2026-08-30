@@ -14,6 +14,5 @@
     <color name="stroke">#DFE2EC</color>
     <color name="camera">#0E1020</color>
     <color name="camera_muted">#AFB5D0</color>
-    <color name="success">#16A36A</color>
     <color name="white">#FFFFFF</color>
 </resources>
