@@ -11,6 +11,11 @@
     <color name="danger">#E5484D</color>
     <color name="danger_dark">#B4232A</color>
     <color name="warning">#D97706</color>
+    <color name="success">#198754</color>
+    <color name="status_idle_background">#F7F8FC</color>
+    <color name="status_working_background">#EEF4FF</color>
+    <color name="status_success_background">#ECFDF3</color>
+    <color name="status_error_background">#FFF1F1</color>
     <color name="stroke">#DFE2EC</color>
     <color name="camera">#0E1020</color>
     <color name="camera_muted">#AFB5D0</color>

@@ -5,6 +5,15 @@
     <string name="top_subtitle">Голос · камера · сенсоры</string>
     <string name="power_content_description">Состояние внешнего питания</string>
     <string name="language_content_description">Язык интерфейса и команд</string>
+    <string name="status_mascot_content_description">Собачка Пайдог показывает состояние</string>
+    <string name="status_idle">ГОТОВ К РАБОТЕ</string>
+    <string name="status_working">ВЫПОЛНЯЮ</string>
+    <string name="status_success">ГОТОВО</string>
+    <string name="status_error">НУЖНО ВНИМАНИЕ</string>
+    <string name="status_mark_idle" translatable="false">●</string>
+    <string name="status_mark_working" translatable="false">•••</string>
+    <string name="status_mark_success" translatable="false">✓</string>
+    <string name="status_mark_error" translatable="false">!</string>
     <string name="nav_connection">Связь</string>
     <string name="nav_voice">Голос</string>
     <string name="nav_movement">Управление</string>
@@ -49,6 +58,7 @@
     <string name="assistant_no_sources">Ответ без веб-источников</string>
     <string name="assistant_listening">Слушаю вопрос…</string>
     <string name="assistant_history_cleared">История диалога очищена</string>
+    <string name="assistant_clearing_history">Очищаю историю диалога…</string>
 
     <string name="connection_page_title">Подключение</string>
     <string name="connection_page_subtitle">Raspberry Pi и телефон должны быть в одной Wi‑Fi сети</string>
@@ -154,7 +164,7 @@
     <string name="white">Белый</string>
     <string name="blink_button">✦ Мигать</string>
     <string name="lights_off_button">○ Выключить</string>
-    <string name="connection_not_checked">● Связь ещё не проверена</string>
+    <string name="connection_not_checked">Связь с Пайдогом ещё не проверена</string>
 
     <string name="reading_sensors">Читаю датчики…</string>
     <string name="sensors_updated">Датчики обновлены</string>
@@ -174,6 +184,9 @@
     <string name="camera_connecting_status">ПОДКЛЮЧЕНИЕ</string>
     <string name="camera_starting">Запускаю камеру Пайдог…</string>
     <string name="camera_starting_short">Запускаю камеру…</string>
+    <string name="camera_refreshing_short">Обновляю видеопоток…</string>
+    <string name="camera_stream_refreshed">Видеопоток обновлён</string>
+    <string name="camera_stopping_short">Выключаю камеру…</string>
     <string name="camera_phrase_on">открыть видеопоток</string>
     <string name="camera_subject">Камера</string>
     <string name="stream_started">видеопоток запущен</string>

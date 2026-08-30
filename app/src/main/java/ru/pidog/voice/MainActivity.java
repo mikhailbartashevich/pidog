@@ -97,7 +97,7 @@ public final class MainActivity extends Activity {
         sensorController = new SensorController(this, robotClient, connection);
         assistantController = new AssistantController(this, robotClient, connection);
         speechController = new SpeechRecognitionController(
-                this, currentLanguageTag, new SpeechRecognitionController.Listener() {
+                this, currentLanguageTag, connection, new SpeechRecognitionController.Listener() {
                     @Override
                     public void onCommand(RobotCommand command, String sourcePhrase) {
                         sendCommand(command, sourcePhrase);
@@ -274,28 +274,28 @@ public final class MainActivity extends Activity {
     @SuppressWarnings("deprecation")
     private void applySystemBarInsets() {
         View topBar = findViewById(R.id.topBar);
-        View bottomStatus = findViewById(R.id.connectionStatus);
+        View mainRoot = findViewById(R.id.mainRoot);
         int topStart = topBar.getPaddingStart();
         int topTop = topBar.getPaddingTop();
         int topEnd = topBar.getPaddingEnd();
         int topBottom = topBar.getPaddingBottom();
-        int bottomStart = bottomStatus.getPaddingStart();
-        int bottomTop = bottomStatus.getPaddingTop();
-        int bottomEnd = bottomStatus.getPaddingEnd();
-        int bottomBottom = bottomStatus.getPaddingBottom();
+        int rootStart = mainRoot.getPaddingStart();
+        int rootTop = mainRoot.getPaddingTop();
+        int rootEnd = mainRoot.getPaddingEnd();
+        int rootBottom = mainRoot.getPaddingBottom();
 
         topBar.setOnApplyWindowInsetsListener((view, insets) -> {
             view.setPaddingRelative(topStart, topTop + insets.getSystemWindowInsetTop(),
                     topEnd, topBottom);
             return insets;
         });
-        bottomStatus.setOnApplyWindowInsetsListener((view, insets) -> {
-            view.setPaddingRelative(bottomStart, bottomTop, bottomEnd,
-                    bottomBottom + insets.getSystemWindowInsetBottom());
+        mainRoot.setOnApplyWindowInsetsListener((view, insets) -> {
+            view.setPaddingRelative(rootStart, rootTop, rootEnd,
+                    rootBottom + insets.getSystemWindowInsetBottom());
             return insets;
         });
         topBar.requestApplyInsets();
-        bottomStatus.requestApplyInsets();
+        mainRoot.requestApplyInsets();
     }
 
     @Override
@@ -327,6 +327,7 @@ public final class MainActivity extends Activity {
         sensorController.stopPolling();
         speechController.destroy();
         visionController.destroy();
+        connection.destroy();
         robotClient.close();
         super.onDestroy();
     }

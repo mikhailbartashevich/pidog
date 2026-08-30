@@ -136,7 +136,11 @@ final class VisionController {
         RobotConnection.Endpoint endpoint = connection.read();
         if (endpoint != null) {
             cameraStatus.setText(R.string.refreshing_status);
+            connection.showStatus(
+                    activity.getString(R.string.camera_refreshing_short), R.color.muted);
             loadStream(endpoint.host);
+            connection.showStatus(
+                    activity.getString(R.string.camera_stream_refreshed), R.color.brand);
         }
     }
 
@@ -150,6 +154,8 @@ final class VisionController {
         cameraView.loadUrl("about:blank");
         cameraStatus.setText(R.string.off_status);
         showPlaceholder(activity.getString(R.string.camera_off));
+        connection.showStatus(
+                activity.getString(R.string.camera_stopping_short), R.color.muted);
         client.send(endpoint.host, endpoint.port, endpoint.token, RobotCommand.CAMERA_OFF,
                 activity.getString(R.string.camera_phrase_off), (success, message) -> {
                     connection.showStatus(message, success ? R.color.brand : R.color.danger);

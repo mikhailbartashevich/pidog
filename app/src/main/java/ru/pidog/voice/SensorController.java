@@ -66,6 +66,8 @@ final class SensorController {
         connection.save();
         if (announce) {
             sensorsText.setText(R.string.reading_sensors);
+            connection.showStatus(
+                    activity.getString(R.string.reading_sensors), R.color.muted);
         }
         client.sensors(endpoint.host, endpoint.port, endpoint.token, (success, message, data) -> {
             if (success) {

@@ -27,6 +27,7 @@ final class SpeechRecognitionController implements RecognitionListener {
 
     private final Activity activity;
     private final String languageTag;
+    private final RobotConnection connection;
     private final Listener listener;
     private final TextView listeningStatus;
     private final TextView recognizedText;
@@ -39,9 +40,11 @@ final class SpeechRecognitionController implements RecognitionListener {
     private boolean listening;
     private boolean assistantMode;
 
-    SpeechRecognitionController(Activity activity, String languageTag, Listener listener) {
+    SpeechRecognitionController(Activity activity, String languageTag,
+                                RobotConnection connection, Listener listener) {
         this.activity = activity;
         this.languageTag = languageTag;
+        this.connection = connection;
         this.listener = listener;
         listeningStatus = activity.findViewById(R.id.listeningStatus);
         recognizedText = activity.findViewById(R.id.recognizedText);
@@ -76,6 +79,8 @@ final class SpeechRecognitionController implements RecognitionListener {
             start();
         } else {
             assistantMode = false;
+            connection.showStatus(
+                    activity.getString(R.string.microphone_denied), R.color.danger);
             Toast.makeText(activity, R.string.microphone_denied, Toast.LENGTH_LONG).show();
         }
     }
@@ -126,9 +131,12 @@ final class SpeechRecognitionController implements RecognitionListener {
             assistantAnswer.setText(R.string.assistant_listening);
             assistantAnswer.setTextColor(activity.getColor(R.color.muted));
             assistantMicButton.setText(R.string.icon_stop);
+            connection.showStatus(
+                    activity.getString(R.string.assistant_listening), R.color.muted);
         } else {
             listeningStatus.setText(R.string.listening);
             micButton.setText(R.string.icon_stop);
+            connection.showStatus(activity.getString(R.string.listening), R.color.muted);
         }
         recognizer.startListening(intent);
     }
@@ -159,6 +167,8 @@ final class SpeechRecognitionController implements RecognitionListener {
         if (match == null) {
             commandText.setText(R.string.command_not_recognized);
             commandText.setTextColor(activity.getColor(R.color.warning));
+            connection.showStatus(
+                    activity.getString(R.string.command_not_recognized), R.color.warning);
             return;
         }
         commandText.setText(String.format(Locale.forLanguageTag(recognitionLanguageTag()),
@@ -181,10 +191,13 @@ final class SpeechRecognitionController implements RecognitionListener {
 
     @Override public void onReadyForSpeech(Bundle params) {
         listeningStatus.setText(R.string.speak_now);
+        connection.showStatus(activity.getString(assistantMode
+                ? R.string.assistant_listening : R.string.speak_now), R.color.muted);
     }
 
     @Override public void onBeginningOfSpeech() {
         listeningStatus.setText(R.string.hearing_you);
+        connection.showStatus(activity.getString(R.string.hearing_you), R.color.muted);
     }
 
     @Override public void onRmsChanged(float rmsdB) {
@@ -198,6 +211,7 @@ final class SpeechRecognitionController implements RecognitionListener {
 
     @Override public void onEndOfSpeech() {
         listeningStatus.setText(R.string.recognizing);
+        connection.showStatus(activity.getString(R.string.recognizing), R.color.muted);
     }
 
     @Override public void onError(int error) {
@@ -228,6 +242,7 @@ final class SpeechRecognitionController implements RecognitionListener {
                 message = activity.getString(R.string.recognition_error, error);
         }
         listeningStatus.setText(message);
+        connection.showStatus(message, R.color.danger);
         if (wasAssistantMode) {
             assistantAnswer.setText(message);
             assistantAnswer.setTextColor(activity.getColor(R.color.warning));

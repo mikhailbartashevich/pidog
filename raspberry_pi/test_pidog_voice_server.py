@@ -3,6 +3,7 @@
 import http.client
 import json
 import os
+import re
 import tempfile
 import threading
 import unittest
@@ -100,6 +101,27 @@ class ServerTest(unittest.TestCase):
         self.assertIn("light_orange", payload["commands"])
         self.assertIn("follow_face", payload["commands"])
         self.assertIn("approach_obstacle", payload["commands"])
+
+    def test_server_accepts_every_android_command(self):
+        robot_command_source = (
+            Path(__file__).resolve().parent.parent
+            / "app/src/main/java/ru/pidog/voice/RobotCommand.java"
+        ).read_text(encoding="utf-8")
+        android_commands = set(re.findall(
+            r'^\s*[A-Z][A-Z0-9_]*\("([a-z0-9_]+)"',
+            robot_command_source,
+            flags=re.MULTILINE,
+        ))
+        android_commands.update({
+            "drive_forward", "drive_backward", "drive_left", "drive_right",
+        })
+
+        self.assertTrue(android_commands, "Android command registry is empty")
+        missing_commands = android_commands.difference(self.controller.commands)
+        self.assertEqual(
+            set(), missing_commands,
+            f"Server does not accept Android commands: {sorted(missing_commands)}",
+        )
 
     def test_sensor_snapshot(self):
         status, payload = self.request("GET", "/sensors")

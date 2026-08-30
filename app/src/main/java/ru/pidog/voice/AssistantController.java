@@ -68,14 +68,20 @@ final class AssistantController {
         if (announce) {
             stateView.setText(R.string.assistant_checking);
             stateView.setTextColor(activity.getColor(R.color.muted));
+            connection.showStatus(
+                    activity.getString(R.string.assistant_checking), R.color.muted);
         }
         client.assistantStatus(endpoint.host, endpoint.port, endpoint.token,
                 (success, message, status) -> {
                     if (success && status != null) {
                         renderStatus(status);
+                        if (announce) {
+                            connection.showStatus(message, R.color.brand);
+                        }
                     } else if (announce) {
                         stateView.setText(message);
                         stateView.setTextColor(activity.getColor(R.color.danger));
+                        connection.showStatus(message, R.color.danger);
                     }
                 });
     }
@@ -125,6 +131,8 @@ final class AssistantController {
         setControlsEnabled(false);
         stateView.setText(activity.getString(R.string.assistant_action_running, action));
         stateView.setTextColor(activity.getColor(R.color.muted));
+        connection.showStatus(
+                activity.getString(R.string.assistant_action_running, action), R.color.muted);
         client.assistantControl(endpoint.host, endpoint.port, endpoint.token, action,
                 (success, message, status) -> {
                     connection.showStatus(message, success ? R.color.brand : R.color.danger);
@@ -154,6 +162,8 @@ final class AssistantController {
         answerView.setText(R.string.assistant_asking);
         answerView.setTextColor(activity.getColor(R.color.muted));
         sourcesView.setText(R.string.assistant_sources_empty);
+        connection.showStatus(
+                activity.getString(R.string.assistant_asking), R.color.muted);
         client.assistantChat(endpoint.host, endpoint.port, endpoint.token, question,
                 webSwitch.isChecked(), speakSwitch.isChecked(), (success, message, reply) -> {
                     setControlsEnabled(true);
@@ -184,6 +194,8 @@ final class AssistantController {
         if (endpoint == null) {
             return;
         }
+        connection.showStatus(
+                activity.getString(R.string.assistant_clearing_history), R.color.muted);
         client.clearAssistantHistory(endpoint.host, endpoint.port, endpoint.token,
                 (success, message) -> {
                     if (success) {

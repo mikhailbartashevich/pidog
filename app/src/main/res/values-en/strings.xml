@@ -5,6 +5,11 @@
     <string name="top_subtitle">Voice · camera · sensors</string>
     <string name="power_content_description">External power status</string>
     <string name="language_content_description">Interface and command language</string>
+    <string name="status_mascot_content_description">PiDog mascot showing the current status</string>
+    <string name="status_idle">READY</string>
+    <string name="status_working">IN PROGRESS</string>
+    <string name="status_success">DONE</string>
+    <string name="status_error">NEEDS ATTENTION</string>
     <string name="nav_connection">Connection</string>
     <string name="nav_voice">Voice</string>
     <string name="nav_movement">Control</string>
@@ -49,6 +54,7 @@
     <string name="assistant_no_sources">Answer without web sources</string>
     <string name="assistant_listening">Listening for a question…</string>
     <string name="assistant_history_cleared">Conversation history cleared</string>
+    <string name="assistant_clearing_history">Clearing conversation history…</string>
 
     <string name="connection_page_title">Connection</string>
     <string name="connection_page_subtitle">The Raspberry Pi and phone must use the same Wi-Fi network</string>
@@ -154,7 +160,7 @@
     <string name="white">White</string>
     <string name="blink_button">✦ Blink</string>
     <string name="lights_off_button">○ Turn off</string>
-    <string name="connection_not_checked">● Connection not checked yet</string>
+    <string name="connection_not_checked">Connection to PiDog has not been checked yet</string>
 
     <string name="reading_sensors">Reading sensors…</string>
     <string name="sensors_updated">Sensors updated</string>
@@ -174,6 +180,9 @@
     <string name="camera_connecting_status">CONNECTING</string>
     <string name="camera_starting">Starting the PiDog camera…</string>
     <string name="camera_starting_short">Starting camera…</string>
+    <string name="camera_refreshing_short">Refreshing video stream…</string>
+    <string name="camera_stream_refreshed">Video stream refreshed</string>
+    <string name="camera_stopping_short">Turning camera off…</string>
     <string name="camera_phrase_on">open video stream</string>
     <string name="camera_subject">Camera</string>
     <string name="stream_started">video stream started</string>

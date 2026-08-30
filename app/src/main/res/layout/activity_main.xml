@@ -1,7 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/mainRoot"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="@color/canvas"
     android:orientation="vertical">
 
     <LinearLayout
@@ -90,6 +92,86 @@
                 android:textColor="@color/brand_dark"
                 android:textSize="12sp"
                 android:textStyle="bold" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/globalStatusBar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@drawable/bg_status_bar"
+        android:elevation="5dp"
+        android:gravity="center_vertical"
+        android:minHeight="72dp"
+        android:orientation="horizontal"
+        android:paddingStart="12dp"
+        android:paddingTop="7dp"
+        android:paddingEnd="16dp"
+        android:paddingBottom="7dp">
+
+        <ImageView
+            android:id="@+id/statusMascot"
+            android:layout_width="76dp"
+            android:layout_height="56dp"
+            android:contentDescription="@string/status_mascot_content_description"
+            android:scaleType="fitCenter"
+            android:src="@drawable/pidog_status_mascot" />
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="5dp"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:id="@+id/statusTitle"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:fontFamily="sans-serif-medium"
+                    android:letterSpacing="0.08"
+                    android:text="@string/status_idle"
+                    android:textColor="@color/muted"
+                    android:textSize="11sp" />
+
+                <TextView
+                    android:id="@+id/statusMark"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:fontFamily="sans-serif-medium"
+                    android:text="@string/status_mark_idle"
+                    android:textColor="@color/muted"
+                    android:textSize="16sp" />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/connectionStatus"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:ellipsize="end"
+                android:fontFamily="sans-serif-medium"
+                android:maxLines="2"
+                android:text="@string/connection_not_checked"
+                android:textColor="@color/ink"
+                android:textSize="14sp" />
+
+            <ProgressBar
+                android:id="@+id/statusProgress"
+                style="?android:attr/progressBarStyleHorizontal"
+                android:layout_width="match_parent"
+                android:layout_height="3dp"
+                android:layout_marginTop="5dp"
+                android:indeterminate="true"
+                android:indeterminateTint="@color/brand"
+                android:visibility="invisible" />
         </LinearLayout>
     </LinearLayout>
 
@@ -990,18 +1072,4 @@
         </ScrollView>
     </ViewFlipper>
 
-    <TextView
-        android:id="@+id/connectionStatus"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:background="@drawable/bg_status_bar"
-        android:elevation="8dp"
-        android:gravity="center_vertical"
-        android:minHeight="52dp"
-        android:paddingStart="20dp"
-        android:paddingEnd="20dp"
-        android:text="@string/connection_not_checked"
-        android:textColor="@color/muted"
-        android:textSize="14sp"
-        android:textStyle="bold" />
 </LinearLayout>
