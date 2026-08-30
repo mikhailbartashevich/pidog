@@ -10,7 +10,7 @@ import org.junit.Test;
 public class CommandParserTest {
     @Test
     public void recognizesPoliteRussianCommand() {
-        assertCommand(RobotCommand.SIT, "Пидог, пожалуйста, сядь!");
+        assertCommand(RobotCommand.SIT, "Пайдог, пожалуйста, сядь!");
     }
 
     @Test
@@ -47,7 +47,7 @@ public class CommandParserTest {
 
     @Test
     public void recognizesOrangeJarScenario() {
-        assertCommand(RobotCommand.FIND_ORANGE, "Пидог, найди оранжевую баночку");
+        assertCommand(RobotCommand.FIND_ORANGE, "Пайдог, найди оранжевую баночку");
     }
 
     @Test
@@ -62,7 +62,7 @@ public class CommandParserTest {
 
     @Test
     public void switchesCommandsToPiDogMicrophone() {
-        assertCommand(RobotCommand.LOCAL_VOICE_ON, "Пидог, перейди в режим слушать");
+        assertCommand(RobotCommand.LOCAL_VOICE_ON, "Пайдог, перейди в режим слушать");
     }
 
     @Test

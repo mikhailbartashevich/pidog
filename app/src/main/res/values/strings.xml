@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">PiDog Голос</string>
-    <string name="title">PiDog V2</string>
-    <string name="top_title">PiDog Control</string>
+    <string name="app_name">Пайдог Голос</string>
+    <string name="title">Пайдог V2</string>
+    <string name="top_title">Управление Пайдог</string>
     <string name="top_subtitle">Голос · камера · сенсоры</string>
     <string name="power_content_description">Состояние внешнего питания</string>
     <string name="language_content_description">Язык интерфейса и команд</string>
@@ -20,7 +20,7 @@
     <string name="token_hint">Секретный токен</string>
     <string name="check_connection">Проверить связь</string>
     <string name="current_configuration">ТЕКУЩАЯ КОНФИГУРАЦИЯ</string>
-    <string name="configuration_summary">PiDog API · порт 8765\nКамера · порт 9000\nРусское распознавание · ru-RU</string>
+    <string name="configuration_summary">API Пайдог · порт 8765\nКамера · порт 9000\nРусское распознавание · ru-RU</string>
 
     <string name="voice_page_title">Голосовое управление</string>
     <string name="voice_page_subtitle">Говорите естественно — команда выбирается из безопасного списка</string>
@@ -31,12 +31,12 @@
     <string name="recognized_empty">Здесь появится услышанная фраза</string>
     <string name="selected_command_title">ВЫБРАННАЯ КОМАНДА</string>
     <string name="command_empty">Ожидаю команду</string>
-    <string name="voice_examples">Попробуйте: «найди оранжевую баночку», «покажи заряд», «свети фиолетовым», «вой», «слушай звук».</string>
+    <string name="voice_examples">Попробуйте: «найди оранжевую баночку», «покажи заряд», «вой». Чтобы дальше говорить без телефона: «перейди в режим слушать».</string>
 
     <string name="commands_page_title">Все команды</string>
     <string name="commands_page_subtitle">Тот же полный набор, что доступен голосом</string>
     <string name="choose_action">ВЫБЕРИТЕ ДЕЙСТВИЕ</string>
-    <string name="send_to_pidog">Отправить PiDog</string>
+    <string name="send_to_pidog">Отправить Пайдог</string>
     <string name="quick_control">Быстрое управление</string>
     <string name="forward_button">↑ Вперёд</string>
     <string name="backward_button">↓ Назад</string>
@@ -50,11 +50,11 @@
     <string name="stop_button">■ СТОП</string>
 
     <string name="camera_page_title">Камера и цвета</string>
-    <string name="camera_page_subtitle">Живой поток и журнал распознавания PiDog</string>
-    <string name="pidog_camera">КАМЕРА PIDOG</string>
+    <string name="camera_page_subtitle">Живой поток и журнал распознавания Пайдог</string>
+    <string name="pidog_camera">КАМЕРА ПАЙДОГ</string>
     <string name="live_video">Прямой видеопоток</string>
     <string name="off_status">ВЫКЛЮЧЕНА</string>
-    <string name="camera_stream_content_description">Видеопоток камеры PiDog</string>
+    <string name="camera_stream_content_description">Видеопоток камеры Пайдог</string>
     <string name="camera_not_started">Поток камеры пока не запущен</string>
     <string name="start_video">▶  Запустить видеопоток</string>
     <string name="refresh_button">↻ Обновить</string>
@@ -68,7 +68,7 @@
     <string name="green_dot">●  Зелёный</string>
     <string name="blue_dot">●  Синий</string>
     <string name="purple_dot">●  Фиолетовый</string>
-    <string name="vision_behavior">При обнаружении PiDog наведёт голову, укажет лапой и подаст голос.</string>
+    <string name="vision_behavior">При обнаружении Пайдог наведёт голову, укажет лапой и подаст голос.</string>
     <string name="vision_log_title">ЖУРНАЛ ЗРЕНИЯ</string>
     <string name="latest_events">Последние события</string>
     <string name="clear_button">Очистить</string>
@@ -77,7 +77,7 @@
     <string name="sensors_page_title">Сенсоры и свет</string>
     <string name="sensors_page_subtitle">Живые индикаторы и световые эффекты</string>
     <string name="determining_power">Определяю источник питания</string>
-    <string name="power_status_after_connection">Статус появится после подключения к PiDog</string>
+    <string name="power_status_after_connection">Статус появится после подключения к Пайдог</string>
     <string name="checking_badge">ПРОВЕРКА</string>
     <string name="sensors_refresh_hint">Нажмите «Обновить», чтобы прочитать датчики</string>
     <string name="refresh_indicators">Обновить индикаторы</string>
@@ -104,13 +104,13 @@
     <string name="external_power_connected">Внешнее питание подключено</string>
     <string name="battery_charging_detail">Аккумулятор заряжается от внешнего источника</string>
     <string name="charging_badge">ЗАРЯДКА</string>
-    <string name="external_power_detail">PiDog питается от внешнего источника</string>
+    <string name="external_power_detail">Пайдог питается от внешнего источника</string>
     <string name="connected_badge">ПОДКЛЮЧЕНО</string>
     <string name="battery_power">Работа от аккумулятора</string>
     <string name="external_power_not_found">Внешний источник питания не обнаружен</string>
     <string name="battery_badge">БАТАРЕЯ</string>
     <string name="camera_connecting_status">ПОДКЛЮЧЕНИЕ</string>
-    <string name="camera_starting">Запускаю камеру PiDog…</string>
+    <string name="camera_starting">Запускаю камеру Пайдог…</string>
     <string name="camera_starting_short">Запускаю камеру…</string>
     <string name="camera_phrase_on">открыть видеопоток</string>
     <string name="camera_subject">Камера</string>
@@ -122,7 +122,7 @@
     <string name="manual_selected">выбрано вручную: %1$s</string>
     <string name="manual_button_phrase">ручная кнопка</string>
     <string name="recognizer_unavailable">На устройстве нет службы распознавания речи</string>
-    <string name="recognizer_prompt">Скажите команду для PiDog</string>
+    <string name="recognizer_prompt">Скажите команду для Пайдог</string>
     <string name="command_not_recognized">Команда не распознана — ничего не отправлено</string>
     <string name="checking_connection">Проверяю связь…</string>
     <string name="sending_command">Отправляю: %1$s…</string>

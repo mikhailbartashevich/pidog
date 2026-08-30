@@ -87,7 +87,7 @@ Then initialize the Russian Vosk model once. The first run downloads the small m
 sudo python3 -c 'from pidog.stt import Vosk; Vosk(language="ru")'
 ```
 
-Restart the service after updating it. In the Android app, say **“Пидог, перейди в режим слушать”** or select **“Слушать через микрофон PiDog”** from the command list. After the server confirms the command, the phone is no longer needed: speak commands 15–30 cm from PiDog. Say **“Пидог, перестань слушать”** to stop local recognition. The `/health` response exposes the current mode in `local_voice` and any Vosk or microphone startup error in `local_voice.error`.
+Restart the service after updating it. In the Android app, say **“Пайдог, перейди в режим слушать”** or select **“Слушать через микрофон Пайдог”** from the command list. After the server confirms the command, the phone is no longer needed: speak commands 15–30 cm from PiDog. Say **“Пайдог, перестань слушать”** to stop local recognition. The `/health` response exposes the current mode in `local_voice` and any Vosk or microphone startup error in `local_voice.error`.
 
 The similarly named **“слушай звук”** command remains a separate six-second sound-direction action and does not start speech recognition.
 
@@ -134,7 +134,7 @@ To build from the command line:
 2. Choose **Русский** or **English** in the language selector. Russian is selected by default; the choice controls both the interface and voice commands and is saved between launches.
 3. In the app, enter the Raspberry Pi IP address, port `8765`, and the same token.
 4. Tap **Check connection**.
-5. Tap the green microphone and say, for example, “Пидог, пожалуйста, сядь” or “PiDog, please sit.”
+5. Tap the green microphone and say, for example, “Пайдог, пожалуйста, сядь” or “PiDog, please sit.”
 
 For the best recognition quality, use Google’s system speech recognizer and a regular home Wi-Fi network with internet access. If the phone connects directly to the PiDog access point without internet, download the Russian or English offline recognition pack in Google Voice Typing settings beforehand. Offline recognition may be less accurate.
 

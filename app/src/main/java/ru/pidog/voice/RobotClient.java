@@ -164,7 +164,7 @@ public final class RobotClient {
                            String path, String body) throws IOException {
         String cleanHost = host == null ? "" : host.trim();
         if (cleanHost.isEmpty()) {
-            return new Result(false, text("Укажите IP-адрес PiDog", "Enter the PiDog IP address"), null);
+            return new Result(false, text("Укажите IP-адрес Пайдог", "Enter the PiDog IP address"), null);
         }
         if (cleanHost.startsWith("http://")) {
             cleanHost = cleanHost.substring(7);
@@ -212,7 +212,7 @@ public final class RobotClient {
         if (status == 409) {
             return new Result(false, conflictMessage(response), response);
         }
-        return new Result(false, text("Ошибка PiDog ", "PiDog error ") + status
+        return new Result(false, text("Ошибка Пайдог ", "PiDog error ") + status
                 + (response.isEmpty() ? "" : ": " + response), response);
     }
 
@@ -220,14 +220,28 @@ public final class RobotClient {
         try {
             JSONObject json = new JSONObject(response);
             if ("/health".equals(path)) {
+                JSONObject localVoice = json.optJSONObject("local_voice");
+                if (localVoice != null) {
+                    String voiceState = localVoice.optString("state", "");
+                    String voiceError = localVoice.optString("error", "").trim();
+                    if ("error".equals(voiceState) && !voiceError.isEmpty()) {
+                        return text("Пайдог на связи, но встроенный микрофон не готов: ",
+                                "PiDog connected, but the built-in microphone is not ready: ")
+                                + voiceError;
+                    }
+                    if ("listening".equals(voiceState) || "starting".equals(voiceState)) {
+                        return text("Пайдог на связи · слушает встроенный микрофон",
+                                "PiDog connected · listening through its built-in microphone");
+                    }
+                }
                 JSONObject audio = json.optJSONObject("audio");
                 if (audio != null && !audio.isNull("ready")) {
                     if (audio.optBoolean("ready", false)) {
-                        return text("PiDog на связи · звук готов", "PiDog connected · audio ready");
+                        return text("Пайдог на связи · звук готов", "PiDog connected · audio ready");
                     }
                     String error = audio.optString("error",
                             text("аудио недоступно", "audio unavailable")).trim();
-                    return text("PiDog на связи, но звук не готов: ",
+                    return text("Пайдог на связи, но звук не готов: ",
                             "PiDog connected, but audio is not ready: ") + error;
                 }
             }
@@ -269,7 +283,7 @@ public final class RobotClient {
             // A successful legacy server may return no JSON message.
         }
         return "/health".equals(path)
-                ? text("PiDog на связи", "PiDog connected")
+                ? text("Пайдог на связи", "PiDog connected")
                 : text("Команда принята", "Command accepted");
     }
 
@@ -279,12 +293,12 @@ public final class RobotClient {
             if ("audio unavailable".equals(json.optString("error"))) {
                 String detail = json.optString("detail",
                         text("проверьте динамик и ALSA", "check the speaker and ALSA")).trim();
-                return text("Звук PiDog недоступен: ", "PiDog audio is unavailable: ") + detail;
+                return text("Звук Пайдог недоступен: ", "PiDog audio is unavailable: ") + detail;
             }
         } catch (JSONException ignored) {
             // Keep the generic message for legacy or non-JSON server responses.
         }
-        return text("PiDog занят или команда не выполнена",
+        return text("Пайдог занят или команда не выполнена",
                 "PiDog is busy or the command could not be completed");
     }
 
@@ -332,7 +346,7 @@ public final class RobotClient {
         if (message == null || message.trim().isEmpty()) {
             message = error.getClass().getSimpleName();
         }
-        return text("Нет связи с PiDog: ", "Could not connect to PiDog: ") + message;
+        return text("Нет связи с Пайдог: ", "Could not connect to PiDog: ") + message;
     }
 
     private String text(String russian, String englishText) {

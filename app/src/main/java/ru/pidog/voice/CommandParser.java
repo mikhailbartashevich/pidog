@@ -20,7 +20,7 @@ public final class CommandParser {
     private static final Map<RobotCommand, List<String>> RUSSIAN_ALIASES = new EnumMap<>(RobotCommand.class);
     private static final Map<RobotCommand, List<String>> ENGLISH_ALIASES = new EnumMap<>(RobotCommand.class);
     private static final Set<String> RUSSIAN_FILLERS = new HashSet<>(Arrays.asList(
-            "пидог", "пайдог", "пес", "песик", "собака", "собачка", "робот",
+            "пайдог", "пес", "песик", "собака", "собачка", "робот",
             "эй", "ну", "давай", "пожалуйста", "команда", "теперь", "быстро"
     ));
     private static final Set<String> ENGLISH_FILLERS = new HashSet<>(Arrays.asList(
@@ -253,7 +253,7 @@ public final class CommandParser {
         for (List<String> commandAliases : aliases.values()) {
             phrases.addAll(commandAliases);
         }
-        phrases.add(english ? "PiDog" : "Пидог");
+        phrases.add(english ? "PiDog" : "Пайдог");
         return phrases;
     }
 

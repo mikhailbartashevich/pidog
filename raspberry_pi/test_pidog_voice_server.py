@@ -57,7 +57,7 @@ class ServerTest(unittest.TestCase):
 
     def test_valid_command(self):
         status, payload = self.request(
-            "POST", "/command", {"command": "sit", "phrase": "Пидог, сядь"}
+            "POST", "/command", {"command": "sit", "phrase": "Пайдог, сядь"}
         )
         self.assertEqual(202, status)
         self.assertEqual("sit", payload["command"])
@@ -178,8 +178,8 @@ class AudioConfigurationTest(unittest.TestCase):
 class LocalVoiceControlTest(unittest.TestCase):
     def test_matches_safe_local_voice_commands(self):
         self.assertEqual("local_voice_on", match_local_voice_command(
-            "Пидог, пожалуйста, перейди в режим слушать!"))
-        self.assertEqual("sit", match_local_voice_command("Пидог, сядь"))
+            "Пайдог, пожалуйста, перейди в режим слушать!"))
+        self.assertEqual("sit", match_local_voice_command("Пайдог, сядь"))
         self.assertEqual("local_voice_off", match_local_voice_command("перестань слушать"))
         self.assertIsNone(match_local_voice_command("похожи немного вперед"))
 
@@ -223,6 +223,9 @@ class LocalVoiceControlTest(unittest.TestCase):
 
         self.assertEqual("error", listener.status["state"])
         self.assertIn("Vosk model unavailable", listener.status["error"])
+
+    def test_listener_accepts_json_text_returned_by_vosk(self):
+        self.assertEqual("сядь", LocalVoiceListener._extract_phrase('{"text": "сядь"}'))
 
 
 class PowerStatusTest(unittest.TestCase):

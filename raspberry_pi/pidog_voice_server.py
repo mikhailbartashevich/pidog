@@ -43,7 +43,7 @@ COMMAND_COLORS = {
 }
 
 VOICE_FILLERS = {
-    "пидог", "пайдог", "пес", "песик", "собака", "собачка", "робот",
+    "пайдог", "пес", "песик", "собака", "собачка", "робот",
     "эй", "ну", "давай", "пожалуйста", "команда", "теперь", "быстро",
 }
 
@@ -190,6 +190,10 @@ class LocalVoiceListener:
             LOG.info("local voice control is listening through the PiDog microphone")
             while not self._stop_event.is_set():
                 result = recognizer.listen(stream=False)
+                # An HTTP stop or service shutdown may arrive while Vosk is
+                # blocked waiting for speech. Discard that last utterance.
+                if self._stop_event.is_set():
+                    break
                 phrase = self._extract_phrase(result)
                 if not phrase:
                     continue
@@ -217,7 +221,13 @@ class LocalVoiceListener:
     @staticmethod
     def _extract_phrase(result: Any) -> str:
         if isinstance(result, str):
-            return result.strip()
+            value = result.strip()
+            if value.startswith("{"):
+                try:
+                    return LocalVoiceListener._extract_phrase(json.loads(value))
+                except json.JSONDecodeError:
+                    pass
+            return value
         if isinstance(result, dict):
             for key in ("final", "text", "result"):
                 value = result.get(key)
@@ -495,8 +505,8 @@ class RobotController:
         return {
             "local_voice": self._local_voice.status,
             "message": (
-                "Режим прослушивания включается: говорите во встроенный микрофон PiDog"
-                if started else "PiDog уже принимает команды через встроенный микрофон"
+                "Режим прослушивания включается: говорите во встроенный микрофон Пайдог"
+                if started else "Пайдог уже принимает команды через встроенный микрофон"
             ),
         }
 
@@ -514,7 +524,7 @@ class RobotController:
     def _stop(self) -> dict[str, Any]:
         self._dog.body_stop()
         self._light_off()
-        return {"message": "PiDog остановлен"}
+        return {"message": "Пайдог остановлен"}
 
     def _bark(self) -> None:
         self._require_audio()
@@ -527,7 +537,7 @@ class RobotController:
         from pidog.preset_actions import howling
 
         self._play_with_speaker(lambda: howling(self._dog, volume=100))
-        return {"message": "PiDog воет"}
+        return {"message": "Пайдог воет"}
 
     def _prepare_audio(self) -> None:
         """Prepare PiDog's sound path under systemd and leave the amp muted.
@@ -844,7 +854,7 @@ class RobotController:
             self._dog.do_action("shake_head", speed=70)
             return {
                 "found": False, "color": color,
-                "message": f"Цвет {self._russian_color(color)} не найден — PiDog показывает «нет»",
+                "message": f"Цвет {self._russian_color(color)} не найден — Пайдог показывает «нет»",
             }
 
         yaw = self._clamp(found["scan_yaw"] + (160 - found["x"]) * 0.30, -70, 70)
@@ -865,7 +875,7 @@ class RobotController:
         return {
             "found": True, "color": color,
             "x": round(found["x"]), "y": round(found["y"]),
-            "message": f"Цвет {self._russian_color(color)} найден — PiDog указал лапой и залаял",
+            "message": f"Цвет {self._russian_color(color)} найден — Пайдог указал лапой и залаял",
         }
 
     def _measure_distance(self) -> dict[str, Any]:

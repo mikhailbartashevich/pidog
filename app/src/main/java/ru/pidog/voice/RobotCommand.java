@@ -21,7 +21,7 @@ public enum RobotCommand {
     SLEEP("sleep", "Спать", "Sleep"),
     MEASURE_DISTANCE("measure_distance", "Измерить расстояние", "Measure distance"),
     LISTEN_SOUND("listen_sound", "Найти источник звука", "Find sound source"),
-    LOCAL_VOICE_ON("local_voice_on", "Слушать через микрофон PiDog", "Listen through PiDog microphone"),
+    LOCAL_VOICE_ON("local_voice_on", "Слушать через микрофон Пайдог", "Listen through PiDog microphone"),
     LOCAL_VOICE_OFF("local_voice_off", "Вернуться к микрофону телефона", "Return to phone microphone"),
     SHOW_BATTERY("show_battery", "Показать заряд светодиодами", "Show battery on LEDs"),
     FIND_ORANGE("find_orange", "Найти оранжевый и указать лапой", "Find orange and point"),

@@ -31,7 +31,7 @@
     <string name="recognized_empty">The recognized phrase will appear here</string>
     <string name="selected_command_title">SELECTED COMMAND</string>
     <string name="command_empty">Waiting for a command</string>
-    <string name="voice_examples">Try: “find orange”, “show battery”, “purple light”, “howl”, or “find sound”.</string>
+    <string name="voice_examples">Try: “find orange”, “show battery”, or “howl”. To continue without the phone, say “listen for commands”.</string>
 
     <string name="commands_page_title">All commands</string>
     <string name="commands_page_subtitle">The same complete set that is available by voice</string>
