@@ -1,5 +1,5 @@
 import { Box, Typography, alpha } from '@mui/material'
-import { type PointerEvent, useRef, useState } from 'react'
+import { type KeyboardEvent, type PointerEvent, useRef, useState } from 'react'
 
 type HeadJoystickProps = {
   label: string
@@ -27,6 +27,7 @@ export function HeadJoystick({
 }: HeadJoystickProps) {
   const surfaceRef = useRef<HTMLDivElement | null>(null)
   const positionRef = useRef<Position>({ x: 0, y: 0 })
+  const keyboardKeysRef = useRef<Set<string>>(new Set())
   const [position, setPosition] = useState<Position>({ x: 0, y: 0 })
 
   const setAndNotify = (next: Position) => {
@@ -36,8 +37,35 @@ export function HeadJoystick({
   }
 
   const resetVisualPosition = () => {
+    keyboardKeysRef.current.clear()
     positionRef.current = { x: 0, y: 0 }
     setPosition({ x: 0, y: 0 })
+  }
+
+  const positionFromKeyboard = (): Position => {
+    let x = 0
+    let y = 0
+    if (keyboardKeysRef.current.has('ArrowLeft')) x -= 1
+    if (keyboardKeysRef.current.has('ArrowRight')) x += 1
+    if (keyboardKeysRef.current.has('ArrowUp')) y -= 1
+    if (keyboardKeysRef.current.has('ArrowDown')) y += 1
+    const length = Math.hypot(x, y)
+    return length > 1 ? { x: x / length, y: y / length } : { x, y }
+  }
+
+  const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (disabled || !event.key.startsWith('Arrow')) return
+    event.preventDefault()
+    if (keyboardKeysRef.current.has(event.key)) return
+    keyboardKeysRef.current.add(event.key)
+    setAndNotify(positionFromKeyboard())
+  }
+
+  const handleKeyUp = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (!keyboardKeysRef.current.has(event.key)) return
+    event.preventDefault()
+    keyboardKeysRef.current.delete(event.key)
+    setAndNotify(positionFromKeyboard())
   }
 
   const update = (event: PointerEvent<HTMLDivElement>) => {
@@ -83,8 +111,13 @@ export function HeadJoystick({
       </Typography>
       <Box
         ref={surfaceRef}
+        // eslint-disable-next-line jsx-a11y/prefer-tag-over-role
+        role="slider"
         tabIndex={disabled ? -1 : 0}
         aria-label={label}
+        aria-valuemin={-1}
+        aria-valuemax={1}
+        aria-valuenow={position.x || position.y ? 1 : 0}
         onPointerDown={(event) => {
           if (disabled) return
           event.currentTarget.setPointerCapture(event.pointerId)
@@ -95,23 +128,16 @@ export function HeadJoystick({
         }}
         onPointerUp={release}
         onPointerCancel={release}
-        onKeyDown={(event) => {
-          if (disabled || !event.key.startsWith('Arrow')) return
-          event.preventDefault()
-          const next = { ...positionRef.current }
-          if (event.key === 'ArrowLeft') next.x = -1
-          if (event.key === 'ArrowRight') next.x = 1
-          if (event.key === 'ArrowUp') next.y = -1
-          if (event.key === 'ArrowDown') next.y = 1
-          setAndNotify(next)
-        }}
-        onKeyUp={(event) => {
-          if (event.key.startsWith('Arrow')) resetVisualPosition()
-        }}
+        onKeyDown={handleKeyDown}
+        onKeyUp={handleKeyUp}
+        onBlur={resetVisualPosition}
         sx={{
-          width: '100%',
-          height: 142,
-          borderRadius: 4,
+          width: 'min(100%, 220px)',
+          aspectRatio: '1 / 1',
+          height: 'auto',
+          minHeight: 0,
+          mx: 'auto',
+          borderRadius: '50%',
           position: 'relative',
           overflow: 'hidden',
           touchAction: 'none',

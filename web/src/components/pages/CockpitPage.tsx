@@ -32,10 +32,26 @@ import { buildCameraStreamUrl, normalizeHost } from '../../lib/api'
 import { findAction } from '../../lib/commands'
 import { tr } from '../../lib/i18n'
 import { colorCommands } from '../../lib/vision'
-import type { CockpitProps } from '../../types/ui'
+import type { Axis, CockpitProps, Direction } from '../../types/ui'
 import { HeadJoystick } from '../HeadJoystick'
 import { Joystick } from '../Joystick'
 import { CompactMetric } from '../ui/Metrics'
+
+const keyboardMovement: Record<string, { axis: Axis; direction: Direction }> = {
+  ArrowUp: { axis: 'drive', direction: -1 },
+  ArrowDown: { axis: 'drive', direction: 1 },
+  ArrowLeft: { axis: 'turn', direction: -1 },
+  ArrowRight: { axis: 'turn', direction: 1 },
+}
+
+function shouldIgnoreKeyboardTarget(target: EventTarget | null) {
+  if (!(target instanceof HTMLElement)) return false
+  return (
+    target.isContentEditable ||
+    ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName) ||
+    target.getAttribute('role') === 'slider'
+  )
+}
 
 export function CockpitPage({
   language,
@@ -55,6 +71,7 @@ export function CockpitPage({
 }: CockpitProps) {
   const cameraRef = useRef<HTMLDivElement | null>(null)
   const [fullscreen, setFullscreen] = useState(false)
+  const pressedKeysRef = useRef<Set<string>>(new Set())
   const host = normalizeHost(settings.host)
   const cameraUrl = buildCameraStreamUrl(settings, streamNonce)
   const toggleFullscreen = async () => {
@@ -67,6 +84,46 @@ export function CockpitPage({
     document.addEventListener('fullscreenchange', listener)
     return () => document.removeEventListener('fullscreenchange', listener)
   }, [])
+
+  useEffect(() => {
+    const pressedKeys = pressedKeysRef.current
+    const handleKeyDown = (event: globalThis.KeyboardEvent) => {
+      const movement = keyboardMovement[event.key]
+      if (!connected || !movement || shouldIgnoreKeyboardTarget(event.target)) return
+      event.preventDefault()
+      if (pressedKeys.has(event.key)) return
+      pressedKeys.add(event.key)
+      onMove(movement.axis, movement.direction)
+    }
+
+    const handleKeyUp = (event: globalThis.KeyboardEvent) => {
+      const movement = keyboardMovement[event.key]
+      if (!movement || !pressedKeys.delete(event.key)) return
+      event.preventDefault()
+      const remainingDirection = Object.entries(keyboardMovement).find(
+        ([key, candidate]) =>
+          key !== event.key && candidate.axis === movement.axis && pressedKeys.has(key),
+      )?.[1].direction
+      onMove(movement.axis, remainingDirection ?? 0)
+    }
+
+    const releaseAllKeys = () => {
+      if (pressedKeys.size === 0) return
+      pressedKeys.clear()
+      onMove('drive', 0)
+      onMove('turn', 0)
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    window.addEventListener('keyup', handleKeyUp)
+    window.addEventListener('blur', releaseAllKeys)
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown)
+      window.removeEventListener('keyup', handleKeyUp)
+      window.removeEventListener('blur', releaseAllKeys)
+      pressedKeys.clear()
+    }
+  }, [connected, onMove])
 
   return (
     <Box
@@ -169,6 +226,7 @@ export function CockpitPage({
                     <span>
                       <IconButton
                         size="small"
+                        aria-label={tr(language, 'Обновить поток', 'Refresh stream')}
                         disabled={!streaming}
                         onClick={onRefreshStream}
                         sx={{
@@ -183,6 +241,7 @@ export function CockpitPage({
                   <Tooltip title={tr(language, 'На весь экран', 'Fullscreen')}>
                     <IconButton
                       size="small"
+                      aria-label={tr(language, 'На весь экран', 'Fullscreen')}
                       onClick={() => void toggleFullscreen()}
                       sx={{
                         bgcolor: alpha('#000', 0.55),
@@ -234,31 +293,20 @@ export function CockpitPage({
             <Box
               sx={{
                 display: 'grid',
-                gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, minmax(0, 1fr))' },
+                gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))' },
                 gap: 1.2,
               }}
             >
               <Card>
                 <CardContent sx={{ p: 1.6 }}>
                   <Joystick
-                    axis="vertical"
-                    label={tr(language, 'ХОД', 'DRIVE')}
-                    negativeLabel={tr(language, 'Вперёд', 'Forward')}
-                    positiveLabel={tr(language, 'Назад', 'Back')}
+                    label={tr(language, 'ХОД / ПОВОРОТ', 'MOVE / TURN')}
+                    forwardLabel={tr(language, 'Вперёд', 'Forward')}
+                    backwardLabel={tr(language, 'Назад', 'Back')}
+                    leftLabel={tr(language, 'Лево', 'Left')}
+                    rightLabel={tr(language, 'Право', 'Right')}
                     disabled={!connected}
-                    onDirectionChange={(direction) => onMove('drive', direction)}
-                  />
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent sx={{ p: 1.6 }}>
-                  <Joystick
-                    axis="horizontal"
-                    label={tr(language, 'ПОВОРОТ', 'TURN')}
-                    negativeLabel={tr(language, 'Налево', 'Left')}
-                    positiveLabel={tr(language, 'Направо', 'Right')}
-                    disabled={!connected}
-                    onDirectionChange={(direction) => onMove('turn', direction)}
+                    onMovementChange={onMove}
                   />
                 </CardContent>
               </Card>
@@ -444,7 +492,12 @@ export function CockpitPage({
               </Box>
               <Tooltip title={tr(language, 'Очистить', 'Clear')}>
                 <span>
-                  <IconButton size="small" disabled={visionLog.length === 0} onClick={onClearLog}>
+                  <IconButton
+                    size="small"
+                    aria-label={tr(language, 'Очистить журнал зрения', 'Clear vision log')}
+                    disabled={visionLog.length === 0}
+                    onClick={onClearLog}
+                  >
                     <ClearAllRounded />
                   </IconButton>
                 </span>

@@ -1,57 +1,131 @@
 import { Box, Typography, alpha } from '@mui/material'
-import { type PointerEvent, useRef, useState } from 'react'
+import { type KeyboardEvent, type PointerEvent, useRef, useState } from 'react'
 
+type Axis = 'drive' | 'turn'
 type Direction = -1 | 0 | 1
 
+type Movement = {
+  axis: Axis
+  direction: Direction
+}
+
+type Position = {
+  x: number
+  y: number
+}
+
 type JoystickProps = {
-  axis: 'vertical' | 'horizontal'
   label: string
-  negativeLabel: string
-  positiveLabel: string
+  forwardLabel: string
+  backwardLabel: string
+  leftLabel: string
+  rightLabel: string
   disabled?: boolean
-  onDirectionChange: (direction: Direction) => void
+  onMovementChange: (axis: Axis, direction: Direction) => void
+}
+
+function movementFromPosition(position: Position, lastAxis: Axis): Movement {
+  const { x, y } = position
+  if (Math.max(Math.abs(x), Math.abs(y)) < 0.2) return { axis: lastAxis, direction: 0 }
+  if (Math.abs(y) >= Math.abs(x)) return { axis: 'drive', direction: y < 0 ? -1 : 1 }
+  return { axis: 'turn', direction: x < 0 ? -1 : 1 }
 }
 
 export function Joystick({
-  axis,
   label,
-  negativeLabel,
-  positiveLabel,
+  forwardLabel,
+  backwardLabel,
+  leftLabel,
+  rightLabel,
   disabled = false,
-  onDirectionChange,
+  onMovementChange,
 }: JoystickProps) {
   const surfaceRef = useRef<HTMLDivElement | null>(null)
-  const directionRef = useRef<Direction>(0)
-  const [direction, setDirection] = useState<Direction>(0)
-  const [offset, setOffset] = useState(0)
+  const movementRef = useRef<Movement>({ axis: 'drive', direction: 0 })
+  const keyboardKeysRef = useRef<Set<string>>(new Set())
+  const lastAxisRef = useRef<Axis>('drive')
+  const [movement, setMovement] = useState<Movement>({ axis: 'drive', direction: 0 })
+  const [position, setPosition] = useState<Position>({ x: 0, y: 0 })
+
+  const notifyMovement = (next: Movement) => {
+    if (
+      next.axis === movementRef.current.axis &&
+      next.direction === movementRef.current.direction
+    ) {
+      return
+    }
+    if (movementRef.current.direction !== 0 && movementRef.current.axis !== next.axis) {
+      onMovementChange(movementRef.current.axis, 0)
+    }
+    const shouldNotifyNext = next.direction !== 0 || movementRef.current.direction === 0
+    movementRef.current = next
+    setMovement(next)
+    if (shouldNotifyNext) onMovementChange(next.axis, next.direction)
+  }
+
+  const reset = () => {
+    keyboardKeysRef.current.clear()
+    lastAxisRef.current = 'drive'
+    setPosition({ x: 0, y: 0 })
+    notifyMovement({ axis: 'drive', direction: 0 })
+  }
+
+  const positionFromKeyboard = (): Position => {
+    let x = 0
+    let y = 0
+    if (keyboardKeysRef.current.has('ArrowLeft')) x -= 1
+    if (keyboardKeysRef.current.has('ArrowRight')) x += 1
+    if (keyboardKeysRef.current.has('ArrowUp')) y -= 1
+    if (keyboardKeysRef.current.has('ArrowDown')) y += 1
+    const length = Math.hypot(x, y)
+    return length > 1 ? { x: x / length, y: y / length } : { x, y }
+  }
+
+  const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (disabled || !event.key.startsWith('Arrow')) return
+    event.preventDefault()
+    if (keyboardKeysRef.current.has(event.key)) return
+    keyboardKeysRef.current.add(event.key)
+    lastAxisRef.current = event.key === 'ArrowUp' || event.key === 'ArrowDown' ? 'drive' : 'turn'
+    const nextPosition = positionFromKeyboard()
+    setPosition(nextPosition)
+    notifyMovement(movementFromPosition(nextPosition, lastAxisRef.current))
+  }
+
+  const handleKeyUp = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (!keyboardKeysRef.current.has(event.key)) return
+    event.preventDefault()
+    keyboardKeysRef.current.delete(event.key)
+    const nextPosition = positionFromKeyboard()
+    setPosition(nextPosition)
+    notifyMovement(movementFromPosition(nextPosition, lastAxisRef.current))
+  }
 
   const update = (event: PointerEvent<HTMLDivElement>) => {
     const bounds = surfaceRef.current?.getBoundingClientRect()
     if (!bounds || disabled) return
-    const center =
-      axis === 'vertical' ? bounds.top + bounds.height / 2 : bounds.left + bounds.width / 2
-    const point = axis === 'vertical' ? event.clientY : event.clientX
-    const radius = (axis === 'vertical' ? bounds.height : bounds.width) / 2
-    const normalized = Math.max(-1, Math.min(1, (point - center) / radius))
-    setOffset(normalized * 54)
-    const next: Direction = normalized < -0.28 ? -1 : normalized > 0.28 ? 1 : 0
-    if (next !== directionRef.current) {
-      directionRef.current = next
-      setDirection(next)
-      onDirectionChange(next)
+    const radius = Math.min(bounds.width, bounds.height) / 2
+    let x = (event.clientX - (bounds.left + bounds.width / 2)) / radius
+    let y = (event.clientY - (bounds.top + bounds.height / 2)) / radius
+    const length = Math.hypot(x, y)
+    if (length > 1) {
+      x /= length
+      y /= length
     }
+    if (length < 0.08) {
+      x = 0
+      y = 0
+    }
+    const nextPosition = { x, y }
+    setPosition(nextPosition)
+    notifyMovement(movementFromPosition(nextPosition, lastAxisRef.current))
   }
 
   const release = (event: PointerEvent<HTMLDivElement>) => {
     if (surfaceRef.current?.hasPointerCapture(event.pointerId)) {
       surfaceRef.current.releasePointerCapture(event.pointerId)
     }
-    setOffset(0)
-    if (directionRef.current !== 0) {
-      directionRef.current = 0
-      setDirection(0)
-      onDirectionChange(0)
-    }
+    reset()
   }
 
   return (
@@ -76,7 +150,7 @@ export function Joystick({
         aria-label={label}
         aria-valuemin={-1}
         aria-valuemax={1}
-        aria-valuenow={direction}
+        aria-valuenow={movement.direction}
         onPointerDown={(event) => {
           if (disabled) return
           event.currentTarget.setPointerCapture(event.pointerId)
@@ -87,31 +161,17 @@ export function Joystick({
         }}
         onPointerUp={release}
         onPointerCancel={release}
-        onKeyDown={(event) => {
-          if (disabled) return
-          const negativeKey = axis === 'vertical' ? 'ArrowUp' : 'ArrowLeft'
-          const positiveKey = axis === 'vertical' ? 'ArrowDown' : 'ArrowRight'
-          const next: Direction = event.key === negativeKey ? -1 : event.key === positiveKey ? 1 : 0
-          if (next !== 0 && next !== directionRef.current) {
-            event.preventDefault()
-            directionRef.current = next
-            setDirection(next)
-            setOffset(next * 54)
-            onDirectionChange(next)
-          }
-        }}
-        onKeyUp={(event) => {
-          if (event.key.startsWith('Arrow')) {
-            directionRef.current = 0
-            setDirection(0)
-            setOffset(0)
-            onDirectionChange(0)
-          }
-        }}
+        onLostPointerCapture={reset}
+        onKeyDown={handleKeyDown}
+        onKeyUp={handleKeyUp}
+        onBlur={reset}
         sx={{
-          width: '100%',
-          height: 142,
-          borderRadius: 4,
+          width: 'min(100%, 220px)',
+          aspectRatio: '1 / 1',
+          height: 'auto',
+          minHeight: 0,
+          mx: 'auto',
+          borderRadius: '50%',
           position: 'relative',
           overflow: 'hidden',
           touchAction: 'none',
@@ -121,9 +181,7 @@ export function Joystick({
           border: '1px solid',
           borderColor: alpha('#65dfff', 0.18),
           backgroundImage:
-            axis === 'vertical'
-              ? 'linear-gradient(90deg, transparent 49.5%, rgba(101,223,255,.13) 50%, transparent 50.5%)'
-              : 'linear-gradient(0deg, transparent 49.5%, rgba(101,223,255,.13) 50%, transparent 50.5%)',
+            'linear-gradient(90deg, transparent 49.5%, rgba(101,223,255,.13) 50%, transparent 50.5%), linear-gradient(0deg, transparent 49.5%, rgba(101,223,255,.13) 50%, transparent 50.5%)',
           '&:focus-visible': {
             outline: '2px solid',
             outlineColor: 'primary.main',
@@ -134,30 +192,30 @@ export function Joystick({
         <Typography
           variant="caption"
           color="text.secondary"
-          sx={{
-            position: 'absolute',
-            top: axis === 'vertical' ? 8 : '50%',
-            left: axis === 'vertical' ? '50%' : 10,
-            transform: axis === 'vertical' ? 'translateX(-50%)' : 'translateY(-50%)',
-            fontWeight: 700,
-          }}
+          sx={{ position: 'absolute', top: 10, left: '50%', transform: 'translateX(-50%)' }}
         >
-          {negativeLabel}
+          {forwardLabel}
         </Typography>
         <Typography
           variant="caption"
           color="text.secondary"
-          sx={{
-            position: 'absolute',
-            bottom: axis === 'vertical' ? 8 : 'auto',
-            top: axis === 'horizontal' ? '50%' : 'auto',
-            right: axis === 'horizontal' ? 10 : 'auto',
-            left: axis === 'vertical' ? '50%' : 'auto',
-            transform: axis === 'vertical' ? 'translateX(-50%)' : 'translateY(-50%)',
-            fontWeight: 700,
-          }}
+          sx={{ position: 'absolute', bottom: 10, left: '50%', transform: 'translateX(-50%)' }}
         >
-          {positiveLabel}
+          {backwardLabel}
+        </Typography>
+        <Typography
+          variant="caption"
+          color="text.secondary"
+          sx={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)' }}
+        >
+          {leftLabel}
+        </Typography>
+        <Typography
+          variant="caption"
+          color="text.secondary"
+          sx={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)' }}
+        >
+          {rightLabel}
         </Typography>
         <Box
           sx={{
@@ -165,15 +223,12 @@ export function Joystick({
             height: 58,
             borderRadius: '50%',
             position: 'absolute',
-            top: '50%',
-            left: '50%',
-            transform:
-              axis === 'vertical'
-                ? `translate(-50%, calc(-50% + ${offset}px))`
-                : `translate(calc(-50% + ${offset}px), -50%)`,
+            left: `${50 + position.x * 35}%`,
+            top: `${50 + position.y * 35}%`,
+            transform: 'translate(-50%, -50%)',
             bgcolor: 'primary.main',
             boxShadow: '0 0 0 8px rgba(24,213,255,.09), 0 10px 30px rgba(0,0,0,.35)',
-            transition: direction === 0 ? 'transform .18s ease' : 'none',
+            transition: position.x === 0 && position.y === 0 ? 'transform .18s ease' : 'none',
           }}
         />
       </Box>

@@ -227,6 +227,7 @@ export function AssistantPage({
                   <Tooltip title={tr(language, 'Продиктовать вопрос', 'Dictate question')}>
                     <span>
                       <IconButton
+                        aria-label={tr(language, 'Продиктовать вопрос', 'Dictate question')}
                         disabled={!speechSupported || !running || busy}
                         color={speechListening ? 'error' : 'primary'}
                         onClick={onSpeech}

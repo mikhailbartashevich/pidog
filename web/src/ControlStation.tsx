@@ -69,6 +69,8 @@ export function ControlStation() {
     last: 'drive',
   })
   const activeMotionRef = useRef<string | null>(null)
+  const motionQueueRef = useRef<string[]>([])
+  const motionWorkerRef = useRef(false)
   const pendingHeadRef = useRef<{ yaw: number; pitch: number } | null>(null)
   const headRequestInFlightRef = useRef(false)
   const autoConnectRef = useRef(false)
@@ -239,15 +241,44 @@ export function ControlStation() {
     },
     [addVisionEntry, connected, language, refreshSensors, settings],
   )
+  const sendCommandRef = useRef(sendCommand)
+  useEffect(() => {
+    sendCommandRef.current = sendCommand
+  }, [sendCommand])
 
-  const sendMotion = useCallback(
-    (command: string) => {
-      if (activeMotionRef.current === command) return
-      activeMotionRef.current = command === 'stop' ? null : command
-      void sendCommand(command, 'web joystick', true)
-    },
-    [sendCommand],
-  )
+  const sendMotion = useCallback((command: string) => {
+    if (
+      command !== 'stop' &&
+      activeMotionRef.current === command &&
+      motionQueueRef.current.length === 0
+    )
+      return
+    activeMotionRef.current = command === 'stop' ? null : command
+    if (command === 'stop') {
+      // A stop must not be replaced by a newer movement request.
+      motionQueueRef.current = ['stop']
+    } else if (motionQueueRef.current.at(-1) === 'stop' || motionQueueRef.current.length === 0) {
+      motionQueueRef.current.push(command)
+    } else {
+      motionQueueRef.current[motionQueueRef.current.length - 1] = command
+    }
+    if (motionWorkerRef.current) return
+    motionWorkerRef.current = true
+    void (async () => {
+      try {
+        while (motionQueueRef.current.length > 0) {
+          const next = motionQueueRef.current.shift()
+          if (next) {
+            // Motion requests must stay ordered so stop cannot race an older direction.
+            // eslint-disable-next-line no-await-in-loop
+            await sendCommandRef.current(next, 'web joystick', true)
+          }
+        }
+      } finally {
+        motionWorkerRef.current = false
+      }
+    })()
+  }, [])
 
   const moveJoystick = useCallback(
     (axis: Axis, direction: Direction) => {
@@ -301,8 +332,8 @@ export function ControlStation() {
     movementRef.current = { drive: 0, turn: 0, last: 'drive' }
     activeMotionRef.current = null
     moveHead(0, 0)
-    void sendCommand('stop')
-  }, [moveHead, sendCommand])
+    sendMotion('stop')
+  }, [moveHead, sendMotion])
 
   useEffect(() => {
     if (page === 'cockpit') return

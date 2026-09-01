@@ -365,20 +365,11 @@
                         android:padding="10dp">
 
                         <TextView style="@style/CardEyebrow" android:text="@string/movement_drive_title" />
-                        <TextView
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:gravity="center"
-                            android:maxLines="1"
-                            android:singleLine="true"
-                            android:text="@string/movement_drive_hint"
-                            android:textColor="@color/ink"
-                            android:textSize="13sp" />
                         <ru.pidog.voice.JoystickView
-                            android:id="@+id/driveJoystick"
+                            android:id="@+id/movementJoystick"
                             android:layout_width="match_parent"
-                            android:layout_height="146dp"
-                            android:contentDescription="@string/drive_joystick_description" />
+                            android:layout_height="220dp"
+                            android:contentDescription="@string/movement_joystick_description" />
                     </LinearLayout>
 
                     <LinearLayout
@@ -390,45 +381,11 @@
                         android:orientation="vertical"
                         android:padding="10dp">
 
-                        <TextView style="@style/CardEyebrow" android:text="@string/movement_turn_title" />
-                        <TextView
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:gravity="center"
-                            android:maxLines="1"
-                            android:singleLine="true"
-                            android:text="@string/movement_turn_hint"
-                            android:textColor="@color/ink"
-                            android:textSize="13sp" />
-                        <ru.pidog.voice.JoystickView
-                            android:id="@+id/turnJoystick"
-                            android:layout_width="match_parent"
-                            android:layout_height="146dp"
-                            android:contentDescription="@string/turn_joystick_description" />
-                    </LinearLayout>
-                </LinearLayout>
-
-                <LinearLayout
-                    style="@style/CardPanel"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="10dp"
-                    android:gravity="center_horizontal"
-                    android:orientation="vertical"
-                    android:padding="10dp">
-
                     <TextView style="@style/CardEyebrow" android:text="@string/movement_head_title" />
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:gravity="center"
-                        android:text="@string/movement_head_hint"
-                        android:textColor="@color/ink"
-                        android:textSize="13sp" />
                     <ru.pidog.voice.HeadJoystickView
                         android:id="@+id/headJoystick"
                         android:layout_width="match_parent"
-                        android:layout_height="176dp"
+                        android:layout_height="220dp"
                         android:contentDescription="@string/head_joystick_description" />
                     <TextView
                         android:id="@+id/headStatus"
@@ -439,6 +396,7 @@
                         android:textColor="@color/brand_dark"
                         android:textSize="13sp"
                         android:textStyle="bold" />
+                    </LinearLayout>
                 </LinearLayout>
 
                 <TextView

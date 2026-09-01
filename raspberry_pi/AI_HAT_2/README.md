@@ -1,35 +1,35 @@
 # PiDog server — Raspberry Pi 5 8GB + AI HAT+ 2 8GB
 
-Это отдельный сетап для официальной Raspberry Pi AI HAT+ 2 (в разговорной форме часто называют «AI HAT 2+»). Он использует Hailo-10H для локальной LLM через `hailo-ollama`; управление моторами, аудио, сенсорами и HTTP API остаётся в PiDog-сервере.
+This is a separate setup for the official Raspberry Pi AI HAT+ 2 board, also commonly called AI HAT 2+. It uses Hailo-10H for a local LLM through `hailo-ollama`; motor, audio, sensor, and HTTP API control remains in the PiDog server.
 
-## Что нужно
+## Requirements
 
-- Raspberry Pi 5 8GB с 64-битной Raspberry Pi OS Trixie;
-- AI HAT+ 2 с Hailo-10H;
-- активное охлаждение Raspberry Pi 5 и штатный радиатор AI HAT+ 2;
-- установленный официальный стек SunFounder: `robot_hat`, `vilib`, `pidog`;
-- камера и звуки PiDog — только если нужны функции камеры и bark/howl.
+- Raspberry Pi 5 8GB with 64-bit Raspberry Pi OS Trixie;
+- AI HAT+ 2 with Hailo-10H;
+- active cooling for Raspberry Pi 5 and the standard AI HAT+ 2 heatsink;
+- the official SunFounder stack installed: `robot_hat`, `vilib`, and `pidog`;
+- a camera and PiDog sounds only if you need camera or bark/howl features.
 
-Для AI HAT+ 2 ручная настройка PCIe Gen 3 не нужна: она применяется автоматически. После физической сборки сначала обновите ОС и установите Hailo-пакеты.
+Manual PCIe Gen 3 configuration is not required for AI HAT+ 2; it is applied automatically. After assembling the hardware, update the operating system and install the Hailo packages first.
 
-## Установка на Raspberry Pi
+## Install on Raspberry Pi
 
-Скопируйте каталог `raspberry_pi/` на Pi, сохранив `AI_HAT_2/`, `common/` и root-файл `pidog_voice_server.py`, и выполните:
+Copy the `raspberry_pi/` directory to the Pi, preserving `AI_HAT_2/`, `common/`, and the root-level `pidog_voice_server.py`, then run:
 
 ```bash
 cd AI_HAT_2
 sudo ./install.sh
 ```
 
-Скрипт устанавливает `hailo-h10-all`, системные зависимости и пакет Hailo GenAI Model Zoo 5.1.1; запускает `hailo-ollama` только на `127.0.0.1:8000`; скачивает модель `qwen2:1.5b`; ставит PiDog API как `pidog-voice-ai-hat2.service` на порту `8765` и генерирует токен в `/etc/pidog-voice-ai-hat2.env`. После первой установки драйвера скрипт может попросить перезагрузить Pi и запустить его повторно.
+The script installs `hailo-h10-all`, system dependencies, and Hailo GenAI Model Zoo 5.1.1; starts `hailo-ollama` only on `127.0.0.1:8000`; downloads the `qwen2:1.5b` model; installs the PiDog API as `pidog-voice-ai-hat2.service` on port `8765`; and generates a token in `/etc/pidog-voice-ai-hat2.env`. After the initial driver installation, the script may ask you to reboot the Pi and run it again.
 
-Если пакет GenAI переместился, URL можно переопределить:
+If the GenAI package has moved, override its URL with:
 
 ```bash
 sudo PIDOG_HAILO_GENAI_DEB_URL='https://...' ./install.sh
 ```
 
-Проверка железа и сервисов:
+Check the hardware and services:
 
 ```bash
 sudo ./check_hailo.sh
@@ -37,20 +37,20 @@ sudo systemctl status pidog-hailo-ollama pidog-voice-ai-hat2
 curl --silent http://127.0.0.1:8000/hailo/v1/list
 ```
 
-Сервер PiDog проверяется с токеном из env-файла:
+Check the PiDog server with the token from the environment file:
 
 ```bash
 TOKEN=$(sudo awk -F= '$1=="PIDOG_TOKEN" {print $2}' /etc/pidog-voice-ai-hat2.env)
 curl --silent -H "X-PiDog-Token: $TOKEN" http://127.0.0.1:8765/health
 ```
 
-## Модель и ограничения
+## Model and limitations
 
-По умолчанию выбран `qwen2:1.5b` — модель из официального примера Hailo для AI HAT+ 2. Другую модель из списка Hailo можно выбрать через `PIDOG_LLM_NAME` до установки. Порт `8000` намеренно доступен только локально; наружу выставляется только аутентифицированный PiDog API на `8765`.
+The default model is `qwen2:1.5b`, from Hailo's official AI HAT+ 2 example. You can select another model from Hailo's list with `PIDOG_LLM_NAME` before installation. Port `8000` is intentionally available only locally; only the authenticated PiDog API on port `8765` is exposed externally.
 
-Не выполняйте без необходимости `apt full-upgrade` после установки Hailo GenAI: версии драйвера, HailoRT и Model Zoo должны оставаться совместимыми.
+Avoid running `apt full-upgrade` unnecessarily after installing Hailo GenAI: the driver, HailoRT, and Model Zoo versions must remain compatible.
 
-## Обновление кода
+## Update the code
 
 ```bash
 sudo cp -a ../pidog_voice_server.py /opt/pidog-voice-ai-hat2/
@@ -60,7 +60,7 @@ sudo systemctl restart pidog-voice-ai-hat2
 sudo journalctl -u pidog-voice-ai-hat2 -n 50 --no-pager
 ```
 
-Проверить все варианты сервера из исходного каталога:
+Check all server variants from the source directory:
 
 ```bash
 cd ..

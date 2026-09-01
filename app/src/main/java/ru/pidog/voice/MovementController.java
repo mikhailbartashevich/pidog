@@ -3,14 +3,13 @@ package ru.pidog.voice;
 import android.app.Activity;
 import android.widget.TextView;
 
-/** Coordinates the walking and head joysticks and guarantees a safe centered stop. */
+/** Coordinates the movement and head joysticks and guarantees a safe centered stop. */
 final class MovementController {
     private final Activity activity;
     private final RobotClient client;
     private final RobotConnection connection;
     private final String languageTag;
-    private final JoystickView driveJoystick;
-    private final JoystickView turnJoystick;
+    private final JoystickView movementJoystick;
     private final HeadJoystickView headJoystick;
     private final TextView movementStatus;
     private final TextView headStatus;
@@ -29,21 +28,17 @@ final class MovementController {
         this.client = client;
         this.connection = connection;
         this.languageTag = languageTag;
-        driveJoystick = activity.findViewById(R.id.driveJoystick);
-        turnJoystick = activity.findViewById(R.id.turnJoystick);
+        movementJoystick = activity.findViewById(R.id.movementJoystick);
         headJoystick = activity.findViewById(R.id.headJoystick);
         movementStatus = activity.findViewById(R.id.movementStatus);
         headStatus = activity.findViewById(R.id.headStatus);
     }
 
     void bind() {
-        driveJoystick.configure(JoystickView.Axis.VERTICAL, direction -> {
-            driveDirection = direction;
-            applyJoystickState(true);
-        });
-        turnJoystick.configure(JoystickView.Axis.HORIZONTAL, direction -> {
-            turnDirection = direction;
-            applyJoystickState(false);
+        movementJoystick.configure((drive, turn) -> {
+            driveDirection = drive;
+            turnDirection = turn;
+            applyJoystickState();
         });
         headJoystick.configure((x, y) -> queueHeadPosition(
                 Math.round(-x * 80), Math.round(-y * 30)));
@@ -58,8 +53,7 @@ final class MovementController {
     void stop() {
         driveDirection = 0;
         turnDirection = 0;
-        driveJoystick.resetToCenter();
-        turnJoystick.resetToCenter();
+        movementJoystick.resetToCenter();
         headJoystick.resetToCenter();
         dispatch(RobotCommand.STOP);
     }
@@ -101,13 +95,9 @@ final class MovementController {
                 });
     }
 
-    private void applyJoystickState(boolean driveChanged) {
+    private void applyJoystickState() {
         RobotCommand command = null;
-        if (driveChanged && driveDirection != 0) {
-            command = driveDirection < 0 ? RobotCommand.FORWARD : RobotCommand.BACKWARD;
-        } else if (!driveChanged && turnDirection != 0) {
-            command = turnDirection < 0 ? RobotCommand.TURN_LEFT : RobotCommand.TURN_RIGHT;
-        } else if (driveDirection != 0) {
+        if (driveDirection != 0) {
             command = driveDirection < 0 ? RobotCommand.FORWARD : RobotCommand.BACKWARD;
         } else if (turnDirection != 0) {
             command = turnDirection < 0 ? RobotCommand.TURN_LEFT : RobotCommand.TURN_RIGHT;

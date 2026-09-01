@@ -77,6 +77,7 @@ export function NavigationRail({ page, language, connected, onPage }: Navigation
           <Tooltip key={id} title={tr(language, ru, en)} placement="right">
             <ListItemButton
               selected={page === id}
+              aria-label={tr(language, ru, en)}
               onClick={() => onPage(id)}
               sx={{
                 borderRadius: 2.5,

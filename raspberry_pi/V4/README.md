@@ -1,5 +1,5 @@
 # PiDog Raspberry Pi setup V4
 
-Это снимок текущего Raspberry Pi сетапа на момент подготовки новой конфигурации для AI HAT+ 2. В V4 сохранены исходные systemd-файлы, env-настройки и локальный CPU `llama.cpp` installer. Общий CPU runtime и единственный entry point находятся в родительском каталоге: `../common/` и `../pidog_voice_server.py`; общий тестовый набор — `../test_pidog_voice_server.py`.
+This is a snapshot of the Raspberry Pi setup captured while preparing the new AI HAT+ 2 configuration. V4 preserves the original systemd files, environment settings, and local CPU `llama.cpp` installer. The shared CPU runtime and the single entry point are in the parent directory: `../common/` and `../pidog_voice_server.py`; the shared test suite is `../test_pidog_voice_server.py`.
 
-Для новой платы Raspberry Pi 5 + AI HAT+ 2 используйте соседнюю папку `../AI_HAT_2/`.
+For the new Raspberry Pi 5 + AI HAT+ 2 board, use the sibling directory `../AI_HAT_2/`.

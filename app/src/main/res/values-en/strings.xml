@@ -90,15 +90,22 @@
 
     <string name="movement_page_title">Movement control</string>
     <string name="movement_page_subtitle">Hold the sticks with your fingers; PiDog stops when you release them</string>
-    <string name="movement_drive_title">MOVEMENT</string>
-    <string name="movement_drive_hint">Forward · backward</string>
-    <string name="movement_turn_title">TURNING</string>
-    <string name="movement_turn_hint">Left · right</string>
+    <string name="movement_drive_title">MOVE / TURN</string>
+    <string name="movement_drive_hint">Forward · back · left · right</string>
+    <string name="movement_forward_label">Forward</string>
+    <string name="movement_backward_label">Back</string>
+    <string name="movement_left_label">Left</string>
+    <string name="movement_right_label">Right</string>
     <string name="movement_head_title">HEAD</string>
     <string name="movement_head_hint">Left · right · up · down</string>
     <string name="drive_joystick_description">Joystick for moving forward and backward</string>
     <string name="turn_joystick_description">Joystick for turning left and right</string>
+    <string name="movement_joystick_description">Joystick for moving and turning</string>
     <string name="head_joystick_description">Joystick for aiming the head in all directions</string>
+    <string name="head_up_label">Up</string>
+    <string name="head_down_label">Down</string>
+    <string name="head_left_label">Left</string>
+    <string name="head_right_label">Right</string>
     <string name="head_centered">Head centered</string>
     <string name="head_position_format">Head: yaw %1$d°, pitch %2$d°</string>
     <string name="movement_ready">Sticks ready</string>
