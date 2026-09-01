@@ -1,0 +1,17 @@
+[Unit]
+Description=PiDog Hailo-10H Ollama-compatible LLM backend
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+Environment=OLLAMA_HOST=127.0.0.1:8000
+ExecStart=/usr/bin/env hailo-ollama
+Restart=on-failure
+RestartSec=5
+Nice=5
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

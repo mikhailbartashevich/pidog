@@ -2,9 +2,9 @@
 
 from pathlib import Path
 
-# The canonical runtime is shared by the root/legacy entry point, V4, and the
-# AI HAT+ 2 bundle. AI HAT+ 2 adds its own assistant/constants before this path.
-_COMMON_PACKAGE = Path(__file__).resolve().parents[1] / "common" / "pidog_voice"
+# Shared implementation lives in raspberry_pi/common. Hailo-specific
+# assistant/constants modules stay first so this bundle uses AI HAT+ 2 backend.
+_COMMON_PACKAGE = Path(__file__).resolve().parents[2] / "common" / "pidog_voice"
 if _COMMON_PACKAGE.is_dir():
     __path__.append(str(_COMMON_PACKAGE))
 

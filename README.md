@@ -1,5 +1,13 @@
 # PiDog V2 — Voice Control for Android
 
+## Versioned Raspberry Pi setups
+
+- `raspberry_pi/V4/` — снимок текущего Raspberry Pi сетапа с CPU `llama.cpp`; он сохранён отдельно без изменения исходных файлов;
+- `raspberry_pi/AI_HAT_2/` — отдельный сетап для Raspberry Pi 5 8GB + Raspberry Pi AI HAT+ 2 8GB (Hailo-10H), с установкой через `install.sh`.
+- `raspberry_pi/common/` — общие файлы серверного runtime, используемые обеими конфигурациями.
+
+Для AI HAT+ 2 используйте инструкцию в `raspberry_pi/AI_HAT_2/README.md`. Это официальное название платы; в запросах её также часто называют AI HAT 2+.
+
 This native Android app recognizes speech, selects a command from a safe allowlist, and sends it to a Raspberry Pi over the local network. A small Python server on the Pi invokes the official `pidog` library.
 
 ## What already works
@@ -89,6 +97,8 @@ The repository includes the `raspberry_pi/pidog-voice.service` template. It expe
 sudo mkdir -p /opt/pidog-voice
 sudo cp raspberry_pi/pidog_voice_server.py /opt/pidog-voice/
 sudo cp -R raspberry_pi/pidog_voice /opt/pidog-voice/
+sudo mkdir -p /opt/pidog-voice/common
+sudo cp -R raspberry_pi/common/pidog_voice /opt/pidog-voice/common/
 ```
 
 ```text
@@ -143,6 +153,8 @@ After updating the server and unit files, apply the changes:
 ```bash
 sudo cp raspberry_pi/pidog_voice_server.py /opt/pidog-voice/
 sudo cp -R raspberry_pi/pidog_voice /opt/pidog-voice/
+sudo mkdir -p /opt/pidog-voice/common
+sudo cp -R raspberry_pi/common/pidog_voice /opt/pidog-voice/common/
 sudo cp raspberry_pi/pidog-voice.service /etc/systemd/system/
 sudo systemctl daemon-reload
 sudo systemctl restart pidog-voice
@@ -218,6 +230,8 @@ Before the first test, place PiDog on the floor with enough free space around it
 - `app/` — Android app written in Java with no third-party runtime dependencies;
 - `app/src/main/java/ru/pidog/voice/CommandParser.java` — Russian and English phrase dictionaries with safe command matching;
 - `raspberry_pi/pidog_voice_server.py` — backward-compatible server entry point;
-- `raspberry_pi/pidog_voice/` — server package split into voice, hardware, sensor,
-  camera, HTTP, and command-line modules;
-- `raspberry_pi/test_pidog_voice_server.py` — server-side dry-run tests.
+- `raspberry_pi/common/pidog_voice/` — shared server package split into voice, hardware,
+  sensor, camera, HTTP, and command-line modules;
+- `raspberry_pi/AI_HAT_2/pidog_voice/` — Hailo-10H-specific assistant override;
+- `raspberry_pi/common/test_pidog_voice_server.py` — единый server-side test suite;
+- `raspberry_pi/run_tests.sh` — запуск тестов для root, V4 и AI HAT+ 2.
