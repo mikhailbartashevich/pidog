@@ -21,6 +21,8 @@ from .voice import LocalVoiceListener
 class RobotController(AudioMixin, VisionMixin, SensorsMixin):
     """Serializes hardware access and exposes an allow-list of robot commands."""
 
+    _SIT_HEAD_PITCH_COMPENSATION = -40
+
     def __init__(self, dry_run: bool = False) -> None:
         self._dry_run = dry_run
         self._lock = threading.RLock()
@@ -71,7 +73,7 @@ class RobotController(AudioMixin, VisionMixin, SensorsMixin):
             "drive_left": lambda: self._continuous_motion("turn_left"),
             "drive_right": lambda: self._continuous_motion("turn_right"),
             "approach_obstacle": self._approach_obstacle,
-            "sit": lambda: self._action("sit", 65),
+            "sit": self._sit,
             "stand": lambda: self._action("stand", 65),
             "lie": lambda: self._action("lie", 65),
             "bark": self._bark,
@@ -225,6 +227,19 @@ class RobotController(AudioMixin, VisionMixin, SensorsMixin):
 
     def _action(self, name: str, speed: int) -> None:
         self._dog.do_action(name, speed=speed)
+
+    def _sit(self) -> None:
+        """Sit down with the head returned to its straight-ahead position."""
+        # PiDog's sitting pose needs a pitch compensation to keep the head
+        # looking forward after the body lowers; logical pitch 0 is not the
+        # physical straight-ahead position.
+        self._dog.head_move(
+            [[0, 0, 0]],
+            pitch_comp=self._SIT_HEAD_PITCH_COMPENSATION,
+            immediately=True,
+            speed=65,
+        )
+        self._action("sit", 65)
 
     def _continuous_motion(self, action_name: str) -> dict[str, Any]:
         self._start_behavior(

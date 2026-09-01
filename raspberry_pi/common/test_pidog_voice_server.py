@@ -250,22 +250,32 @@ class LightingTest(unittest.TestCase):
             call(style="breath", color="#000000", bps=1, brightness=0),
         ], controller._dog.rgb_strip.set_mode.call_args_list)
 
+    def test_sit_centers_head_before_sitting(self):
+        controller = object.__new__(RobotController)
+        controller._dog = Mock()
+
+        controller._sit()
+
+        self.assertEqual([
+            call.head_move(
+                [[0, 0, 0]], pitch_comp=-40, immediately=True, speed=65),
+            call.do_action("sit", speed=65),
+        ], controller._dog.mock_calls)
+
 
 class SleepCommandTest(unittest.TestCase):
-    def test_sleep_does_not_wait_for_all_servos_before_returning(self):
+    def test_sleep_starts_background_sequence_without_blocking_command(self):
         controller = object.__new__(RobotController)
-        controller._dog = SimpleNamespace(do_action=Mock(), wait_all_done=Mock())
+        controller._dog = SimpleNamespace()
         controller._start_behavior = Mock()
 
         result = controller._sleep_until_clap()
 
         self.assertTrue(result["sleeping"])
-        controller._dog.do_action.assert_called_once_with("doze_off", speed=65)
-        controller._dog.wait_all_done.assert_not_called()
         controller._start_behavior.assert_called_once_with(
             "sleep-until-clap", controller._wait_for_wake_clap)
 
-    def test_clap_clears_sleep_motion_before_waking(self):
+    def test_sleep_waits_for_doze_off_and_clap_then_sits_and_barks(self):
         controller = object.__new__(RobotController)
         detected = iter((False, True))
         controller._dog = SimpleNamespace(
@@ -274,11 +284,18 @@ class SleepCommandTest(unittest.TestCase):
                 read=Mock(),
             ),
             body_stop=Mock(),
+            head_move=Mock(),
             do_action=Mock(),
+            wait_all_done=Mock(),
+            wait_legs_done=Mock(),
         )
+        controller._bark = Mock()
 
         class WakeEvent:
             waits = 0
+
+            def is_set(self):
+                return False
 
             def wait(self, _timeout):
                 self.waits += 1
@@ -289,9 +306,16 @@ class SleepCommandTest(unittest.TestCase):
         controller._dog.ears.read.assert_called_once_with()
         controller._dog.body_stop.assert_called_once_with()
         controller._dog.do_action.assert_has_calls([
+            call("doze_off", speed=65),
             call("stand", speed=85),
             call("stretch", speed=50),
         ])
+        controller._dog.head_move.assert_called_once_with(
+            [[0, 0, 0]], pitch_comp=-40, immediately=True, speed=65)
+        controller._dog.do_action.assert_called_with("sit", speed=65)
+        controller._dog.wait_all_done.assert_called_once_with()
+        self.assertEqual(3, controller._dog.wait_legs_done.call_count)
+        controller._bark.assert_called_once_with()
 
 
 class AudioConfigurationTest(unittest.TestCase):

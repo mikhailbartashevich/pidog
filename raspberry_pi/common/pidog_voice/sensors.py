@@ -242,11 +242,17 @@ class SensorsMixin:
         self._bark()
 
     def _sleep_until_clap(self) -> dict[str, Any]:
-        self._dog.do_action("doze_off", speed=65)
         self._start_behavior("sleep-until-clap", self._wait_for_wake_clap)
         return {"sleeping": True, "message": "Пайдог спит и ждёт хлопок"}
 
     def _wait_for_wake_clap(self, stop_event: threading.Event) -> None:
+        # Run the whole sleep pose in this worker. Starting the clap listener
+        # before doze_off has finished lets servo noise wake the robot early.
+        self._dog.do_action("doze_off", speed=65)
+        self._dog.wait_all_done()
+        if stop_event.is_set():
+            return
+
         # Servo noise can trigger the direction sensor, so discard it and add a
         # short quiet period before accepting the wake clap.
         if self._dog.ears.isdetected():
@@ -256,11 +262,15 @@ class SensorsMixin:
         while not stop_event.wait(0.08):
             if self._dog.ears.isdetected():
                 self._dog.ears.read()
-                # doze_off queues a long sequence of poses. Clear the
-                # remaining sleep motion before queuing the wake-up pose.
+                # Stop any residual motion before starting the wake-up pose.
                 self._dog.body_stop()
                 self._dog.do_action("stand", speed=85)
+                self._dog.wait_legs_done()
                 self._dog.do_action("stretch", speed=50)
+                self._dog.wait_legs_done()
+                self._sit()
+                self._dog.wait_legs_done()
+                self._bark()
                 return
 
     def _listen_sound(self) -> dict[str, Any]:
