@@ -346,18 +346,18 @@ public final class MainActivity extends Activity {
 
     @SuppressWarnings("deprecation")
     private void applySystemBarInsets() {
-        View topBar = findViewById(R.id.topBar);
+        View globalStatusBar = findViewById(R.id.globalStatusBar);
         View mainRoot = findViewById(R.id.mainRoot);
-        int statusStart = topBar.getPaddingStart();
-        int statusTop = topBar.getPaddingTop();
-        int statusEnd = topBar.getPaddingEnd();
-        int statusBottom = topBar.getPaddingBottom();
+        int statusStart = globalStatusBar.getPaddingStart();
+        int statusTop = globalStatusBar.getPaddingTop();
+        int statusEnd = globalStatusBar.getPaddingEnd();
+        int statusBottom = globalStatusBar.getPaddingBottom();
         int rootStart = mainRoot.getPaddingStart();
         int rootTop = mainRoot.getPaddingTop();
         int rootEnd = mainRoot.getPaddingEnd();
         int rootBottom = mainRoot.getPaddingBottom();
 
-        topBar.setOnApplyWindowInsetsListener((view, insets) -> {
+        globalStatusBar.setOnApplyWindowInsetsListener((view, insets) -> {
             view.setPaddingRelative(statusStart,
                     statusTop + insets.getSystemWindowInsetTop(), statusEnd, statusBottom);
             return insets;
@@ -367,7 +367,7 @@ public final class MainActivity extends Activity {
                     rootBottom + insets.getSystemWindowInsetBottom());
             return insets;
         });
-        topBar.requestApplyInsets();
+        globalStatusBar.requestApplyInsets();
         mainRoot.requestApplyInsets();
     }
 
