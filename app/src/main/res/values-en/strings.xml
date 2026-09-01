@@ -94,8 +94,13 @@
     <string name="movement_drive_hint">Forward · backward</string>
     <string name="movement_turn_title">TURNING</string>
     <string name="movement_turn_hint">Left · right</string>
+    <string name="movement_head_title">HEAD</string>
+    <string name="movement_head_hint">Left · right · up · down</string>
     <string name="drive_joystick_description">Joystick for moving forward and backward</string>
     <string name="turn_joystick_description">Joystick for turning left and right</string>
+    <string name="head_joystick_description">Joystick for aiming the head in all directions</string>
+    <string name="head_centered">Head centered</string>
+    <string name="head_position_format">Head: yaw %1$d°, pitch %2$d°</string>
     <string name="movement_ready">Sticks ready</string>
     <string name="movement_forward">Moving forward</string>
     <string name="movement_backward">Moving backward</string>

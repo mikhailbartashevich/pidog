@@ -157,7 +157,34 @@ sudo bash i2samp.sh
 sudo reboot
 ```
 
-## 2. Build the Android app
+## 2. Run the web control panel
+
+The responsive browser interface lives in `web/` and uses Vite, React, TypeScript, Material UI,
+Yarn 4, Oxlint with type-aware checks, Oxfmt, and Vitest. It mirrors the Android controls: Russian
+and English browser speech recognition, safe fuzzy command matching, walking/turning sticks plus a
+two-axis head joystick, a large MJPEG camera view, the complete command catalog, sensors, vision log,
+lighting, and local LLM controls.
+Keep it on the same trusted local network as PiDog; the API is intentionally plain HTTP and must not
+be exposed to the internet.
+
+```bash
+cd web
+corepack yarn install
+corepack yarn dev
+```
+
+Open the local URL printed by Vite, enter the Raspberry Pi address and the same `PIDOG_TOKEN`, then
+check the connection. The production bundle is created with `corepack yarn build`. Run every quality
+gate with one command:
+
+```bash
+corepack yarn check
+```
+
+After updating an existing Raspberry Pi installation, copy the refreshed `pidog_voice` package and
+restart `pidog-voice` so browser preflight requests are accepted.
+
+## 3. Build the Android app
 
 Requirements: Android Studio, or JDK 17+ and Android SDK 36. The project uses AGP 9.3 and Gradle 9.5. JDK 17 remains the target Java toolchain for maximum Android code compatibility.
 
@@ -172,7 +199,7 @@ To build from the command line:
 ./gradlew test assembleDebug
 ```
 
-## 3. Connect the phone
+## 4. Connect the phone
 
 1. Connect the phone and PiDog to the same Wi-Fi network.
 2. Choose **Русский** or **English** in the language selector. Russian is selected by default; the choice controls both the interface and voice commands and is saved between launches.

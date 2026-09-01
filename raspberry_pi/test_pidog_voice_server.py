@@ -94,6 +94,32 @@ class ServerTest(unittest.TestCase):
         self.assertEqual("sit", payload["command"])
         self.assertIn("message", payload)
 
+    def test_moves_head_with_two_axes(self):
+        status, payload = self.request(
+            "POST", "/head", {"yaw": -42, "pitch": 18}
+        )
+        self.assertEqual(200, status)
+        self.assertEqual(-42, payload["yaw"])
+        self.assertEqual(18, payload["pitch"])
+
+    def test_rejects_head_angles_outside_safe_range(self):
+        status, payload = self.request(
+            "POST", "/head", {"yaw": 81, "pitch": 0}
+        )
+        self.assertEqual(400, status)
+        self.assertFalse(payload["ok"])
+
+    def test_head_endpoint_cors_preflight(self):
+        connection = http.client.HTTPConnection("127.0.0.1", self.port, timeout=2)
+        connection.request("OPTIONS", "/head", headers={
+            "Origin": "http://localhost:5173",
+            "Access-Control-Request-Method": "POST",
+        })
+        response = connection.getresponse()
+        response.read()
+        self.assertEqual(204, response.status)
+        connection.close()
+
     def test_color_search_is_listed(self):
         status, payload = self.request("GET", "/health")
         self.assertEqual(200, status)
@@ -139,6 +165,24 @@ class ServerTest(unittest.TestCase):
     def test_requires_token(self):
         status, _ = self.request("GET", "/health", token="wrong")
         self.assertEqual(401, status)
+
+    def test_web_client_cors_preflight(self):
+        connection = http.client.HTTPConnection("127.0.0.1", self.port, timeout=2)
+        connection.request("OPTIONS", "/command", headers={
+            "Origin": "http://localhost:5173",
+            "Access-Control-Request-Method": "POST",
+            "Access-Control-Request-Headers": "content-type,x-pidog-token",
+            "Access-Control-Request-Private-Network": "true",
+        })
+        response = connection.getresponse()
+        response.read()
+        self.assertEqual(204, response.status)
+        self.assertEqual("*", response.getheader("Access-Control-Allow-Origin"))
+        self.assertIn("X-PiDog-Token", response.getheader(
+            "Access-Control-Allow-Headers"))
+        self.assertEqual("true", response.getheader(
+            "Access-Control-Allow-Private-Network"))
+        connection.close()
 
 
 class AudioConfigurationTest(unittest.TestCase):

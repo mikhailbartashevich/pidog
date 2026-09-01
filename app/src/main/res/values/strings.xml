@@ -98,8 +98,13 @@
     <string name="movement_drive_hint">Вперёд · назад</string>
     <string name="movement_turn_title">ПОВОРОТ</string>
     <string name="movement_turn_hint">Налево · направо</string>
+    <string name="movement_head_title">ГОЛОВА</string>
+    <string name="movement_head_hint">Влево · вправо · вверх · вниз</string>
     <string name="drive_joystick_description">Джойстик движения вперёд и назад</string>
     <string name="turn_joystick_description">Джойстик поворота налево и направо</string>
+    <string name="head_joystick_description">Джойстик поворота головы во всех направлениях</string>
+    <string name="head_centered">Голова по центру</string>
+    <string name="head_position_format">Голова: горизонталь %1$d°, вертикаль %2$d°</string>
     <string name="movement_ready">Стики готовы</string>
     <string name="movement_forward">Движение вперёд</string>
     <string name="movement_backward">Движение назад</string>

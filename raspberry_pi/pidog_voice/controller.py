@@ -186,6 +186,22 @@ class RobotController(AudioMixin, VisionMixin, SensorsMixin):
             result = action()
             return result or {"message": "Команда выполнена"}
 
+    def move_head(self, yaw: float, pitch: float) -> dict[str, Any]:
+        """Point the head directly without interrupting an active walking command."""
+        with self._lock:
+            LOG.info("head yaw=%.1f pitch=%.1f dry_run=%s", yaw, pitch, self._dry_run)
+            if not self._dry_run:
+                self._dog.head_move(
+                    [[round(yaw, 1), 0, round(pitch, 1)]],
+                    immediately=True,
+                    speed=80,
+                )
+            return {
+                "yaw": round(yaw, 1),
+                "pitch": round(pitch, 1),
+                "message": "Положение головы обновлено",
+            }
+
     def close(self) -> None:
         self._stop_touch_monitor()
         self._local_voice.close()

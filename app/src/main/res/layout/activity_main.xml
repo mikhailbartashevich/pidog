@@ -408,6 +408,39 @@
                     </LinearLayout>
                 </LinearLayout>
 
+                <LinearLayout
+                    style="@style/CardPanel"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:gravity="center_horizontal"
+                    android:orientation="vertical"
+                    android:padding="10dp">
+
+                    <TextView style="@style/CardEyebrow" android:text="@string/movement_head_title" />
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center"
+                        android:text="@string/movement_head_hint"
+                        android:textColor="@color/ink"
+                        android:textSize="13sp" />
+                    <ru.pidog.voice.HeadJoystickView
+                        android:id="@+id/headJoystick"
+                        android:layout_width="match_parent"
+                        android:layout_height="176dp"
+                        android:contentDescription="@string/head_joystick_description" />
+                    <TextView
+                        android:id="@+id/headStatus"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center"
+                        android:text="@string/head_centered"
+                        android:textColor="@color/brand_dark"
+                        android:textSize="13sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+
                 <TextView
                     android:id="@+id/movementStatus"
                     android:layout_width="match_parent"

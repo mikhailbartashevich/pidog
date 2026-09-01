@@ -1,0 +1,51 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["typescript", "react", "import", "unicorn", "jsx-a11y", "vitest"],
+  "env": {
+    "browser": true,
+    "es2024": true
+  },
+  "settings": {
+    "react": {
+      "version": "19.2.8"
+    }
+  },
+  "categories": {
+    "correctness": "error",
+    "suspicious": "error",
+    "perf": "warn"
+  },
+  "options": {
+    "typeAware": true,
+    "typeCheck": true,
+    "reportUnusedDisableDirectives": "error"
+  },
+  "rules": {
+    "react/react-in-jsx-scope": "off",
+    "typescript/no-floating-promises": "error",
+    "typescript/no-misused-promises": "error",
+    "typescript/await-thenable": "error",
+    "typescript/no-unnecessary-condition": "warn",
+    "typescript/no-unsafe-type-assertion": "off",
+    "react/jsx-key": "error",
+    "react/self-closing-comp": "error",
+    "jsx-a11y/alt-text": "error",
+    "unicorn/prefer-node-protocol": "error",
+    "jsx-a11y/no-autofocus": "off"
+  },
+  "overrides": [
+    {
+      "files": ["src/components/Joystick.tsx"],
+      "rules": {
+        "jsx-a11y/prefer-tag-over-role": "off"
+      }
+    },
+    {
+      "files": ["src/test/setup.ts"],
+      "rules": {
+        "import/no-unassigned-import": "off"
+      }
+    }
+  ],
+  "ignorePatterns": ["dist", "coverage"]
+}

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hmac
 import json
+import math
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any
@@ -27,6 +28,21 @@ class VoiceServer(ThreadingHTTPServer):
 
 class RequestHandler(BaseHTTPRequestHandler):
     server: VoiceServer
+
+    def do_OPTIONS(self) -> None:  # noqa: N802
+        """Allow the local web control panel to complete its CORS preflight."""
+        if self.path not in {
+            "/health", "/sensors", "/assistant/status", "/command",
+            "/head",
+            "/assistant/control", "/assistant/chat", "/assistant/history",
+        }:
+            self._json(HTTPStatus.NOT_FOUND, {"ok": False, "error": "not found"})
+            return
+        self.send_response(HTTPStatus.NO_CONTENT.value)
+        self._cors_headers()
+        self.send_header("Content-Length", "0")
+        self.send_header("Cache-Control", "no-store")
+        self.end_headers()
 
     def do_GET(self) -> None:  # noqa: N802
         if not self._authorized():
@@ -60,7 +76,8 @@ class RequestHandler(BaseHTTPRequestHandler):
 
     def do_POST(self) -> None:  # noqa: N802
         if self.path not in {
-            "/command", "/assistant/control", "/assistant/chat", "/assistant/history",
+            "/command", "/head", "/assistant/control", "/assistant/chat",
+            "/assistant/history",
         }:
             self._json(HTTPStatus.NOT_FOUND, {"ok": False, "error": "not found"})
             return
@@ -100,6 +117,9 @@ class RequestHandler(BaseHTTPRequestHandler):
                 "ok": True, **self.server.controller.assistant_clear_history(),
             })
             return
+        if self.path == "/head":
+            self._move_head(payload)
+            return
 
         command = payload.get("command")
         if not isinstance(command, str) or command not in self.server.controller.commands:
@@ -126,6 +146,29 @@ class RequestHandler(BaseHTTPRequestHandler):
             })
             return
         self._json(HTTPStatus.ACCEPTED, {"ok": True, "command": command, **result})
+
+    def _move_head(self, payload: dict[str, Any]) -> None:
+        yaw = payload.get("yaw")
+        pitch = payload.get("pitch")
+        if (isinstance(yaw, bool) or not isinstance(yaw, (int, float))
+                or isinstance(pitch, bool) or not isinstance(pitch, (int, float))
+                or not math.isfinite(yaw) or not math.isfinite(pitch)
+                or not -80 <= yaw <= 80 or not -30 <= pitch <= 30):
+            self._json(HTTPStatus.BAD_REQUEST, {
+                "ok": False,
+                "error": "head angles must be finite numbers: yaw -80..80, pitch -30..30",
+            })
+            return
+        try:
+            result = self.server.controller.move_head(float(yaw), float(pitch))
+        except Exception as error:
+            LOG.exception("PiDog head movement failed")
+            detail = str(error).strip() or error.__class__.__name__
+            self._json(HTTPStatus.CONFLICT, {
+                "ok": False, "error": "head movement failed", "detail": detail[:300],
+            })
+            return
+        self._json(HTTPStatus.OK, {"ok": True, **result})
 
     def _assistant_control(self, payload: dict[str, Any]) -> None:
         action = payload.get("action")
@@ -179,12 +222,25 @@ class RequestHandler(BaseHTTPRequestHandler):
     def _json(self, status: HTTPStatus, payload: dict[str, Any]) -> None:
         body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
         self.send_response(status.value)
+        self._cors_headers()
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(body)))
         self.send_header("Cache-Control", "no-store")
         self.send_header("X-Content-Type-Options", "nosniff")
         self.end_headers()
         self.wfile.write(body)
+
+    def _cors_headers(self) -> None:
+        # Every data endpoint still requires X-PiDog-Token. CORS only lets a
+        # browser UI on the same trusted LAN send that authenticated request.
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+        self.send_header(
+            "Access-Control-Allow-Headers",
+            "Content-Type, X-PiDog-Token",
+        )
+        if self.headers.get("Access-Control-Request-Private-Network") == "true":
+            self.send_header("Access-Control-Allow-Private-Network", "true")
 
     def log_message(self, format_string: str, *args: Any) -> None:
         LOG.info("client=%s %s", self.client_address[0], format_string % args)

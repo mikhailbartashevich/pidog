@@ -3,7 +3,7 @@ package ru.pidog.voice;
 import android.app.Activity;
 import android.widget.TextView;
 
-/** Coordinates both joysticks and guarantees that movement is stopped on exit. */
+/** Coordinates the walking and head joysticks and guarantees a safe centered stop. */
 final class MovementController {
     private final Activity activity;
     private final RobotClient client;
@@ -11,11 +11,17 @@ final class MovementController {
     private final String languageTag;
     private final JoystickView driveJoystick;
     private final JoystickView turnJoystick;
+    private final HeadJoystickView headJoystick;
     private final TextView movementStatus;
+    private final TextView headStatus;
 
     private int driveDirection;
     private int turnDirection;
     private RobotCommand activeCommand;
+    private boolean headRequestInFlight;
+    private boolean headRequestPending;
+    private int pendingHeadYaw;
+    private int pendingHeadPitch;
 
     MovementController(Activity activity, RobotClient client, RobotConnection connection,
                        String languageTag) {
@@ -25,7 +31,9 @@ final class MovementController {
         this.languageTag = languageTag;
         driveJoystick = activity.findViewById(R.id.driveJoystick);
         turnJoystick = activity.findViewById(R.id.turnJoystick);
+        headJoystick = activity.findViewById(R.id.headJoystick);
         movementStatus = activity.findViewById(R.id.movementStatus);
+        headStatus = activity.findViewById(R.id.headStatus);
     }
 
     void bind() {
@@ -37,6 +45,8 @@ final class MovementController {
             turnDirection = direction;
             applyJoystickState(false);
         });
+        headJoystick.configure((x, y) -> queueHeadPosition(
+                Math.round(-x * 80), Math.round(-y * 30)));
         activity.findViewById(R.id.joystickStopButton)
                 .setOnClickListener(view -> stop());
     }
@@ -50,7 +60,45 @@ final class MovementController {
         turnDirection = 0;
         driveJoystick.resetToCenter();
         turnJoystick.resetToCenter();
+        headJoystick.resetToCenter();
         dispatch(RobotCommand.STOP);
+    }
+
+    private void queueHeadPosition(int yaw, int pitch) {
+        pendingHeadYaw = yaw;
+        pendingHeadPitch = pitch;
+        headRequestPending = true;
+        headStatus.setText(activity.getString(R.string.head_position_format, yaw, pitch));
+        headStatus.setTextColor(activity.getColor(R.color.brand_dark));
+        dispatchPendingHead();
+    }
+
+    private void dispatchPendingHead() {
+        if (headRequestInFlight || !headRequestPending) {
+            return;
+        }
+        RobotConnection.Endpoint endpoint = connection.read();
+        if (endpoint == null) {
+            headRequestPending = false;
+            headStatus.setText(R.string.movement_connection_required);
+            headStatus.setTextColor(activity.getColor(R.color.danger));
+            return;
+        }
+        int yaw = pendingHeadYaw;
+        int pitch = pendingHeadPitch;
+        headRequestPending = false;
+        headRequestInFlight = true;
+        connection.save();
+        client.sendHead(endpoint.host, endpoint.port, endpoint.token, yaw, pitch,
+                (success, message) -> {
+                    headRequestInFlight = false;
+                    if (!success) {
+                        headStatus.setText(message);
+                        headStatus.setTextColor(activity.getColor(R.color.danger));
+                        connection.showStatus(message, R.color.danger);
+                    }
+                    dispatchPendingHead();
+                });
     }
 
     private void applyJoystickState(boolean driveChanged) {

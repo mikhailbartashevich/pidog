@@ -157,6 +157,12 @@ public final class RobotClient {
         execute(() -> request("POST", host, port, token, "/command", json), callback);
     }
 
+    public void sendHead(String host, int port, String token, int yaw, int pitch,
+                         Callback callback) {
+        String json = String.format(Locale.US, "{\"yaw\":%d,\"pitch\":%d}", yaw, pitch);
+        execute(() -> request("POST", host, port, token, "/head", json), callback);
+    }
+
     public void sendVision(String host, int port, String token, RobotCommand command,
                            String recognizedPhrase, VisionCallback callback) {
         String json = commandJson(command, recognizedPhrase);
