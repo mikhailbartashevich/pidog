@@ -1,19 +1,19 @@
-import { Box, Typography, alpha } from '@mui/material';
-import { type PointerEvent, useRef, useState } from 'react';
+import { Box, Typography, alpha } from '@mui/material'
+import { type PointerEvent, useRef, useState } from 'react'
 
-interface HeadJoystickProps {
-  label: string;
-  upLabel: string;
-  downLabel: string;
-  leftLabel: string;
-  rightLabel: string;
-  disabled?: boolean;
-  onPositionChange: (x: number, y: number) => void;
+type HeadJoystickProps = {
+  label: string
+  upLabel: string
+  downLabel: string
+  leftLabel: string
+  rightLabel: string
+  disabled?: boolean
+  onPositionChange: (x: number, y: number) => void
 }
 
-interface Position {
-  x: number;
-  y: number;
+type Position = {
+  x: number
+  y: number
 }
 
 export function HeadJoystick({
@@ -25,40 +25,46 @@ export function HeadJoystick({
   disabled = false,
   onPositionChange,
 }: HeadJoystickProps) {
-  const surfaceRef = useRef<HTMLDivElement | null>(null);
-  const positionRef = useRef<Position>({ x: 0, y: 0 });
-  const [position, setPosition] = useState<Position>({ x: 0, y: 0 });
+  const surfaceRef = useRef<HTMLDivElement | null>(null)
+  const positionRef = useRef<Position>({ x: 0, y: 0 })
+  const [position, setPosition] = useState<Position>({ x: 0, y: 0 })
 
   const setAndNotify = (next: Position) => {
-    positionRef.current = next;
-    setPosition(next);
-    onPositionChange(next.x, next.y);
-  };
+    positionRef.current = next
+    setPosition(next)
+    onPositionChange(next.x, next.y)
+  }
+
+  const resetVisualPosition = () => {
+    positionRef.current = { x: 0, y: 0 }
+    setPosition({ x: 0, y: 0 })
+  }
 
   const update = (event: PointerEvent<HTMLDivElement>) => {
-    const bounds = surfaceRef.current?.getBoundingClientRect();
-    if (!bounds || disabled) return;
-    const radius = Math.max(1, Math.min(bounds.width, bounds.height) / 2 - 32);
-    let x = (event.clientX - (bounds.left + bounds.width / 2)) / radius;
-    let y = (event.clientY - (bounds.top + bounds.height / 2)) / radius;
-    const length = Math.hypot(x, y);
+    const bounds = surfaceRef.current?.getBoundingClientRect()
+    if (!bounds || disabled) return
+    const radius = Math.max(1, Math.min(bounds.width, bounds.height) / 2 - 32)
+    let x = (event.clientX - (bounds.left + bounds.width / 2)) / radius
+    let y = (event.clientY - (bounds.top + bounds.height / 2)) / radius
+    const length = Math.hypot(x, y)
     if (length > 1) {
-      x /= length;
-      y /= length;
+      x /= length
+      y /= length
     }
     if (length < 0.08) {
-      x = 0;
-      y = 0;
+      x = 0
+      y = 0
     }
-    setAndNotify({ x: Math.round(x * 100) / 100, y: Math.round(y * 100) / 100 });
-  };
+    setAndNotify({ x: Math.round(x * 100) / 100, y: Math.round(y * 100) / 100 })
+  }
 
   const release = (event: PointerEvent<HTMLDivElement>) => {
     if (surfaceRef.current?.hasPointerCapture(event.pointerId)) {
-      surfaceRef.current.releasePointerCapture(event.pointerId);
+      surfaceRef.current.releasePointerCapture(event.pointerId)
     }
-    setAndNotify({ x: 0, y: 0 });
-  };
+    // Head commands are absolute: releasing the control must not centre the head.
+    resetVisualPosition()
+  }
 
   return (
     <Box sx={{ minWidth: 0 }}>
@@ -80,27 +86,27 @@ export function HeadJoystick({
         tabIndex={disabled ? -1 : 0}
         aria-label={label}
         onPointerDown={(event) => {
-          if (disabled) return;
-          event.currentTarget.setPointerCapture(event.pointerId);
-          update(event);
+          if (disabled) return
+          event.currentTarget.setPointerCapture(event.pointerId)
+          update(event)
         }}
         onPointerMove={(event) => {
-          if (event.currentTarget.hasPointerCapture(event.pointerId)) update(event);
+          if (event.currentTarget.hasPointerCapture(event.pointerId)) update(event)
         }}
         onPointerUp={release}
         onPointerCancel={release}
         onKeyDown={(event) => {
-          if (disabled || !event.key.startsWith('Arrow')) return;
-          event.preventDefault();
-          const next = { ...positionRef.current };
-          if (event.key === 'ArrowLeft') next.x = -1;
-          if (event.key === 'ArrowRight') next.x = 1;
-          if (event.key === 'ArrowUp') next.y = -1;
-          if (event.key === 'ArrowDown') next.y = 1;
-          setAndNotify(next);
+          if (disabled || !event.key.startsWith('Arrow')) return
+          event.preventDefault()
+          const next = { ...positionRef.current }
+          if (event.key === 'ArrowLeft') next.x = -1
+          if (event.key === 'ArrowRight') next.x = 1
+          if (event.key === 'ArrowUp') next.y = -1
+          if (event.key === 'ArrowDown') next.y = 1
+          setAndNotify(next)
         }}
         onKeyUp={(event) => {
-          if (event.key.startsWith('Arrow')) setAndNotify({ x: 0, y: 0 });
+          if (event.key.startsWith('Arrow')) resetVisualPosition()
         }}
         sx={{
           width: '100%',
@@ -167,5 +173,5 @@ export function HeadJoystick({
         />
       </Box>
     </Box>
-  );
+  )
 }

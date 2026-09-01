@@ -1,1 +1,1 @@
-export { ControlStation as App } from './ControlStation';
+export { ControlStation as App } from './ControlStation'

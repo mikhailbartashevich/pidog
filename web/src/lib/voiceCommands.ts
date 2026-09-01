@@ -1,12 +1,12 @@
-import type { Language } from './commands';
+import type { Language } from './commands'
 
-export interface VoiceMatch {
-  command: string;
-  score: number;
-  sourcePhrase: string;
+export type VoiceMatch = {
+  command: string
+  score: number
+  sourcePhrase: string
 }
 
-type AliasMap = Record<string, string[]>;
+type AliasMap = Record<string, string[]>
 
 const ru: AliasMap = {
   stop: [
@@ -165,7 +165,7 @@ const ru: AliasMap = {
   light_white: ['белый свет', 'включи белый', 'свети белым'],
   light_blink: ['мигай светом', 'моргай светом', 'мигай лампочками'],
   light_off: ['выключи свет', 'погаси свет', 'свет выключить'],
-};
+}
 
 const en: AliasMap = {
   stop: ['stop', 'halt', 'freeze', 'stop moving', 'do not move', 'cancel'],
@@ -230,7 +230,7 @@ const en: AliasMap = {
   light_white: ['white light', 'turn on white', 'light white'],
   light_blink: ['blink lights', 'flash lights', 'blinking lights'],
   light_off: ['turn lights off', 'lights off', 'switch off lights'],
-};
+}
 
 const fillers = {
   ru: new Set([
@@ -262,10 +262,10 @@ const fillers = {
     'can',
     'you',
   ]),
-};
+}
 
-const movement = new Set(['forward', 'backward', 'turn_left', 'turn_right']);
-const rejectedTokens = new Set(['не', 'нет', 'отмена', 'not', 'don', 'never', 'cancel']);
+const movement = new Set(['forward', 'backward', 'turn_left', 'turn_right'])
+const rejectedTokens = new Set(['не', 'нет', 'отмена', 'not', 'don', 'never', 'cancel'])
 
 export function normalizeVoicePhrase(value: string): string {
   return value
@@ -274,79 +274,79 @@ export function normalizeVoicePhrase(value: string): string {
     .replaceAll('ё', 'е')
     .replace(/[^a-zа-я0-9]+/gu, ' ')
     .trim()
-    .replace(/\s+/gu, ' ');
+    .replace(/\s+/gu, ' ')
 }
 
 function withoutFillers(value: string, language: Language): string {
   return value
     .split(' ')
     .filter((token) => !fillers[language].has(token))
-    .join(' ');
+    .join(' ')
 }
 
 function includesPhrase(text: string, phrase: string): boolean {
-  return ` ${text} `.includes(` ${phrase} `);
+  return ` ${text} `.includes(` ${phrase} `)
 }
 
 function levenshtein(left: string, right: string): number {
-  let previous = Array.from({ length: right.length + 1 }, (_, index) => index);
+  let previous = Array.from({ length: right.length + 1 }, (_, index) => index)
   for (let leftIndex = 1; leftIndex <= left.length; leftIndex += 1) {
-    const current = [leftIndex];
+    const current = [leftIndex]
     for (let rightIndex = 1; rightIndex <= right.length; rightIndex += 1) {
       const substitution =
-        (previous[rightIndex - 1] ?? 0) + (left[leftIndex - 1] === right[rightIndex - 1] ? 0 : 1);
+        (previous[rightIndex - 1] ?? 0) + (left[leftIndex - 1] === right[rightIndex - 1] ? 0 : 1)
       current[rightIndex] = Math.min(
         (current[rightIndex - 1] ?? 0) + 1,
         (previous[rightIndex] ?? 0) + 1,
         substitution,
-      );
+      )
     }
-    previous = current;
+    previous = current
   }
-  return previous[right.length] ?? 0;
+  return previous[right.length] ?? 0
 }
 
 function similarity(candidate: string, alias: string): number {
-  if (candidate === alias) return 1;
-  if ([...rejectedTokens].some((token) => includesPhrase(candidate, token))) return 0;
-  const aliasWords = alias.split(' ').length;
-  const candidateWords = candidate.split(' ').length;
-  if (aliasWords >= 2 && includesPhrase(candidate, alias)) return 0.965;
-  if (aliasWords === 1 && candidateWords <= 3 && includesPhrase(candidate, alias)) return 0.935;
-  const maxLength = Math.max(candidate.length, alias.length);
-  return maxLength === 0 ? 0 : 1 - levenshtein(candidate, alias) / maxLength;
+  if (candidate === alias) return 1
+  if ([...rejectedTokens].some((token) => includesPhrase(candidate, token))) return 0
+  const aliasWords = alias.split(' ').length
+  const candidateWords = candidate.split(' ').length
+  if (aliasWords >= 2 && includesPhrase(candidate, alias)) return 0.965
+  if (aliasWords === 1 && candidateWords <= 3 && includesPhrase(candidate, alias)) return 0.935
+  const maxLength = Math.max(candidate.length, alias.length)
+  return maxLength === 0 ? 0 : 1 - levenshtein(candidate, alias) / maxLength
 }
 
 function bestCandidate(
   source: string,
   language: Language,
 ): Omit<VoiceMatch, 'sourcePhrase'> | null {
-  const candidate = withoutFillers(normalizeVoicePhrase(source), language);
-  if (!candidate) return null;
-  let best: Omit<VoiceMatch, 'sourcePhrase'> | null = null;
+  const candidate = withoutFillers(normalizeVoicePhrase(source), language)
+  if (!candidate) return null
+  let best: Omit<VoiceMatch, 'sourcePhrase'> | null = null
   for (const [command, aliases] of Object.entries(language === 'en' ? en : ru)) {
     for (const alias of aliases) {
-      const score = similarity(candidate, normalizeVoicePhrase(alias));
-      const threshold = movement.has(command) ? 0.91 : 0.86;
-      if (score >= threshold && (!best || score > best.score)) best = { command, score };
+      const score = similarity(candidate, normalizeVoicePhrase(alias))
+      const threshold = movement.has(command) ? 0.91 : 0.86
+      if (score >= threshold && (!best || score > best.score)) best = { command, score }
     }
   }
-  return best;
+  return best
 }
 
 export function matchVoiceCommand(hypotheses: string[], language: Language): VoiceMatch | null {
   const matches = hypotheses
     .slice(0, 8)
     .flatMap((sourcePhrase, index) => {
-      const candidate = bestCandidate(sourcePhrase, language);
+      const candidate = bestCandidate(sourcePhrase, language)
       return candidate
         ? [{ ...candidate, score: candidate.score - index * 0.006, sourcePhrase }]
-        : [];
+        : []
     })
-    .toSorted((left, right) => right.score - left.score);
-  const best = matches[0];
-  if (!best) return null;
-  const runnerUp = matches.find((match) => match.command !== best.command);
-  if (runnerUp && best.score - runnerUp.score < 0.035) return null;
-  return best;
+    .toSorted((left, right) => right.score - left.score)
+  const best = matches[0]
+  if (!best) return null
+  const runnerUp = matches.find((match) => match.command !== best.command)
+  if (runnerUp && best.score - runnerUp.score < 0.035) return null
+  return best
 }

@@ -96,11 +96,13 @@ public final class HeadJoystickView extends View {
                 return true;
             case MotionEvent.ACTION_UP:
                 performClick();
-                reset(true);
+                // The head position is absolute. Re-centre only the control itself so
+                // releasing the joystick does not command the robot back to zero.
+                reset(false);
                 getParent().requestDisallowInterceptTouchEvent(false);
                 return true;
             case MotionEvent.ACTION_CANCEL:
-                reset(true);
+                reset(false);
                 getParent().requestDisallowInterceptTouchEvent(false);
                 return true;
             default:

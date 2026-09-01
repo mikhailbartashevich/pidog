@@ -1,19 +1,19 @@
-export type Language = 'ru' | 'en';
+export type Language = 'ru' | 'en'
 
-export interface RobotAction {
-  command: string;
-  label: string;
-  englishLabel: string;
-  description: string;
-  englishDescription: string;
-  color: string;
+export type RobotAction = {
+  command: string
+  label: string
+  englishLabel: string
+  description: string
+  englishDescription: string
+  color: string
 }
 
-export interface ActionGroup {
-  id: string;
-  label: string;
-  englishLabel: string;
-  actions: RobotAction[];
+export type ActionGroup = {
+  id: string
+  label: string
+  englishLabel: string
+  actions: RobotAction[]
 }
 
 const action = (
@@ -30,7 +30,7 @@ const action = (
   description,
   englishDescription,
   color,
-});
+})
 
 export const actionGroups: ActionGroup[] = [
   {
@@ -311,16 +311,16 @@ export const actionGroups: ActionGroup[] = [
       ),
     ],
   },
-];
+]
 
-export const allActions = actionGroups.flatMap((group) => group.actions);
+export const allActions = actionGroups.flatMap((group) => group.actions)
 
 export function findAction(command: string): RobotAction | undefined {
-  return allActions.find((item) => item.command === command);
+  return allActions.find((item) => item.command === command)
 }
 
 export function actionLabel(command: string, language: Language): string {
-  const item = findAction(command);
-  if (!item) return command;
-  return language === 'en' ? item.englishLabel : item.label;
+  const item = findAction(command)
+  if (!item) return command
+  return language === 'en' ? item.englishLabel : item.label
 }

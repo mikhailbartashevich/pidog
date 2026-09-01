@@ -1,15 +1,15 @@
-import { Box, Typography, alpha } from '@mui/material';
-import { type PointerEvent, useRef, useState } from 'react';
+import { Box, Typography, alpha } from '@mui/material'
+import { type PointerEvent, useRef, useState } from 'react'
 
-type Direction = -1 | 0 | 1;
+type Direction = -1 | 0 | 1
 
-interface JoystickProps {
-  axis: 'vertical' | 'horizontal';
-  label: string;
-  negativeLabel: string;
-  positiveLabel: string;
-  disabled?: boolean;
-  onDirectionChange: (direction: Direction) => void;
+type JoystickProps = {
+  axis: 'vertical' | 'horizontal'
+  label: string
+  negativeLabel: string
+  positiveLabel: string
+  disabled?: boolean
+  onDirectionChange: (direction: Direction) => void
 }
 
 export function Joystick({
@@ -20,39 +20,39 @@ export function Joystick({
   disabled = false,
   onDirectionChange,
 }: JoystickProps) {
-  const surfaceRef = useRef<HTMLDivElement | null>(null);
-  const directionRef = useRef<Direction>(0);
-  const [direction, setDirection] = useState<Direction>(0);
-  const [offset, setOffset] = useState(0);
+  const surfaceRef = useRef<HTMLDivElement | null>(null)
+  const directionRef = useRef<Direction>(0)
+  const [direction, setDirection] = useState<Direction>(0)
+  const [offset, setOffset] = useState(0)
 
   const update = (event: PointerEvent<HTMLDivElement>) => {
-    const bounds = surfaceRef.current?.getBoundingClientRect();
-    if (!bounds || disabled) return;
+    const bounds = surfaceRef.current?.getBoundingClientRect()
+    if (!bounds || disabled) return
     const center =
-      axis === 'vertical' ? bounds.top + bounds.height / 2 : bounds.left + bounds.width / 2;
-    const point = axis === 'vertical' ? event.clientY : event.clientX;
-    const radius = (axis === 'vertical' ? bounds.height : bounds.width) / 2;
-    const normalized = Math.max(-1, Math.min(1, (point - center) / radius));
-    setOffset(normalized * 54);
-    const next: Direction = normalized < -0.28 ? -1 : normalized > 0.28 ? 1 : 0;
+      axis === 'vertical' ? bounds.top + bounds.height / 2 : bounds.left + bounds.width / 2
+    const point = axis === 'vertical' ? event.clientY : event.clientX
+    const radius = (axis === 'vertical' ? bounds.height : bounds.width) / 2
+    const normalized = Math.max(-1, Math.min(1, (point - center) / radius))
+    setOffset(normalized * 54)
+    const next: Direction = normalized < -0.28 ? -1 : normalized > 0.28 ? 1 : 0
     if (next !== directionRef.current) {
-      directionRef.current = next;
-      setDirection(next);
-      onDirectionChange(next);
+      directionRef.current = next
+      setDirection(next)
+      onDirectionChange(next)
     }
-  };
+  }
 
   const release = (event: PointerEvent<HTMLDivElement>) => {
     if (surfaceRef.current?.hasPointerCapture(event.pointerId)) {
-      surfaceRef.current.releasePointerCapture(event.pointerId);
+      surfaceRef.current.releasePointerCapture(event.pointerId)
     }
-    setOffset(0);
+    setOffset(0)
     if (directionRef.current !== 0) {
-      directionRef.current = 0;
-      setDirection(0);
-      onDirectionChange(0);
+      directionRef.current = 0
+      setDirection(0)
+      onDirectionChange(0)
     }
-  };
+  }
 
   return (
     <Box sx={{ minWidth: 0 }}>
@@ -78,35 +78,34 @@ export function Joystick({
         aria-valuemax={1}
         aria-valuenow={direction}
         onPointerDown={(event) => {
-          if (disabled) return;
-          event.currentTarget.setPointerCapture(event.pointerId);
-          update(event);
+          if (disabled) return
+          event.currentTarget.setPointerCapture(event.pointerId)
+          update(event)
         }}
         onPointerMove={(event) => {
-          if (event.currentTarget.hasPointerCapture(event.pointerId)) update(event);
+          if (event.currentTarget.hasPointerCapture(event.pointerId)) update(event)
         }}
         onPointerUp={release}
         onPointerCancel={release}
         onKeyDown={(event) => {
-          if (disabled) return;
-          const negativeKey = axis === 'vertical' ? 'ArrowUp' : 'ArrowLeft';
-          const positiveKey = axis === 'vertical' ? 'ArrowDown' : 'ArrowRight';
-          const next: Direction =
-            event.key === negativeKey ? -1 : event.key === positiveKey ? 1 : 0;
+          if (disabled) return
+          const negativeKey = axis === 'vertical' ? 'ArrowUp' : 'ArrowLeft'
+          const positiveKey = axis === 'vertical' ? 'ArrowDown' : 'ArrowRight'
+          const next: Direction = event.key === negativeKey ? -1 : event.key === positiveKey ? 1 : 0
           if (next !== 0 && next !== directionRef.current) {
-            event.preventDefault();
-            directionRef.current = next;
-            setDirection(next);
-            setOffset(next * 54);
-            onDirectionChange(next);
+            event.preventDefault()
+            directionRef.current = next
+            setDirection(next)
+            setOffset(next * 54)
+            onDirectionChange(next)
           }
         }}
         onKeyUp={(event) => {
           if (event.key.startsWith('Arrow')) {
-            directionRef.current = 0;
-            setDirection(0);
-            setOffset(0);
-            onDirectionChange(0);
+            directionRef.current = 0
+            setDirection(0)
+            setOffset(0)
+            onDirectionChange(0)
           }
         }}
         sx={{
@@ -179,5 +178,5 @@ export function Joystick({
         />
       </Box>
     </Box>
-  );
+  )
 }

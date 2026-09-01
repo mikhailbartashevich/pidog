@@ -1,5 +1,5 @@
-import react from '@vitejs/plugin-react';
-import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react'
+import { defineConfig } from 'vite'
 
 const pidogProxy = {
   '/pidog-api': {
@@ -12,7 +12,7 @@ const pidogProxy = {
     changeOrigin: true,
     rewrite: (path: string) => path.replace(/^\/pidog-camera/u, ''),
   },
-};
+}
 
 export default defineConfig({
   plugins: [react()],
@@ -31,12 +31,12 @@ export default defineConfig({
       output: {
         manualChunks(id) {
           if (id.includes('/node_modules/@mui/') || id.includes('/node_modules/@emotion/')) {
-            return 'mui';
+            return 'mui'
           }
-          if (id.includes('/node_modules/react')) return 'react';
-          return undefined;
+          if (id.includes('/node_modules/react')) return 'react'
+          return undefined
         },
       },
     },
   },
-});
+})
