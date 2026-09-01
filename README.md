@@ -2,11 +2,11 @@
 
 ## Versioned Raspberry Pi setups
 
-- `raspberry_pi/V4/` — снимок текущего Raspberry Pi сетапа с CPU `llama.cpp`; он сохранён отдельно без изменения исходных файлов;
-- `raspberry_pi/AI_HAT_2/` — отдельный сетап для Raspberry Pi 5 8GB + Raspberry Pi AI HAT+ 2 8GB (Hailo-10H), с установкой через `install.sh`.
-- `raspberry_pi/common/` — общие файлы серверного runtime, используемые обеими конфигурациями.
+- `raspberry_pi/V4/` — a snapshot of the current Raspberry Pi setup with the CPU `llama.cpp` runtime, preserved separately without changing the original files;
+- `raspberry_pi/AI_HAT_2/` — a separate setup for Raspberry Pi 5 8GB + Raspberry Pi AI HAT+ 2 8GB (Hailo-10H), installed with `install.sh`.
+- `raspberry_pi/common/` — shared server runtime files used by both configurations.
 
-Для AI HAT+ 2 используйте инструкцию в `raspberry_pi/AI_HAT_2/README.md`. Это официальное название платы; в запросах её также часто называют AI HAT 2+.
+For AI HAT+ 2, follow the instructions in `raspberry_pi/AI_HAT_2/README.md`. This is the board's official name; it is also often called AI HAT 2+.
 
 This native Android app recognizes speech, selects a command from a safe allowlist, and sends it to a Raspberry Pi over the local network. A small Python server on the Pi invokes the official `pidog` library.
 
@@ -140,9 +140,9 @@ Then initialize the Russian Vosk model once. The first run downloads the small m
 sudo python3 -c 'from pidog.stt import Vosk; Vosk(language="ru")'
 ```
 
-Restart the service after updating it. In the Android app, say **“Пайдог, перейди в режим слушать”** or select **“Слушать через микрофон Пайдог”** from the command list. After the server confirms the command, the phone is no longer needed: speak commands 15–30 cm from PiDog. Say **“Пайдог, перестань слушать”** to stop local recognition. The `/health` response exposes the current mode in `local_voice` and any Vosk or microphone startup error in `local_voice.error`.
+Restart the service after updating it. In the Android app, say the localized **start listening** phrase or select the localized **Listen through PiDog microphone** command from the command list. After the server confirms the command, the phone is no longer needed: speak commands 15–30 cm from PiDog. Say the localized **stop listening** phrase to stop local recognition. The `/health` response exposes the current mode in `local_voice` and any Vosk or microphone startup error in `local_voice.error`.
 
-The similarly named **“слушай звук”** command remains a separate six-second sound-direction action and does not start speech recognition.
+The similarly named **listen for sound** command remains a separate six-second sound-direction action and does not start speech recognition.
 
 ### If the “Bark” and “Howl” commands produce no sound
 
@@ -214,10 +214,10 @@ To build from the command line:
 ## 4. Connect the phone
 
 1. Connect the phone and PiDog to the same Wi-Fi network.
-2. Choose **Русский** or **English** in the language selector. Russian is selected by default; the choice controls both the interface and voice commands and is saved between launches.
+2. Choose **Russian** or **English** in the language selector. Russian is selected by default; the choice controls both the interface and voice commands and is saved between launches.
 3. In the app, enter the Raspberry Pi IP address, port `8765`, and the same token.
 4. Tap **Check connection**.
-5. Tap the green microphone and say, for example, “Пайдог, пожалуйста, сядь” or “PiDog, please sit.”
+5. Tap the green microphone and say, for example, “PiDog, please sit.”
 
 For the best recognition quality, use Google’s system speech recognizer and a regular home Wi-Fi network with internet access. If the phone connects directly to the PiDog access point without internet, download the Russian or English offline recognition pack in Google Voice Typing settings beforehand. Offline recognition may be less accurate.
 
@@ -233,5 +233,5 @@ Before the first test, place PiDog on the floor with enough free space around it
 - `raspberry_pi/common/pidog_voice/` — shared server package split into voice, hardware,
   sensor, camera, HTTP, and command-line modules;
 - `raspberry_pi/AI_HAT_2/pidog_voice/` — Hailo-10H-specific assistant override;
-- `raspberry_pi/common/test_pidog_voice_server.py` — единый server-side test suite;
-- `raspberry_pi/run_tests.sh` — запуск тестов для root, V4 и AI HAT+ 2.
+- `raspberry_pi/common/test_pidog_voice_server.py` — the shared server-side test suite;
+- `raspberry_pi/run_tests.sh` — runs the tests for the root, V4, and AI HAT+ 2 configurations.
