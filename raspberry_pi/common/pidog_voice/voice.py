@@ -45,6 +45,10 @@ LOCAL_VOICE_ALIASES: dict[str, tuple[str, ...]] = {
     "high_five": ("дай пять", "дай мне пять", "пять", "ладушки", "хай файв"),
     "howl": ("вой", "завой", "выть", "повой"),
     "sleep": ("спать", "засыпай", "усни", "дремать", "отдыхай"),
+    # This is only acted on while the controller is in sleep mode. Keeping it
+    # in the local-only dictionary means the wake word is recognized by the
+    # microphone built into PiDog, not by the phone command parser.
+    "wake": ("проснись", "просыпайся", "пора просыпаться"),
     "measure_distance": (
         "измерь расстояние", "расстояние до предмета", "скажи расстояние",
         "какое расстояние", "дистанция", "что впереди",

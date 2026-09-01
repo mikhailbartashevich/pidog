@@ -7,7 +7,6 @@ import {
 } from '@mui/icons-material'
 import {
   alpha,
-  Avatar,
   Box,
   IconButton,
   List,
@@ -18,7 +17,6 @@ import {
   Tooltip,
 } from '@mui/material'
 
-import mascot from '../../../../app/src/main/res/drawable-nodpi/pidog_status_mascot.png'
 import type { Language } from '../../lib/commands'
 import { tr } from '../../lib/i18n'
 import type { Page } from '../../types/ui'
@@ -59,19 +57,6 @@ export function NavigationRail({ page, language, connected, onPage }: Navigation
         py: 1.5,
       }}
     >
-      <Avatar
-        src={mascot}
-        alt="PiDog"
-        variant="rounded"
-        sx={{
-          width: 54,
-          height: 54,
-          borderRadius: 2.5,
-          border: '1px solid',
-          borderColor: 'divider',
-          mb: 2,
-        }}
-      />
       <List disablePadding sx={{ width: '100%', px: 1 }}>
         {pages.map(({ id, ru, en, icon: Icon }) => (
           <Tooltip key={id} title={tr(language, ru, en)} placement="right">

@@ -267,22 +267,30 @@ class SleepCommandTest(unittest.TestCase):
     def test_sleep_starts_background_sequence_without_blocking_command(self):
         controller = object.__new__(RobotController)
         controller._dog = SimpleNamespace()
+        controller._sleep_lock = threading.Lock()
+        controller._sleep_active = False
+        controller._sleep_wake_ready = threading.Event()
+        controller._sleep_wake_event = threading.Event()
+        controller._sleep_started_local_voice = False
+        controller._local_voice = SimpleNamespace(start=Mock(return_value=True))
         controller._start_behavior = Mock()
 
-        result = controller._sleep_until_clap()
+        result = controller._sleep_until_wake_word()
 
         self.assertTrue(result["sleeping"])
         controller._start_behavior.assert_called_once_with(
-            "sleep-until-clap", controller._wait_for_wake_clap)
+            "sleep-until-wake-word", controller._wait_for_wake_word)
+        controller._local_voice.start.assert_called_once_with()
 
-    def test_sleep_waits_for_doze_off_and_clap_then_sits_and_barks(self):
+    def test_sleep_waits_for_wake_word_then_sits_and_barks(self):
         controller = object.__new__(RobotController)
-        detected = iter((False, True))
+        controller._sleep_lock = threading.Lock()
+        controller._sleep_active = True
+        controller._sleep_wake_ready = threading.Event()
+        controller._sleep_wake_event = threading.Event()
+        controller._sleep_started_local_voice = False
+        controller._local_voice = SimpleNamespace(stop=Mock())
         controller._dog = SimpleNamespace(
-            ears=SimpleNamespace(
-                isdetected=lambda: next(detected),
-                read=Mock(),
-            ),
             body_stop=Mock(),
             head_move=Mock(),
             do_action=Mock(),
@@ -292,18 +300,15 @@ class SleepCommandTest(unittest.TestCase):
         controller._bark = Mock()
 
         class WakeEvent:
-            waits = 0
-
             def is_set(self):
                 return False
 
-            def wait(self, _timeout):
-                self.waits += 1
-                return False
+        # A wake word received before the pose is ready is ignored by the
+        # controller. Queue one here so the worker consumes it after setting
+        # its readiness flag.
+        controller._sleep_wake_event.set()
+        controller._wait_for_wake_word(WakeEvent())
 
-        controller._wait_for_wake_clap(WakeEvent())
-
-        controller._dog.ears.read.assert_called_once_with()
         controller._dog.body_stop.assert_called_once_with()
         controller._dog.do_action.assert_has_calls([
             call("doze_off", speed=65),
@@ -317,8 +322,40 @@ class SleepCommandTest(unittest.TestCase):
         self.assertEqual(3, controller._dog.wait_legs_done.call_count)
         controller._bark.assert_called_once_with()
 
+    def test_wake_word_is_accepted_only_after_sleep_pose(self):
+        controller = object.__new__(RobotController)
+        controller._sleep_lock = threading.Lock()
+        controller._sleep_active = True
+        controller._sleep_wake_ready = threading.Event()
+        controller._sleep_wake_event = threading.Event()
+
+        self.assertFalse(controller._wake_from_microphone()["sleeping"])
+        self.assertFalse(controller._sleep_wake_event.is_set())
+
+        controller._sleep_wake_ready.set()
+        self.assertFalse(controller._wake_from_microphone()["sleeping"])
+        self.assertTrue(controller._sleep_wake_event.is_set())
+
 
 class AudioConfigurationTest(unittest.TestCase):
+    def test_bark_plays_audio_without_waiting_for_the_head_servo(self):
+        controller = object.__new__(RobotController)
+        controller._dog = SimpleNamespace(speak=Mock())
+        controller._require_audio = Mock()
+        controller._play_with_speaker = Mock(side_effect=lambda action: action())
+
+        with patch("pidog_voice.audio.time.sleep") as sleep:
+            result = controller._bark()
+
+        self.assertEqual({"barks": 3, "message": "Пайдог залаял три раза"}, result)
+        self.assertEqual([
+            call("single_bark_1", 100),
+            call("single_bark_1", 100),
+            call("single_bark_1", 100),
+        ], controller._dog.speak.call_args_list)
+        self.assertEqual(3, controller._play_with_speaker.call_count)
+        self.assertEqual([call(0.18), call(0.18)], sleep.call_args_list)
+
     def test_audio_setup_leaves_speaker_disabled(self):
         controller = object.__new__(RobotController)
         controller._dog = SimpleNamespace()
@@ -462,6 +499,7 @@ class LocalVoiceControlTest(unittest.TestCase):
         self.assertEqual("local_voice_on", match_local_voice_command(
             "Пайдог, пожалуйста, перейди в режим слушать!"))
         self.assertEqual("sit", match_local_voice_command("Пайдог, сядь"))
+        self.assertEqual("wake", match_local_voice_command("Пайдог, проснись"))
         self.assertEqual("local_voice_off", match_local_voice_command("перестань слушать"))
         self.assertIsNone(match_local_voice_command("похожи немного вперед"))
 

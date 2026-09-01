@@ -241,37 +241,38 @@ class SensorsMixin:
         hand_shake(self._dog)
         self._bark()
 
-    def _sleep_until_clap(self) -> dict[str, Any]:
-        self._start_behavior("sleep-until-clap", self._wait_for_wake_clap)
-        return {"sleeping": True, "message": "Пайдог спит и ждёт хлопок"}
+    def _sleep_until_wake_word(self) -> dict[str, Any]:
+        self._begin_sleep()
+        self._start_behavior("sleep-until-wake-word", self._wait_for_wake_word)
+        return {
+            "sleeping": True,
+            "message": "Пайдог спит и слушает встроенный микрофон: скажите «проснись»",
+        }
 
-    def _wait_for_wake_clap(self, stop_event: threading.Event) -> None:
-        # Run the whole sleep pose in this worker. Starting the clap listener
-        # before doze_off has finished lets servo noise wake the robot early.
-        self._dog.do_action("doze_off", speed=65)
-        self._dog.wait_all_done()
-        if stop_event.is_set():
-            return
-
-        # Servo noise can trigger the direction sensor, so discard it and add a
-        # short quiet period before accepting the wake clap.
-        if self._dog.ears.isdetected():
-            self._dog.ears.read()
-        if stop_event.wait(1.0):
-            return
-        while not stop_event.wait(0.08):
-            if self._dog.ears.isdetected():
-                self._dog.ears.read()
-                # Stop any residual motion before starting the wake-up pose.
-                self._dog.body_stop()
-                self._dog.do_action("stand", speed=85)
-                self._dog.wait_legs_done()
-                self._dog.do_action("stretch", speed=50)
-                self._dog.wait_legs_done()
-                self._sit()
-                self._dog.wait_legs_done()
-                self._bark()
+    def _wait_for_wake_word(self, stop_event: threading.Event) -> None:
+        """Sleep until the local Vosk listener recognizes the wake word."""
+        try:
+            self._dog.do_action("doze_off", speed=65)
+            self._dog.wait_all_done()
+            if stop_event.is_set():
                 return
+
+            # Ignore all phrases until the sleep pose is fully complete.
+            self._sleep_wake_ready.set()
+            while not stop_event.is_set():
+                if self._sleep_wake_event.wait(0.1):
+                    # Stop any residual motion before starting the wake-up pose.
+                    self._dog.body_stop()
+                    self._dog.do_action("stand", speed=85)
+                    self._dog.wait_legs_done()
+                    self._dog.do_action("stretch", speed=50)
+                    self._dog.wait_legs_done()
+                    self._sit()
+                    self._dog.wait_legs_done()
+                    self._bark()
+                    return
+        finally:
+            self._finish_sleep()
 
     def _listen_sound(self) -> dict[str, Any]:
         deadline = time.monotonic() + 6

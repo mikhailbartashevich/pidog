@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { ConnectionDialog } from './components/ConnectionDialog'
 import { AppHeader } from './components/layout/AppHeader'
 import { MobileNavigation, NavigationRail } from './components/layout/Navigation'
+import type { PiDogStatus, PiDogStatusKind } from './components/layout/PiDogStatus'
 import { AssistantPage } from './components/pages/AssistantPage'
 import { CockpitPage } from './components/pages/CockpitPage'
 import { CommandsPage } from './components/pages/CommandsPage'
@@ -71,6 +72,14 @@ export function ControlStation() {
   const [assistantSpeak, setAssistantSpeak] = useState(false)
   const [assistantBusy, setAssistantBusy] = useState(false)
   const [speechTarget, setSpeechTarget] = useState<SpeechTarget>('command')
+  const [dogStatus, setDogStatus] = useState<PiDogStatus>(() => ({
+    kind: 'idle',
+    message: tr(
+      language,
+      'Связь с Пайдогом ещё не проверена',
+      'Connection to PiDog has not been checked yet',
+    ),
+  }))
 
   const speechTargetRef = useRef<SpeechTarget>('command')
   const movementRef = useRef<{ drive: Direction; turn: Direction; last: Axis }>({
@@ -84,14 +93,33 @@ export function ControlStation() {
   const pendingHeadRef = useRef<{ yaw: number; pitch: number } | null>(null)
   const headRequestInFlightRef = useRef(false)
   const autoConnectRef = useRef(false)
+  const dogStatusRequestRef = useRef(0)
 
-  const markDisconnected = useCallback((error?: unknown) => {
-    setConnected(false)
-    setHealth(null)
-    setStreaming(false)
-    setConnectionOpen(true)
-    if (error) setNotice({ message: errorMessage(error), severity: 'error' })
+  const beginDogStatus = useCallback((kind: PiDogStatusKind, message: string) => {
+    const request = dogStatusRequestRef.current + 1
+    dogStatusRequestRef.current = request
+    setDogStatus({ kind, message })
+    return request
   }, [])
+
+  const finishDogStatus = useCallback((request: number, kind: PiDogStatusKind, message: string) => {
+    if (request === dogStatusRequestRef.current) setDogStatus({ kind, message })
+  }, [])
+
+  const markDisconnected = useCallback(
+    (error?: unknown) => {
+      setConnected(false)
+      setHealth(null)
+      setStreaming(false)
+      setConnectionOpen(true)
+      if (error) setNotice({ message: errorMessage(error), severity: 'error' })
+      beginDogStatus(
+        'error',
+        error ? errorMessage(error) : tr(language, 'Нет подключения к Пайдогу', 'PiDog is offline'),
+      )
+    },
+    [beginDogStatus, language],
+  )
 
   const addVisionEntry = useCallback((title: string, detail: string, success: boolean) => {
     setVisionLog((current) =>
@@ -105,6 +133,9 @@ export function ControlStation() {
   const refreshSensors = useCallback(
     async (announce = false) => {
       if (!connected) return
+      const statusRequest = announce
+        ? beginDogStatus('working', tr(language, 'Читаю датчики…', 'Reading sensors…'))
+        : 0
       try {
         const next = await pidogApi.sensors(settings)
         setSensors(next)
@@ -115,17 +146,29 @@ export function ControlStation() {
             message: tr(language, 'Сенсоры обновлены', 'Sensors updated'),
             severity: 'success',
           })
+        if (announce)
+          finishDogStatus(
+            statusRequest,
+            'success',
+            tr(language, 'Датчики обновлены', 'Sensors updated'),
+          )
       } catch (error) {
         if (isConnectivityError(error)) markDisconnected(error)
-        else if (announce) setNotice({ message: errorMessage(error), severity: 'error' })
+        else if (announce) {
+          setNotice({ message: errorMessage(error), severity: 'error' })
+          finishDogStatus(statusRequest, 'error', errorMessage(error))
+        }
       }
     },
-    [connected, language, markDisconnected, settings],
+    [beginDogStatus, connected, finishDogStatus, language, markDisconnected, settings],
   )
 
   const refreshAssistant = useCallback(
     async (announce = false) => {
       if (!connected) return
+      const statusRequest = announce
+        ? beginDogStatus('working', tr(language, 'Проверяю локальную LLM…', 'Checking local LLM…'))
+        : 0
       try {
         const response = await pidogApi.assistantStatus(settings)
         setAssistantStatus(response.assistant)
@@ -134,17 +177,30 @@ export function ControlStation() {
             message: tr(language, 'Состояние LLM обновлено', 'LLM status updated'),
             severity: 'success',
           })
+        if (announce)
+          finishDogStatus(
+            statusRequest,
+            'success',
+            tr(language, 'Состояние LLM обновлено', 'LLM status updated'),
+          )
       } catch (error) {
         if (isConnectivityError(error)) markDisconnected(error)
-        else if (announce) setNotice({ message: errorMessage(error), severity: 'error' })
+        else if (announce) {
+          setNotice({ message: errorMessage(error), severity: 'error' })
+          finishDogStatus(statusRequest, 'error', errorMessage(error))
+        }
       }
     },
-    [connected, language, markDisconnected, settings],
+    [beginDogStatus, connected, finishDogStatus, language, markDisconnected, settings],
   )
 
   const connect = useCallback(
     async (endpoint: ConnectionSettings, announce = true) => {
       setConnecting(true)
+      const statusRequest = beginDogStatus(
+        'working',
+        tr(language, 'Подключаюсь к Пайдогу…', 'Connecting to PiDog…'),
+      )
       try {
         const nextHealth = await pidogApi.health(endpoint)
         setSettings(endpoint)
@@ -168,6 +224,13 @@ export function ControlStation() {
               : tr(language, 'Пайдог на связи', 'PiDog is online'),
             severity: 'success',
           })
+        finishDogStatus(
+          statusRequest,
+          'success',
+          nextHealth.dry_run
+            ? tr(language, 'Подключено в dry-run режиме', 'Connected in dry-run mode')
+            : tr(language, 'Пайдог на связи', 'PiDog is online'),
+        )
         return true
       } catch (error) {
         markDisconnected(announce ? error : undefined)
@@ -176,7 +239,7 @@ export function ControlStation() {
         setConnecting(false)
       }
     },
-    [language, markDisconnected],
+    [beginDogStatus, finishDogStatus, language, markDisconnected],
   )
 
   useEffect(() => {
@@ -207,9 +270,23 @@ export function ControlStation() {
             message: tr(language, 'Сначала подключитесь к Пайдогу', 'Connect to PiDog first'),
             severity: 'info',
           })
+        beginDogStatus(
+          'error',
+          tr(language, 'Сначала подключитесь к Пайдогу', 'Connect to PiDog first'),
+        )
         return null
       }
       if (!quiet) setBusyCommand(command)
+      const action = actionLabel(command, language)
+      const statusKind: PiDogStatusKind = colorCommands.includes(command)
+        ? 'searching'
+        : command === 'listen_sound' || command === 'local_voice_on'
+          ? 'listening'
+          : 'working'
+      const statusRequest = beginDogStatus(
+        statusKind,
+        tr(language, `Выполняю: ${action}`, `Running: ${action}`),
+      )
       try {
         const response = await pidogApi.command(settings, command, phrase)
         if (command === 'camera_on') {
@@ -245,12 +322,20 @@ export function ControlStation() {
             message: response.message ?? `${actionLabel(command, language)} — OK`,
             severity: 'success',
           })
+        finishDogStatus(
+          statusRequest,
+          'success',
+          response.message ?? tr(language, `${action} — готово`, `${action} — done`),
+        )
         if (['show_battery', 'measure_distance', 'camera_on', 'camera_off'].includes(command))
           void refreshSensors(false)
         return response
       } catch (error) {
         if (isConnectivityError(error)) markDisconnected(error)
-        else if (!quiet) setNotice({ message: errorMessage(error), severity: 'error' })
+        else {
+          if (!quiet) setNotice({ message: errorMessage(error), severity: 'error' })
+          finishDogStatus(statusRequest, 'error', errorMessage(error))
+        }
         if (!quiet && colorCommands.includes(command))
           addVisionEntry(actionLabel(command, language), errorMessage(error), false)
         return null
@@ -258,7 +343,16 @@ export function ControlStation() {
         if (!quiet) setBusyCommand(null)
       }
     },
-    [addVisionEntry, connected, language, markDisconnected, refreshSensors, settings],
+    [
+      addVisionEntry,
+      beginDogStatus,
+      connected,
+      finishDogStatus,
+      language,
+      markDisconnected,
+      refreshSensors,
+      settings,
+    ],
   )
   const sendCommandRef = useRef(sendCommand)
   useEffect(() => {
@@ -365,21 +459,37 @@ export function ControlStation() {
     async (action: 'start' | 'stop' | 'restart') => {
       if (!connected) {
         setConnectionOpen(true)
+        beginDogStatus(
+          'error',
+          tr(language, 'Сначала подключитесь к Пайдогу', 'Connect to PiDog first'),
+        )
         return
       }
       setAssistantBusy(true)
+      const statusRequest = beginDogStatus(
+        'working',
+        tr(language, 'Управляю локальной LLM…', 'Managing local LLM…'),
+      )
       try {
         const response = await pidogApi.assistantControl(settings, action)
         setAssistantStatus(response.assistant)
         setNotice({ message: response.message ?? action, severity: 'success' })
+        finishDogStatus(
+          statusRequest,
+          'success',
+          response.message ?? tr(language, 'Настройки LLM обновлены', 'LLM settings updated'),
+        )
       } catch (error) {
         if (isConnectivityError(error)) markDisconnected(error)
-        else setNotice({ message: errorMessage(error), severity: 'error' })
+        else {
+          setNotice({ message: errorMessage(error), severity: 'error' })
+          finishDogStatus(statusRequest, 'error', errorMessage(error))
+        }
       } finally {
         setAssistantBusy(false)
       }
     },
-    [connected, markDisconnected, settings],
+    [beginDogStatus, connected, finishDogStatus, language, markDisconnected, settings],
   )
 
   const askAssistant = useCallback(
@@ -388,10 +498,20 @@ export function ControlStation() {
       if (!question) return
       if (!connected) {
         setConnectionOpen(true)
+        beginDogStatus(
+          'error',
+          tr(language, 'Сначала подключитесь к Пайдогу', 'Connect to PiDog first'),
+        )
         return
       }
       setAssistantQuestion(question)
       setAssistantBusy(true)
+      const statusRequest = beginDogStatus(
+        assistantSearch ? 'searching' : 'thinking',
+        assistantSearch
+          ? tr(language, 'Ищу и думаю над ответом…', 'Searching and thinking…')
+          : tr(language, 'Думаю над ответом…', 'Thinking about the answer…'),
+      )
       try {
         const reply = await pidogApi.assistantChat(
           settings,
@@ -401,9 +521,19 @@ export function ControlStation() {
         )
         setAssistantReply(reply)
         void refreshAssistant(false)
+        finishDogStatus(
+          statusRequest,
+          reply.spoken ? 'speaking' : 'success',
+          reply.spoken
+            ? tr(language, 'Отвечаю через динамик Пайдога', 'Answering through PiDog speaker')
+            : tr(language, 'Ответ готов', 'Answer ready'),
+        )
       } catch (error) {
         if (isConnectivityError(error)) markDisconnected(error)
-        else setNotice({ message: errorMessage(error), severity: 'error' })
+        else {
+          setNotice({ message: errorMessage(error), severity: 'error' })
+          finishDogStatus(statusRequest, 'error', errorMessage(error))
+        }
       } finally {
         setAssistantBusy(false)
       }
@@ -412,7 +542,10 @@ export function ControlStation() {
       assistantQuestion,
       assistantSearch,
       assistantSpeak,
+      beginDogStatus,
       connected,
+      finishDogStatus,
+      language,
       markDisconnected,
       refreshAssistant,
       settings,
@@ -422,6 +555,10 @@ export function ControlStation() {
   const clearAssistant = useCallback(async () => {
     if (!connected) return
     setAssistantBusy(true)
+    const statusRequest = beginDogStatus(
+      'working',
+      tr(language, 'Очищаю историю диалога…', 'Clearing conversation history…'),
+    )
     try {
       const response = await pidogApi.clearAssistantHistory(settings)
       setAssistantReply(null)
@@ -430,13 +567,21 @@ export function ControlStation() {
         message: response.message ?? tr(language, 'История очищена', 'History cleared'),
         severity: 'success',
       })
+      finishDogStatus(
+        statusRequest,
+        'success',
+        response.message ?? tr(language, 'История очищена', 'History cleared'),
+      )
     } catch (error) {
       if (isConnectivityError(error)) markDisconnected(error)
-      else setNotice({ message: errorMessage(error), severity: 'error' })
+      else {
+        setNotice({ message: errorMessage(error), severity: 'error' })
+        finishDogStatus(statusRequest, 'error', errorMessage(error))
+      }
     } finally {
       setAssistantBusy(false)
     }
-  }, [connected, language, markDisconnected, settings])
+  }, [beginDogStatus, connected, finishDogStatus, language, markDisconnected, settings])
 
   const speech = useSpeechRecognition({
     languageTag: language === 'en' ? 'en-US' : 'ru-RU',
@@ -462,7 +607,10 @@ export function ControlStation() {
           severity: 'warning',
         })
     },
-    onError: (message) => setNotice({ message, severity: 'error' }),
+    onError: (message) => {
+      setNotice({ message, severity: 'error' })
+      beginDogStatus('error', message)
+    },
   })
 
   const startSpeech = (target: SpeechTarget) => {
@@ -470,8 +618,18 @@ export function ControlStation() {
     setSpeechTarget(target)
     setRecognized('')
     if (target === 'command') setVoiceMatch(null)
-    if (speech.listening) speech.stop()
-    else speech.start()
+    if (speech.listening) {
+      speech.stop()
+      beginDogStatus('idle', tr(language, 'Готов к командам', 'Ready for commands'))
+    } else {
+      beginDogStatus(
+        'listening',
+        target === 'assistant'
+          ? tr(language, 'Слушаю вопрос…', 'Listening for a question…')
+          : tr(language, 'Слушаю команду…', 'Listening for a command…'),
+      )
+      speech.start()
+    }
   }
 
   const changeLanguage = (next: Language) => {
@@ -569,10 +727,10 @@ export function ControlStation() {
         <AppHeader
           page={page}
           language={language}
-          small={small}
           connected={connected}
           version={health?.version}
           dryRun={health?.dry_run}
+          status={dogStatus}
           onLanguage={changeLanguage}
           onConnection={() => {
             setDraftSettings(settings)

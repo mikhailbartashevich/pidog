@@ -38,6 +38,11 @@ class RobotController(AudioMixin, VisionMixin, SensorsMixin):
         self._behavior_lock = threading.Lock()
         self._behavior_stop = threading.Event()
         self._behavior_thread: threading.Thread | None = None
+        self._sleep_lock = threading.Lock()
+        self._sleep_active = False
+        self._sleep_wake_ready = threading.Event()
+        self._sleep_wake_event = threading.Event()
+        self._sleep_started_local_voice = False
         self._touch_stop = threading.Event()
         self._touch_thread: threading.Thread | None = None
         self._power_samples: deque[tuple[float, float]] = deque()
@@ -85,7 +90,8 @@ class RobotController(AudioMixin, VisionMixin, SensorsMixin):
             "handshake": self._handshake,
             "high_five": self._high_five,
             "howl": self._howl,
-            "sleep": self._sleep_until_clap,
+            "sleep": self._sleep_until_wake_word,
+            "wake": self._wake_from_microphone,
             "measure_distance": self._measure_distance,
             "listen_sound": self._listen_sound,
             "show_battery": self._show_battery,
@@ -181,7 +187,7 @@ class RobotController(AudioMixin, VisionMixin, SensorsMixin):
                 return {"message": f"Команда принята: {command}"}
             # Long-running modes use a single cooperative background worker.
             # Any new command takes control immediately and stops the old mode.
-            if command not in {"stop_face_follow", "stop_object_follow"}:
+            if command not in {"stop_face_follow", "stop_object_follow", "wake"}:
                 self._cancel_behavior()
             command_color = COMMAND_COLORS.get(command)
             if command_color is not None:
@@ -303,17 +309,54 @@ class RobotController(AudioMixin, VisionMixin, SensorsMixin):
                 self._behavior_thread = None
 
     def _execute_local_voice(self, command: str, phrase: str) -> None:
+        if self._is_sleeping() and command != "wake":
+            LOG.info("local voice command ignored while sleeping: %s", command)
+            return
         try:
             self.execute(command)
         except Exception:
             LOG.exception("local voice command failed command=%s phrase=%r", command, phrase[:200])
 
     def _execute_local_conversation(self, phrase: str) -> None:
+        if self._is_sleeping():
+            LOG.info("local voice phrase ignored while sleeping: %r", phrase[:200])
+            return
         try:
             result = self._assistant.chat(phrase, use_web=None)
             self._speak_text(result["answer"])
         except Exception:
             LOG.exception("local assistant conversation failed phrase=%r", phrase[:200])
+
+    def _is_sleeping(self) -> bool:
+        with self._sleep_lock:
+            return self._sleep_active
+
+    def _begin_sleep(self) -> bool:
+        """Enter sleep mode and ensure its wake word uses PiDog's microphone."""
+        with self._sleep_lock:
+            self._sleep_active = True
+            self._sleep_wake_ready.clear()
+            self._sleep_wake_event.clear()
+            self._sleep_started_local_voice = self._local_voice.start()
+            return self._sleep_started_local_voice
+
+    def _finish_sleep(self) -> None:
+        with self._sleep_lock:
+            self._sleep_active = False
+            self._sleep_wake_ready.clear()
+            started_local_voice = self._sleep_started_local_voice
+            self._sleep_started_local_voice = False
+        # If sleep enabled the microphone, return it to its previous state.
+        # Do not turn it off when the user had already enabled local control.
+        if started_local_voice:
+            self._local_voice.stop()
+
+    def _wake_from_microphone(self) -> dict[str, Any]:
+        with self._sleep_lock:
+            if not self._sleep_active or not self._sleep_wake_ready.is_set():
+                return {"sleeping": False, "message": "Пайдог сейчас не ждёт команду пробуждения"}
+            self._sleep_wake_event.set()
+        return {"sleeping": False, "message": "Пайдог просыпается"}
 
     def _start_local_voice(self) -> dict[str, Any]:
         started = self._local_voice.start()

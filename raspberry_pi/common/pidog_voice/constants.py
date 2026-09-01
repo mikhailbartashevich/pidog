@@ -8,6 +8,10 @@ import logging
 LOG = logging.getLogger("pidog-voice")
 MAX_BODY_BYTES = 16 * 1024
 AUDIO_FILES = ("single_bark_1", "howling")
+# A sound effect is only a few seconds long.  Keeping this short is important:
+# ALSA can otherwise leave the command lock held indefinitely after a device
+# failure, making the control service look unavailable.
+AUDIO_PLAYBACK_TIMEOUT_SECONDS = 6
 SERVER_VERSION = "1.5.0"
 
 COMMAND_COLORS = {

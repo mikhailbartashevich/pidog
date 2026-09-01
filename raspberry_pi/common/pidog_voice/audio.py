@@ -12,7 +12,7 @@ import time
 from pathlib import Path
 from typing import Any, Callable
 
-from .constants import AUDIO_FILES, LOG
+from .constants import AUDIO_FILES, AUDIO_PLAYBACK_TIMEOUT_SECONDS, LOG
 
 
 class AudioUnavailableError(RuntimeError):
@@ -28,12 +28,16 @@ class AudioMixin:
     def _bark(self) -> dict[str, Any]:
         """Bark three times for the explicit voice command."""
         self._require_audio()
-        from pidog.preset_actions import bark
 
         for index in range(3):
-            # Wait for each sample before starting the next one so the barks
-            # remain three distinct sounds instead of overlapping processes.
-            self._play_with_speaker(lambda: bark(self._dog, volume=100))
+            # The upstream ``preset_actions.bark`` waits for the head servo
+            # three times.  A stalled servo makes those waits unbounded and,
+            # while execute() owns the controller lock, blocks every command.
+            # "Voice" is an audio command, so play the bundled bark directly.
+            # This also keeps the three samples distinct without risking a
+            # servo-related service lockup.
+            self._play_with_speaker(
+                lambda: self._dog.speak("single_bark_1", 100))
             if index < 2:
                 time.sleep(0.18)
         return {"barks": 3, "message": "Пайдог залаял три раза"}
@@ -222,10 +226,15 @@ class AudioMixin:
         self._audio_processes.clear()
         for process in processes:
             try:
-                _, error_output = process.communicate(timeout=30)
+                _, error_output = process.communicate(
+                    timeout=AUDIO_PLAYBACK_TIMEOUT_SECONDS)
             except subprocess.TimeoutExpired as error:
                 process.terminate()
-                process.communicate(timeout=2)
+                try:
+                    process.communicate(timeout=2)
+                except subprocess.TimeoutExpired:
+                    process.kill()
+                    process.communicate()
                 raise AudioUnavailableError("таймаут воспроизведения звука") from error
             if process.returncode != 0:
                 detail = (error_output or "").strip()

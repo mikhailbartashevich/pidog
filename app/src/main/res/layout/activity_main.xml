@@ -19,7 +19,7 @@
         android:paddingTop="9dp"
         android:paddingEnd="18dp"
         android:paddingBottom="9dp"
-        android:visibility="gone">
+        android:visibility="visible">
 
         <ImageView
             android:id="@+id/statusMascot"

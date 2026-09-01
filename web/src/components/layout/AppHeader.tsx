@@ -1,7 +1,6 @@
 import { EmergencyRounded, SettingsRounded } from '@mui/icons-material'
 import {
   alpha,
-  Avatar,
   Box,
   IconButton,
   MenuItem,
@@ -12,19 +11,19 @@ import {
   Typography,
 } from '@mui/material'
 
-import mascot from '../../../../app/src/main/res/drawable-nodpi/pidog_status_mascot.png'
 import type { Language } from '../../lib/commands'
 import { tr } from '../../lib/i18n'
 import type { Page } from '../../types/ui'
 import { pages } from './Navigation'
+import { PiDogStatusIndicator, type PiDogStatus } from './PiDogStatus'
 
 type AppHeaderProps = {
   page: Page
   language: Language
-  small: boolean
   connected: boolean
   version?: string
   dryRun?: boolean
+  status: PiDogStatus
   onLanguage: (language: Language) => void
   onConnection: () => void
   onStop: () => void
@@ -33,10 +32,10 @@ type AppHeaderProps = {
 export function AppHeader({
   page,
   language,
-  small,
   connected,
   version,
   dryRun,
+  status,
   onLanguage,
   onConnection,
   onStop,
@@ -63,14 +62,9 @@ export function AppHeader({
       }}
     >
       <Stack direction="row" sx={{ alignItems: 'center', gap: 1.2, minWidth: 0 }}>
-        {small && (
-          <Avatar
-            src={mascot}
-            alt="PiDog"
-            variant="rounded"
-            sx={{ width: 40, height: 40, borderRadius: 2 }}
-          />
-        )}
+        <Box sx={{ display: { xs: 'block', sm: 'none' } }}>
+          <PiDogStatusIndicator language={language} status={status} compact />
+        </Box>
         <Box sx={{ minWidth: 0 }}>
           <Typography sx={{ fontWeight: 800, lineHeight: 1.1 }} noWrap>
             {pageTitle ? tr(language, pageTitle.ru, pageTitle.en) : 'PiDog'}
@@ -93,6 +87,9 @@ export function AppHeader({
         </Box>
       </Stack>
       <Stack direction="row" sx={{ alignItems: 'center', gap: 0.8 }}>
+        <Box sx={{ display: { xs: 'none', sm: 'block' }, mr: { sm: 0.7, lg: 1.5 } }}>
+          <PiDogStatusIndicator language={language} status={status} />
+        </Box>
         <Select
           size="small"
           value={language}

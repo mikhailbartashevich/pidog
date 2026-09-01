@@ -142,6 +142,8 @@ sudo python3 -c 'from pidog.stt import Vosk; Vosk(language="ru")'
 
 Restart the service after updating it. In the Android app, say the localized **start listening** phrase or select the localized **Listen through PiDog microphone** command from the command list. After the server confirms the command, the phone is no longer needed: speak commands 15–30 cm from PiDog. Say the localized **stop listening** phrase to stop local recognition. The `/health` response exposes the current mode in `local_voice` and any Vosk or microphone startup error in `local_voice.error`.
 
+The **Sleep** command also starts this built-in microphone automatically. While PiDog is asleep, it ignores other speech and wakes only after the Russian phrase **«проснись»** (also **«просыпайся»**). When it wakes, the microphone is returned to the state it had before sleep.
+
 The similarly named **listen for sound** command remains a separate six-second sound-direction action and does not start speech recognition.
 
 ### If the “Bark” and “Howl” commands produce no sound
