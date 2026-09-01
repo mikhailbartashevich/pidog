@@ -181,9 +181,16 @@ class RobotController(AudioMixin, VisionMixin, SensorsMixin):
             # Any new command takes control immediately and stops the old mode.
             if command not in {"stop_face_follow", "stop_object_follow"}:
                 self._cancel_behavior()
-            if command in COMMAND_COLORS:
-                self._set_light("breath", COMMAND_COLORS[command], bps=1.2, brightness=0.8)
-            result = action()
+            command_color = COMMAND_COLORS.get(command)
+            if command_color is not None:
+                self._set_light("breath", command_color, bps=1.2, brightness=0.8)
+            try:
+                result = action()
+            finally:
+                # Status lighting must not leave the RGB strip in its repeating
+                # breath mode after a command has completed or failed.
+                if command_color is not None and command != "stop":
+                    self._finish_command_light(command_color)
             return result or {"message": "Команда выполнена"}
 
     def move_head(self, yaw: float, pitch: float) -> dict[str, Any]:

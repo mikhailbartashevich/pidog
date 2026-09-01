@@ -9,12 +9,15 @@ import android.content.res.Configuration;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.LocaleList;
+import android.view.Menu;
 import android.view.View;
 import android.window.OnBackInvokedDispatcher;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.HorizontalScrollView;
+import android.widget.ImageButton;
+import android.widget.PopupMenu;
 import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.ViewFlipper;
@@ -48,6 +51,8 @@ public final class MainActivity extends Activity {
     private ViewFlipper servicePages;
     private Button[] navButtons;
     private HorizontalScrollView navScroll;
+    private ImageButton menuButton;
+    private TextView toolbarTitle;
 
     @Override
     protected void attachBaseContext(Context newBase) {
@@ -84,6 +89,8 @@ public final class MainActivity extends Activity {
         languageSpinner = findViewById(R.id.languageSpinner);
         servicePages = findViewById(R.id.servicePages);
         navScroll = findViewById(R.id.navScroll);
+        menuButton = findViewById(R.id.menuButton);
+        toolbarTitle = findViewById(R.id.toolbarTitle);
         navButtons = new Button[]{
                 findViewById(R.id.navConnection), findViewById(R.id.navVoice),
                 findViewById(R.id.navMovement), findViewById(R.id.navCommands),
@@ -118,6 +125,7 @@ public final class MainActivity extends Activity {
     private void bindActions() {
         bindLanguageSpinner();
         bindNavigation();
+        menuButton.setOnClickListener(view -> showNavigationMenu());
         bindCommandButtons();
         findViewById(R.id.connectButton)
                 .setOnClickListener(view -> connection.check(robotClient));
@@ -255,6 +263,7 @@ public final class MainActivity extends Activity {
             movementController.stop();
         }
         servicePages.setDisplayedChild(page);
+        toolbarTitle.setText(pageTitleResource(page));
         if (page == PAGE_COMMANDS) {
             groupedCommands.showGroups();
         }
@@ -269,9 +278,42 @@ public final class MainActivity extends Activity {
                     selected ? R.color.on_brand : R.color.brand_dark));
         }
         navScroll.post(() -> {
-            int inset = Math.round(12 * getResources().getDisplayMetrics().density);
-            navScroll.smoothScrollTo(Math.max(0, navButtons[page].getLeft() - inset), 0);
+            navScroll.scrollTo(0, 0);
         });
+    }
+
+    private void showNavigationMenu() {
+        PopupMenu popup = new PopupMenu(this, menuButton);
+        int[] labels = {
+                R.string.nav_connection,
+                R.string.nav_voice,
+                R.string.nav_movement,
+                R.string.nav_commands,
+                R.string.nav_camera,
+                R.string.nav_sensors,
+                R.string.nav_assistant
+        };
+        for (int page = 0; page < labels.length; page++) {
+            popup.getMenu().add(Menu.NONE, page, page, labels[page]);
+        }
+        popup.setOnMenuItemClickListener(item -> {
+            showPage(item.getItemId());
+            return true;
+        });
+        popup.show();
+    }
+
+    private int pageTitleResource(int page) {
+        switch (page) {
+            case 0: return R.string.connection_page_title;
+            case PAGE_VOICE: return R.string.voice_page_title;
+            case PAGE_MOVEMENT: return R.string.movement_page_title;
+            case PAGE_COMMANDS: return R.string.commands_page_title;
+            case 4: return R.string.camera_page_title;
+            case 5: return R.string.sensors_page_title;
+            case PAGE_ASSISTANT: return R.string.assistant_page_title;
+            default: return R.string.app_name;
+        }
     }
 
     private boolean isEnglish() {
@@ -304,18 +346,18 @@ public final class MainActivity extends Activity {
 
     @SuppressWarnings("deprecation")
     private void applySystemBarInsets() {
-        View statusBar = findViewById(R.id.globalStatusBar);
+        View topBar = findViewById(R.id.topBar);
         View mainRoot = findViewById(R.id.mainRoot);
-        int statusStart = statusBar.getPaddingStart();
-        int statusTop = statusBar.getPaddingTop();
-        int statusEnd = statusBar.getPaddingEnd();
-        int statusBottom = statusBar.getPaddingBottom();
+        int statusStart = topBar.getPaddingStart();
+        int statusTop = topBar.getPaddingTop();
+        int statusEnd = topBar.getPaddingEnd();
+        int statusBottom = topBar.getPaddingBottom();
         int rootStart = mainRoot.getPaddingStart();
         int rootTop = mainRoot.getPaddingTop();
         int rootEnd = mainRoot.getPaddingEnd();
         int rootBottom = mainRoot.getPaddingBottom();
 
-        statusBar.setOnApplyWindowInsetsListener((view, insets) -> {
+        topBar.setOnApplyWindowInsetsListener((view, insets) -> {
             view.setPaddingRelative(statusStart,
                     statusTop + insets.getSystemWindowInsetTop(), statusEnd, statusBottom);
             return insets;
@@ -325,7 +367,7 @@ public final class MainActivity extends Activity {
                     rootBottom + insets.getSystemWindowInsetBottom());
             return insets;
         });
-        statusBar.requestApplyInsets();
+        topBar.requestApplyInsets();
         mainRoot.requestApplyInsets();
     }
 

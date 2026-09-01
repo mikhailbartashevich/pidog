@@ -18,7 +18,8 @@
         android:paddingStart="14dp"
         android:paddingTop="9dp"
         android:paddingEnd="18dp"
-        android:paddingBottom="9dp">
+        android:paddingBottom="9dp"
+        android:visibility="gone">
 
         <ImageView
             android:id="@+id/statusMascot"
@@ -86,31 +87,123 @@
         </LinearLayout>
     </LinearLayout>
 
+    <LinearLayout
+        android:id="@+id/topBar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@drawable/bg_topbar"
+        android:elevation="4dp"
+        android:gravity="center_vertical"
+        android:minHeight="56dp"
+        android:orientation="horizontal"
+        android:paddingTop="0dp"
+        android:paddingStart="4dp"
+        android:paddingEnd="16dp">
+
+        <ImageButton
+            android:id="@+id/menuButton"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:background="@android:color/transparent"
+            android:contentDescription="@string/menu_content_description"
+            android:padding="12dp"
+            android:src="@drawable/ic_menu"
+            android:tint="@color/ink" />
+
+        <TextView
+            android:id="@+id/toolbarTitle"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:layout_weight="1"
+            android:ellipsize="end"
+            android:fontFamily="sans-serif-medium"
+            android:maxLines="1"
+            android:text="@string/voice_page_title"
+            android:textColor="@color/ink"
+            android:textSize="18sp" />
+    </LinearLayout>
+
     <HorizontalScrollView
         android:id="@+id/navScroll"
         android:layout_width="match_parent"
-        android:layout_height="64dp"
+        android:layout_height="112dp"
         android:background="@drawable/bg_topbar"
         android:clipToPadding="false"
         android:elevation="2dp"
-        android:fillViewport="false"
+        android:fillViewport="true"
+        android:overScrollMode="never"
         android:paddingStart="12dp"
         android:paddingEnd="12dp"
-        android:scrollbars="none">
+        android:scrollbars="none"
+        android:visibility="gone">
 
         <LinearLayout
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:gravity="center_vertical"
-            android:orientation="horizontal">
+            android:orientation="vertical">
 
-            <Button android:id="@+id/navConnection" style="@style/NavButton" android:text="@string/nav_connection" />
-            <Button android:id="@+id/navVoice" style="@style/NavButton" android:text="@string/nav_voice" />
-            <Button android:id="@+id/navMovement" style="@style/NavButton" android:text="@string/nav_movement" />
-            <Button android:id="@+id/navCommands" style="@style/NavButton" android:text="@string/nav_commands" />
-            <Button android:id="@+id/navVision" style="@style/NavButton" android:text="@string/nav_camera" />
-            <Button android:id="@+id/navSensors" style="@style/NavButton" android:text="@string/nav_sensors" />
-            <Button android:id="@+id/navAssistant" style="@style/NavButton" android:text="@string/nav_assistant" />
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:orientation="horizontal">
+
+                <Button
+                    android:id="@+id/navConnection"
+                    style="@style/NavButton"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:text="@string/nav_connection" />
+                <Button
+                    android:id="@+id/navVoice"
+                    style="@style/NavButton"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:text="@string/nav_voice" />
+                <Button
+                    android:id="@+id/navMovement"
+                    style="@style/NavButton"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:text="@string/nav_movement" />
+                <Button
+                    android:id="@+id/navCommands"
+                    style="@style/NavButton"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:text="@string/nav_commands" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:orientation="horizontal">
+
+                <Button
+                    android:id="@+id/navVision"
+                    style="@style/NavButton"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:text="@string/nav_camera" />
+                <Button
+                    android:id="@+id/navSensors"
+                    style="@style/NavButton"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:text="@string/nav_sensors" />
+                <Button
+                    android:id="@+id/navAssistant"
+                    style="@style/NavButton"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:text="@string/nav_assistant" />
+                <Space
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1" />
+            </LinearLayout>
         </LinearLayout>
     </HorizontalScrollView>
 
@@ -370,6 +463,16 @@
                             android:layout_width="match_parent"
                             android:layout_height="220dp"
                             android:contentDescription="@string/movement_joystick_description" />
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:gravity="center"
+                            android:text="@string/head_centered"
+                            android:textColor="@color/brand_dark"
+                            android:textSize="13sp"
+                            android:textStyle="bold"
+                            android:visibility="invisible" />
                     </LinearLayout>
 
                     <LinearLayout

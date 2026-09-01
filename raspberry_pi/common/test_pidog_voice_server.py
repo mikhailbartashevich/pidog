@@ -215,6 +215,84 @@ class LightingTest(unittest.TestCase):
             call(style="breath", color="#000000", bps=1, brightness=0),
         ], controller._dog.rgb_strip.set_mode.call_args_list)
 
+    def test_command_completion_stops_status_light_after_three_cycles(self):
+        controller = object.__new__(RobotController)
+        controller._dog = SimpleNamespace(rgb_strip=SimpleNamespace(set_mode=Mock()))
+
+        with patch("pidog_voice.vision.time.sleep") as sleep:
+            controller._finish_command_light("#21D07A")
+
+        sleep.assert_called_once_with(1.0)
+        self.assertEqual([
+            call(style="boom", color="#21D07A", bps=3, brightness=0.8),
+            call(style="breath", color="#000000", bps=1, brightness=0),
+        ], controller._dog.rgb_strip.set_mode.call_args_list)
+
+    def test_execute_finishes_status_light_after_command(self):
+        controller = object.__new__(RobotController)
+        controller._dry_run = False
+        controller._lock = threading.RLock()
+        controller._behavior_lock = threading.Lock()
+        controller._behavior_stop = threading.Event()
+        controller._behavior_thread = None
+        controller._dog = SimpleNamespace(
+            rgb_strip=SimpleNamespace(set_mode=Mock()),
+            do_action=Mock(),
+        )
+        controller._actions = {"sit": lambda: controller._action("sit", 65)}
+
+        with patch("pidog_voice.vision.time.sleep"):
+            controller.execute("sit")
+
+        self.assertEqual([
+            call(style="breath", color="#FFD54F", bps=1.2, brightness=0.8),
+            call(style="boom", color="#FFD54F", bps=3, brightness=0.8),
+            call(style="breath", color="#000000", bps=1, brightness=0),
+        ], controller._dog.rgb_strip.set_mode.call_args_list)
+
+
+class SleepCommandTest(unittest.TestCase):
+    def test_sleep_does_not_wait_for_all_servos_before_returning(self):
+        controller = object.__new__(RobotController)
+        controller._dog = SimpleNamespace(do_action=Mock(), wait_all_done=Mock())
+        controller._start_behavior = Mock()
+
+        result = controller._sleep_until_clap()
+
+        self.assertTrue(result["sleeping"])
+        controller._dog.do_action.assert_called_once_with("doze_off", speed=65)
+        controller._dog.wait_all_done.assert_not_called()
+        controller._start_behavior.assert_called_once_with(
+            "sleep-until-clap", controller._wait_for_wake_clap)
+
+    def test_clap_clears_sleep_motion_before_waking(self):
+        controller = object.__new__(RobotController)
+        detected = iter((False, True))
+        controller._dog = SimpleNamespace(
+            ears=SimpleNamespace(
+                isdetected=lambda: next(detected),
+                read=Mock(),
+            ),
+            body_stop=Mock(),
+            do_action=Mock(),
+        )
+
+        class WakeEvent:
+            waits = 0
+
+            def wait(self, _timeout):
+                self.waits += 1
+                return False
+
+        controller._wait_for_wake_clap(WakeEvent())
+
+        controller._dog.ears.read.assert_called_once_with()
+        controller._dog.body_stop.assert_called_once_with()
+        controller._dog.do_action.assert_has_calls([
+            call("stand", speed=85),
+            call("stretch", speed=50),
+        ])
+
 
 class AudioConfigurationTest(unittest.TestCase):
     def test_audio_setup_leaves_speaker_disabled(self):

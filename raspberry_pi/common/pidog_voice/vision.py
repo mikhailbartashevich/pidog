@@ -22,15 +22,22 @@ class VisionMixin:
         self._set_light("breath", color, bps=1.2, brightness=1)
         return {"message": "Подсветка переливается выбранным цветом"}
 
-    def _light_blink(self) -> dict[str, Any]:
-        self._set_light("boom", "white", bps=self._LIGHT_BLINK_BPS, brightness=1)
+    def _blink_light(self, color: str, brightness: float = 1) -> None:
+        self._set_light("boom", color, bps=self._LIGHT_BLINK_BPS, brightness=brightness)
         try:
             # ``boom`` is a repeating animation. Let exactly three cycles run,
             # then explicitly stop it so the LEDs cannot remain animated.
             time.sleep(self._LIGHT_BLINK_COUNT / self._LIGHT_BLINK_BPS)
         finally:
             self._light_off()
+
+    def _light_blink(self) -> dict[str, Any]:
+        self._blink_light("white")
         return {"message": "Подсветка мигнула 3 раза и выключена"}
+
+    def _finish_command_light(self, color: str) -> None:
+        """Show three completion flashes and leave the LEDs off."""
+        self._blink_light(color, brightness=0.8)
 
     def _light_off(self) -> dict[str, Any]:
         self._set_light("breath", "#000000", bps=1, brightness=0)

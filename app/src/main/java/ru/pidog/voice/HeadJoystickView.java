@@ -15,7 +15,6 @@ public final class HeadJoystickView extends View {
     }
 
     private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final Paint textPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final PointF knob = new PointF();
     private Listener listener;
     private float centerX;
@@ -79,8 +78,6 @@ public final class HeadJoystickView extends View {
         float guide = outerRadius * 0.62f;
         canvas.drawLine(centerX - guide, centerY, centerX + guide, centerY, paint);
         canvas.drawLine(centerX, centerY - guide, centerX, centerY + guide, paint);
-
-        drawLabels(canvas, outerRadius);
 
         paint.setStyle(Paint.Style.FILL);
         boolean centered = normalizedX == 0 && normalizedY == 0;
@@ -166,33 +163,8 @@ public final class HeadJoystickView extends View {
         }
     }
 
-    private void drawLabels(Canvas canvas, float outerRadius) {
-        textPaint.setStyle(Paint.Style.FILL);
-        textPaint.setColor(getContext().getColor(R.color.ink));
-        textPaint.setTextSize(sp(16));
-        textPaint.setTextAlign(Paint.Align.CENTER);
-        canvas.drawText(getContext().getString(R.string.head_up_label),
-                centerX, centerY - outerRadius + dp(31), textPaint);
-        canvas.drawText(getContext().getString(R.string.head_down_label),
-                centerX, centerY + outerRadius - dp(13), textPaint);
-        textPaint.setTextAlign(Paint.Align.LEFT);
-        canvas.drawText(getContext().getString(R.string.head_left_label),
-                centerX - outerRadius + dp(12), centeredTextBaseline(), textPaint);
-        textPaint.setTextAlign(Paint.Align.RIGHT);
-        canvas.drawText(getContext().getString(R.string.head_right_label),
-                centerX + outerRadius - dp(12), centeredTextBaseline(), textPaint);
-    }
-
-    private float centeredTextBaseline() {
-        Paint.FontMetrics metrics = textPaint.getFontMetrics();
-        return centerY - (metrics.ascent + metrics.descent) / 2f;
-    }
-
     private float dp(float value) {
         return value * getResources().getDisplayMetrics().density;
     }
 
-    private float sp(float value) {
-        return value * getResources().getDisplayMetrics().scaledDensity;
-    }
 }

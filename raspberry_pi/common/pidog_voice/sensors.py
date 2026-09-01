@@ -243,7 +243,6 @@ class SensorsMixin:
 
     def _sleep_until_clap(self) -> dict[str, Any]:
         self._dog.do_action("doze_off", speed=65)
-        self._dog.wait_all_done()
         self._start_behavior("sleep-until-clap", self._wait_for_wake_clap)
         return {"sleeping": True, "message": "Пайдог спит и ждёт хлопок"}
 
@@ -257,6 +256,9 @@ class SensorsMixin:
         while not stop_event.wait(0.08):
             if self._dog.ears.isdetected():
                 self._dog.ears.read()
+                # doze_off queues a long sequence of poses. Clear the
+                # remaining sleep motion before queuing the wake-up pose.
+                self._dog.body_stop()
                 self._dog.do_action("stand", speed=85)
                 self._dog.do_action("stretch", speed=50)
                 return

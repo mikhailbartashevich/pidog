@@ -19,7 +19,6 @@ public final class JoystickView extends View {
     }
 
     private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final Paint textPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final PointF knob = new PointF();
     private final Set<Integer> pressedKeys = new HashSet<>();
     private Listener listener;
@@ -86,8 +85,6 @@ public final class JoystickView extends View {
         float guide = outerRadius * 0.62f;
         canvas.drawLine(centerX - guide, centerY, centerX + guide, centerY, paint);
         canvas.drawLine(centerX, centerY - guide, centerX, centerY + guide, paint);
-
-        drawLabels(canvas, outerRadius);
 
         paint.setStyle(Paint.Style.FILL);
         boolean centered = driveDirection == 0 && turnDirection == 0;
@@ -240,28 +237,6 @@ public final class JoystickView extends View {
                 || keyCode == KeyEvent.KEYCODE_DPAD_RIGHT;
     }
 
-    private void drawLabels(Canvas canvas, float outerRadius) {
-        textPaint.setStyle(Paint.Style.FILL);
-        textPaint.setColor(getContext().getColor(R.color.ink));
-        textPaint.setTextSize(sp(16));
-        textPaint.setTextAlign(Paint.Align.CENTER);
-        canvas.drawText(getContext().getString(R.string.movement_forward_label),
-                centerX, centerY - outerRadius + dp(31), textPaint);
-        canvas.drawText(getContext().getString(R.string.movement_backward_label),
-                centerX, centerY + outerRadius - dp(13), textPaint);
-        textPaint.setTextAlign(Paint.Align.LEFT);
-        canvas.drawText(getContext().getString(R.string.movement_left_label),
-                centerX - outerRadius + dp(12), centeredTextBaseline(), textPaint);
-        textPaint.setTextAlign(Paint.Align.RIGHT);
-        canvas.drawText(getContext().getString(R.string.movement_right_label),
-                centerX + outerRadius - dp(12), centeredTextBaseline(), textPaint);
-    }
-
-    private float centeredTextBaseline() {
-        Paint.FontMetrics metrics = textPaint.getFontMetrics();
-        return centerY - (metrics.ascent + metrics.descent) / 2f;
-    }
-
     private static float normalizedOffset(float offset, float maximum) {
         if (maximum <= 0) {
             return 0;
@@ -273,7 +248,4 @@ public final class JoystickView extends View {
         return value * getResources().getDisplayMetrics().density;
     }
 
-    private float sp(float value) {
-        return value * getResources().getDisplayMetrics().scaledDensity;
-    }
 }

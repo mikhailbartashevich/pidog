@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Пайдог Голос</string>
+    <string name="menu_content_description">Открыть меню экранов</string>
     <string name="top_title">Управление Пайдог</string>
     <string name="top_subtitle">Голос · камера · сенсоры</string>
     <string name="power_content_description">Состояние внешнего питания</string>

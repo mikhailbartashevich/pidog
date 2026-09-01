@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">PiDog Voice</string>
+    <string name="menu_content_description">Open screens menu</string>
     <string name="top_title">PiDog Control</string>
     <string name="top_subtitle">Voice · camera · sensors</string>
     <string name="power_content_description">External power status</string>
