@@ -48,6 +48,32 @@ describe('critical joystick controls', () => {
     expect(onMovementChange).toHaveBeenLastCalledWith('drive', -1)
   })
 
+  it('stops movement when the pointer is released', () => {
+    const onMovementChange = movementMock()
+    render(<Joystick {...movementLabels} onMovementChange={onMovementChange} />)
+    const control = screen.getByRole('slider')
+
+    vi.spyOn(control, 'getBoundingClientRect').mockReturnValue({
+      bottom: 220,
+      height: 220,
+      left: 0,
+      right: 220,
+      top: 0,
+      width: 220,
+      x: 0,
+      y: 0,
+      toJSON: () => ({}),
+    })
+    Object.defineProperty(control, 'setPointerCapture', { value: voidMock() })
+    Object.defineProperty(control, 'hasPointerCapture', { value: () => true })
+    Object.defineProperty(control, 'releasePointerCapture', { value: voidMock() })
+
+    control.focus()
+    fireEvent.pointerDown(control, { clientX: 110, clientY: 20, pointerId: 1 })
+    fireEvent.blur(control)
+    expect(onMovementChange).toHaveBeenLastCalledWith('drive', 0)
+  })
+
   it('reacts to keyboard arrows and stops when the movement joystick loses focus', () => {
     const onMovementChange = movementMock()
     render(<Joystick {...movementLabels} onMovementChange={onMovementChange} />)

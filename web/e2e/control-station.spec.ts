@@ -69,19 +69,24 @@ async function mockPiDogApi(page: Page) {
   })
 }
 
+async function connectToMockPiDog(page: Page) {
+  await page.getByRole('button', { name: 'Настроить подключение' }).click()
+  await page.getByRole('button', { name: 'Проверить и сохранить' }).click()
+  await expect(page.getByText(/На связи/)).toBeVisible()
+}
+
 test.describe('PiDog control station E2E', () => {
   test.beforeEach(async ({ page }) => {
-    page.on('request', (request) =>
-      console.log(`E2E request: ${request.method()} ${request.url()}`),
-    )
-    page.on('pageerror', (error) => console.log(`E2E page error: ${error.message}`))
-    page.on('console', (message) => console.log(`E2E console ${message.type()}: ${message.text()}`))
     await mockPiDogApi(page)
     await page.goto('/')
-    await expect(page.getByText(/На связи/)).toBeVisible()
+    await connectToMockPiDog(page)
   })
 
-  test('opens every application screen from desktop navigation', async ({ page }) => {
+  test('opens every application screen from desktop navigation', async ({ page }, testInfo) => {
+    test.skip(
+      testInfo.project.name !== 'desktop-chromium',
+      'Desktop navigation is not rendered on mobile',
+    )
     const navigation = page.locator('aside')
     const screens = [
       ['Голос', 'Голосовое управление'],
@@ -100,8 +105,6 @@ test.describe('PiDog control station E2E', () => {
   })
 
   test('sends movement, stop, head, and emergency commands', async ({ page }) => {
-    const movement = page.getByRole('slider', { name: 'ХОД / ПОВОРОТ' })
-    await movement.focus()
     await Promise.all([
       page.waitForRequest(
         (request) =>
@@ -133,14 +136,14 @@ test.describe('PiDog mobile control station E2E', () => {
   test('uses the mobile navigation and keeps both circular controls visible', async ({ page }) => {
     await mockPiDogApi(page)
     await page.goto('/')
-    await expect(page.getByText(/На связи/)).toBeVisible()
+    await connectToMockPiDog(page)
     await expect(page.locator('aside')).toBeHidden()
     await expect(page.getByRole('slider', { name: 'ХОД / ПОВОРОТ' })).toBeVisible()
     await expect(page.getByRole('slider', { name: 'ГОЛОВА' })).toBeVisible()
 
     await page.getByRole('button', { name: 'Команды', exact: true }).click()
     await expect(page.getByText('Все команды', { exact: true })).toBeVisible()
-    await page.getByRole('button', { name: 'Сенсоры', exact: true }).click()
+    await page.getByRole('button', { name: 'Сенсоры', exact: true }).last().click()
     await expect(page.getByText('Сенсоры и свет', { exact: true })).toBeVisible()
   })
 })

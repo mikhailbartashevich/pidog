@@ -1,5 +1,12 @@
 import { Box, Typography, alpha } from '@mui/material'
-import { type KeyboardEvent, type PointerEvent, useRef, useState } from 'react'
+import {
+  type KeyboardEvent,
+  type PointerEvent,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from 'react'
 
 type Axis = 'drive' | 'turn'
 type Direction = -1 | 0 | 1
@@ -41,34 +48,50 @@ export function Joystick({
   onMovementChange,
 }: JoystickProps) {
   const surfaceRef = useRef<HTMLDivElement | null>(null)
+  const activePointerIdRef = useRef<number | null>(null)
   const movementRef = useRef<Movement>({ axis: 'drive', direction: 0 })
   const keyboardKeysRef = useRef<Set<string>>(new Set())
   const lastAxisRef = useRef<Axis>('drive')
   const [movement, setMovement] = useState<Movement>({ axis: 'drive', direction: 0 })
   const [position, setPosition] = useState<Position>({ x: 0, y: 0 })
 
-  const notifyMovement = (next: Movement) => {
-    if (
-      next.axis === movementRef.current.axis &&
-      next.direction === movementRef.current.direction
-    ) {
-      return
-    }
-    if (movementRef.current.direction !== 0 && movementRef.current.axis !== next.axis) {
-      onMovementChange(movementRef.current.axis, 0)
-    }
-    const shouldNotifyNext = next.direction !== 0 || movementRef.current.direction === 0
-    movementRef.current = next
-    setMovement(next)
-    if (shouldNotifyNext) onMovementChange(next.axis, next.direction)
-  }
+  const notifyMovement = useCallback(
+    (next: Movement) => {
+      const previous = movementRef.current
+      if (next.axis === previous.axis && next.direction === previous.direction) {
+        return
+      }
+      if (previous.direction !== 0 && previous.axis !== next.axis) {
+        onMovementChange(previous.axis, 0)
+      }
+      const shouldNotifyNext =
+        next.direction !== 0 || previous.direction === 0 || previous.axis === next.axis
+      movementRef.current = next
+      setMovement(next)
+      if (shouldNotifyNext) onMovementChange(next.axis, next.direction)
+    },
+    [onMovementChange],
+  )
 
-  const reset = () => {
+  const reset = useCallback(() => {
+    activePointerIdRef.current = null
     keyboardKeysRef.current.clear()
     lastAxisRef.current = 'drive'
     setPosition({ x: 0, y: 0 })
     notifyMovement({ axis: 'drive', direction: 0 })
-  }
+  }, [notifyMovement])
+
+  useEffect(() => {
+    const releaseFromWindow = (event: globalThis.PointerEvent) => {
+      if (activePointerIdRef.current === event.pointerId) reset()
+    }
+    window.addEventListener('pointerup', releaseFromWindow)
+    window.addEventListener('pointercancel', releaseFromWindow)
+    return () => {
+      window.removeEventListener('pointerup', releaseFromWindow)
+      window.removeEventListener('pointercancel', releaseFromWindow)
+    }
+  }, [reset])
 
   const positionFromKeyboard = (): Position => {
     let x = 0
@@ -122,10 +145,10 @@ export function Joystick({
   }
 
   const release = (event: PointerEvent<HTMLDivElement>) => {
+    reset()
     if (surfaceRef.current?.hasPointerCapture(event.pointerId)) {
       surfaceRef.current.releasePointerCapture(event.pointerId)
     }
-    reset()
   }
 
   return (
@@ -153,6 +176,7 @@ export function Joystick({
         aria-valuenow={movement.direction}
         onPointerDown={(event) => {
           if (disabled) return
+          activePointerIdRef.current = event.pointerId
           event.currentTarget.setPointerCapture(event.pointerId)
           update(event)
         }}

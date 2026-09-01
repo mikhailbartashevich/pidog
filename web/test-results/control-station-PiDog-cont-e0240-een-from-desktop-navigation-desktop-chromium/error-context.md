@@ -27,68 +27,68 @@ Call log:
 
 ```yaml
 - complementary:
-  - img "PiDog"
-  - list:
-    - button "Пульт"
-    - button "Голос"
-    - button "Команды"
-    - button "Сенсоры"
-    - button "LLM"
+    - img "PiDog"
+    - list:
+        - button "Пульт"
+        - button "Голос"
+        - button "Команды"
+        - button "Сенсоры"
+        - button "LLM"
 - banner:
-  - paragraph: Пульт
-  - text: Нет подключения
-  - combobox "Language": RU
-  - button "Настроить подключение"
-  - button "Emergency stop" [disabled]
+    - paragraph: Пульт
+    - text: Нет подключения
+    - combobox "Language": RU
+    - button "Настроить подключение"
+    - button "Emergency stop" [disabled]
 - main:
-  - paragraph: Камера выключена
-  - button "Запустить поток" [disabled]
-  - text: OFFLINE
-  - button "Обновить поток" [disabled]
-  - button "На весь экран"
-  - paragraph: Прямой MJPEG-поток внутри локальной сети
-  - button "Включить" [disabled]
-  - button "Выключить" [disabled]
-  - text: ХОД / ПОВОРОТ
-  - slider "ХОД / ПОВОРОТ": Вперёд Назад Лево Право
-  - text: ГОЛОВА
-  - slider "ГОЛОВА": Вверх Вниз Лево Право
-  - text: БЫСТРЫЕ ПОЗЫ
-  - button "Встать" [disabled]
-  - button "Сесть" [disabled]
-  - button "Голос" [disabled]
-  - button "Хвост" [disabled]
-  - button "АВАРИЙНЫЙ STOP" [disabled]
-  - text: БАТАРЕЯ
-  - paragraph: —
-  - text: ДИСТАНЦИЯ
-  - paragraph: —
-  - text: ЗВУК
-  - paragraph: Тихо
-  - text: ПИТАНИЕ
-  - paragraph: —
-  - heading "Поиск цвета" [level=3]
-  - text: Пайдог наведётся и укажет лапой
-  - button "Найти красный" [disabled]
-  - button "Найти оранжевый" [disabled]
-  - button "Найти жёлтый" [disabled]
-  - button "Найти зелёный" [disabled]
-  - button "Найти синий" [disabled]
-  - button "Найти фиолетовый" [disabled]
-  - button "Лицо" [disabled]
-  - button "Предмет" [disabled]
-  - heading "Журнал зрения" [level=3]
-  - text: Последние 10 событий
-  - button "Очистить журнал зрения" [disabled]
-  - separator
-  - paragraph: Событий пока нет
+    - paragraph: Камера выключена
+    - button "Запустить поток" [disabled]
+    - text: OFFLINE
+    - button "Обновить поток" [disabled]
+    - button "На весь экран"
+    - paragraph: Прямой MJPEG-поток внутри локальной сети
+    - button "Включить" [disabled]
+    - button "Выключить" [disabled]
+    - text: ХОД / ПОВОРОТ
+    - slider "ХОД / ПОВОРОТ": Вперёд Назад Лево Право
+    - text: ГОЛОВА
+    - slider "ГОЛОВА": Вверх Вниз Лево Право
+    - text: БЫСТРЫЕ ПОЗЫ
+    - button "Встать" [disabled]
+    - button "Сесть" [disabled]
+    - button "Голос" [disabled]
+    - button "Хвост" [disabled]
+    - button "АВАРИЙНЫЙ STOP" [disabled]
+    - text: БАТАРЕЯ
+    - paragraph: —
+    - text: ДИСТАНЦИЯ
+    - paragraph: —
+    - text: ЗВУК
+    - paragraph: Тихо
+    - text: ПИТАНИЕ
+    - paragraph: —
+    - heading "Поиск цвета" [level=3]
+    - text: Пайдог наведётся и укажет лапой
+    - button "Найти красный" [disabled]
+    - button "Найти оранжевый" [disabled]
+    - button "Найти жёлтый" [disabled]
+    - button "Найти зелёный" [disabled]
+    - button "Найти синий" [disabled]
+    - button "Найти фиолетовый" [disabled]
+    - button "Лицо" [disabled]
+    - button "Предмет" [disabled]
+    - heading "Журнал зрения" [level=3]
+    - text: Последние 10 событий
+    - button "Очистить журнал зрения" [disabled]
+    - separator
+    - paragraph: Событий пока нет
 ```
 
 # Test source
 
 ```ts
   1   | import { expect, test, type Page } from '@playwright/test'
-  2   | 
+  2   |
   3   | const health = {
   4   |   ok: true,
   5   |   service: 'pidog-voice',
@@ -96,7 +96,7 @@ Call log:
   7   |   dry_run: true,
   8   |   commands: ['drive_forward', 'stop'],
   9   | }
-  10  | 
+  10  |
   11  | const sensors = {
   12  |   ok: true,
   13  |   message: 'ok',
@@ -111,14 +111,14 @@ Call log:
   22  |   charging: true,
   23  |   power_detection: 'USB-C',
   24  | }
-  25  | 
+  25  |
   26  | async function mockPiDogApi(page: Page) {
   27  |   await page.route('**/pidog-api/**', async (route) => {
   28  |     const request = route.request()
   29  |     const path = new URL(request.url()).pathname
   30  |     const body =
   31  |       request.method() === 'POST' ? (request.postDataJSON() as { command?: string }) : null
-  32  | 
+  32  |
   33  |     if (path.endsWith('/health')) return route.fulfill({ json: health })
   34  |     if (path.endsWith('/sensors')) return route.fulfill({ json: sensors })
   35  |     if (path.endsWith('/assistant/status')) {
@@ -157,7 +157,7 @@ Call log:
   68  |     return route.fulfill({ status: 404, json: { error: 'Unhandled test endpoint' } })
   69  |   })
   70  | }
-  71  | 
+  71  |
   72  | test.describe('PiDog control station E2E', () => {
   73  |   test.beforeEach(async ({ page }) => {
   74  |     page.on('request', (request) =>
@@ -170,7 +170,7 @@ Call log:
 > 81  |     await expect(page.getByText(/На связи/)).toBeVisible()
       |                                              ^ Error: expect(locator).toBeVisible() failed
   82  |   })
-  83  | 
+  83  |
   84  |   test('opens every application screen from desktop navigation', async ({ page }) => {
   85  |     const navigation = page.locator('aside')
   86  |     const screens = [
@@ -180,7 +180,7 @@ Call log:
   90  |       ['LLM', 'Локальный Пайдог'],
   91  |       ['Пульт', 'ХОД / ПОВОРОТ'],
   92  |     ] as const
-  93  | 
+  93  |
   94  |     for (const [navigationLabel, heading] of screens) {
   95  |       // eslint-disable-next-line no-await-in-loop
   96  |       await navigation.getByRole('button', { name: navigationLabel, exact: true }).click()
@@ -188,7 +188,7 @@ Call log:
   98  |       await expect(page.getByText(heading, { exact: true })).toBeVisible()
   99  |     }
   100 |   })
-  101 | 
+  101 |
   102 |   test('sends movement, stop, head, and emergency commands', async ({ page }) => {
   103 |     const movement = page.getByRole('slider', { name: 'ХОД / ПОВОРОТ' })
   104 |     await movement.focus()
@@ -208,7 +208,7 @@ Call log:
   118 |       ),
   119 |       page.keyboard.up('ArrowUp'),
   120 |     ])
-  121 | 
+  121 |
   122 |     const head = page.getByRole('slider', { name: 'ГОЛОВА' })
   123 |     await head.focus()
   124 |     await page.keyboard.press('ArrowLeft')
@@ -216,10 +216,10 @@ Call log:
   126 |     await expect(page.getByRole('button', { name: 'Emergency stop' })).toBeEnabled()
   127 |   })
   128 | })
-  129 | 
+  129 |
   130 | test.describe('PiDog mobile control station E2E', () => {
   131 |   test.use({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 1, isMobile: true })
-  132 | 
+  132 |
   133 |   test('uses the mobile navigation and keeps both circular controls visible', async ({ page }) => {
   134 |     await mockPiDogApi(page)
   135 |     await page.goto('/')
@@ -227,12 +227,12 @@ Call log:
   137 |     await expect(page.locator('aside')).toBeHidden()
   138 |     await expect(page.getByRole('slider', { name: 'ХОД / ПОВОРОТ' })).toBeVisible()
   139 |     await expect(page.getByRole('slider', { name: 'ГОЛОВА' })).toBeVisible()
-  140 | 
+  140 |
   141 |     await page.getByRole('button', { name: 'Команды', exact: true }).click()
   142 |     await expect(page.getByText('Все команды', { exact: true })).toBeVisible()
   143 |     await page.getByRole('button', { name: 'Сенсоры', exact: true }).click()
   144 |     await expect(page.getByText('Сенсоры и свет', { exact: true })).toBeVisible()
   145 |   })
   146 | })
-  147 | 
+  147 |
 ```

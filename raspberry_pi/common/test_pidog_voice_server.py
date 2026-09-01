@@ -200,6 +200,22 @@ class ServerTest(unittest.TestCase):
         connection.close()
 
 
+class LightingTest(unittest.TestCase):
+    def test_blink_stops_after_three_cycles(self):
+        controller = object.__new__(RobotController)
+        controller._dog = SimpleNamespace(rgb_strip=SimpleNamespace(set_mode=Mock()))
+
+        with patch("pidog_voice.vision.time.sleep") as sleep:
+            result = controller._light_blink()
+
+        self.assertEqual("Подсветка мигнула 3 раза и выключена", result["message"])
+        sleep.assert_called_once_with(1.0)
+        self.assertEqual([
+            call(style="boom", color="white", bps=3, brightness=1),
+            call(style="breath", color="#000000", bps=1, brightness=0),
+        ], controller._dog.rgb_strip.set_mode.call_args_list)
+
+
 class AudioConfigurationTest(unittest.TestCase):
     def test_audio_setup_leaves_speaker_disabled(self):
         controller = object.__new__(RobotController)

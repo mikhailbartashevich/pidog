@@ -18,6 +18,7 @@ import {
   type HealthResponse,
   loadSettings,
   normalizeHost,
+  PiDogApiError,
   pidogApi,
   saveSettings,
   type SensorsResponse,
@@ -32,6 +33,15 @@ const languageKey = 'pidog.language.v1'
 
 function initialLanguage(): Language {
   return localStorage.getItem(languageKey) === 'en' ? 'en' : 'ru'
+}
+
+function isConnectivityError(error: unknown): boolean {
+  return (
+    !(error instanceof PiDogApiError) ||
+    error.status === undefined ||
+    error.status === 401 ||
+    error.status === 404
+  )
 }
 
 export function ControlStation() {
@@ -75,6 +85,14 @@ export function ControlStation() {
   const headRequestInFlightRef = useRef(false)
   const autoConnectRef = useRef(false)
 
+  const markDisconnected = useCallback((error?: unknown) => {
+    setConnected(false)
+    setHealth(null)
+    setStreaming(false)
+    setConnectionOpen(true)
+    if (error) setNotice({ message: errorMessage(error), severity: 'error' })
+  }, [])
+
   const addVisionEntry = useCallback((title: string, detail: string, success: boolean) => {
     setVisionLog((current) =>
       [
@@ -98,10 +116,11 @@ export function ControlStation() {
             severity: 'success',
           })
       } catch (error) {
-        if (announce) setNotice({ message: errorMessage(error), severity: 'error' })
+        if (isConnectivityError(error)) markDisconnected(error)
+        else if (announce) setNotice({ message: errorMessage(error), severity: 'error' })
       }
     },
-    [connected, language, settings],
+    [connected, language, markDisconnected, settings],
   )
 
   const refreshAssistant = useCallback(
@@ -116,10 +135,11 @@ export function ControlStation() {
             severity: 'success',
           })
       } catch (error) {
-        if (announce) setNotice({ message: errorMessage(error), severity: 'error' })
+        if (isConnectivityError(error)) markDisconnected(error)
+        else if (announce) setNotice({ message: errorMessage(error), severity: 'error' })
       }
     },
-    [connected, language, settings],
+    [connected, language, markDisconnected, settings],
   )
 
   const connect = useCallback(
@@ -150,15 +170,13 @@ export function ControlStation() {
           })
         return true
       } catch (error) {
-        setConnected(false)
-        setHealth(null)
-        if (announce) setNotice({ message: errorMessage(error), severity: 'error' })
+        markDisconnected(announce ? error : undefined)
         return false
       } finally {
         setConnecting(false)
       }
     },
-    [language],
+    [language, markDisconnected],
   )
 
   useEffect(() => {
@@ -231,15 +249,16 @@ export function ControlStation() {
           void refreshSensors(false)
         return response
       } catch (error) {
-        if (!quiet) setNotice({ message: errorMessage(error), severity: 'error' })
-        if (colorCommands.includes(command))
+        if (isConnectivityError(error)) markDisconnected(error)
+        else if (!quiet) setNotice({ message: errorMessage(error), severity: 'error' })
+        if (!quiet && colorCommands.includes(command))
           addVisionEntry(actionLabel(command, language), errorMessage(error), false)
         return null
       } finally {
         if (!quiet) setBusyCommand(null)
       }
     },
-    [addVisionEntry, connected, language, refreshSensors, settings],
+    [addVisionEntry, connected, language, markDisconnected, refreshSensors, settings],
   )
   const sendCommandRef = useRef(sendCommand)
   useEffect(() => {
@@ -319,13 +338,14 @@ export function ControlStation() {
           }
         } catch (error) {
           pendingHeadRef.current = null
-          setNotice({ message: errorMessage(error), severity: 'error' })
+          if (isConnectivityError(error)) markDisconnected(error)
+          else setNotice({ message: errorMessage(error), severity: 'error' })
         } finally {
           headRequestInFlightRef.current = false
         }
       })()
     },
-    [connected, settings],
+    [connected, markDisconnected, settings],
   )
 
   const emergencyStop = useCallback(() => {
@@ -353,12 +373,13 @@ export function ControlStation() {
         setAssistantStatus(response.assistant)
         setNotice({ message: response.message ?? action, severity: 'success' })
       } catch (error) {
-        setNotice({ message: errorMessage(error), severity: 'error' })
+        if (isConnectivityError(error)) markDisconnected(error)
+        else setNotice({ message: errorMessage(error), severity: 'error' })
       } finally {
         setAssistantBusy(false)
       }
     },
-    [connected, settings],
+    [connected, markDisconnected, settings],
   )
 
   const askAssistant = useCallback(
@@ -381,12 +402,21 @@ export function ControlStation() {
         setAssistantReply(reply)
         void refreshAssistant(false)
       } catch (error) {
-        setNotice({ message: errorMessage(error), severity: 'error' })
+        if (isConnectivityError(error)) markDisconnected(error)
+        else setNotice({ message: errorMessage(error), severity: 'error' })
       } finally {
         setAssistantBusy(false)
       }
     },
-    [assistantQuestion, assistantSearch, assistantSpeak, connected, refreshAssistant, settings],
+    [
+      assistantQuestion,
+      assistantSearch,
+      assistantSpeak,
+      connected,
+      markDisconnected,
+      refreshAssistant,
+      settings,
+    ],
   )
 
   const clearAssistant = useCallback(async () => {
@@ -401,11 +431,12 @@ export function ControlStation() {
         severity: 'success',
       })
     } catch (error) {
-      setNotice({ message: errorMessage(error), severity: 'error' })
+      if (isConnectivityError(error)) markDisconnected(error)
+      else setNotice({ message: errorMessage(error), severity: 'error' })
     } finally {
       setAssistantBusy(false)
     }
-  }, [connected, language, settings])
+  }, [connected, language, markDisconnected, settings])
 
   const speech = useSpeechRecognition({
     languageTag: language === 'en' ? 'en-US' : 'ru-RU',
@@ -559,11 +590,13 @@ export function ControlStation() {
       {small && <MobileNavigation page={page} language={language} onPage={setPage} />}
       <ConnectionDialog
         language={language}
-        open={connectionOpen}
+        open={connectionOpen || !connected}
         value={draftSettings}
         connecting={connecting}
         onChange={setDraftSettings}
-        onClose={() => setConnectionOpen(false)}
+        onClose={() => {
+          if (connected) setConnectionOpen(false)
+        }}
         onSave={() => void saveConnection()}
       />
       <Snackbar

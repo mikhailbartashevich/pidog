@@ -11,6 +11,9 @@ from .constants import LOG
 
 
 class VisionMixin:
+    _LIGHT_BLINK_COUNT = 3
+    _LIGHT_BLINK_BPS = 3
+
     def _set_light(self, style: str, color: str, bps: float = 1,
                    brightness: float = 1) -> None:
         self._dog.rgb_strip.set_mode(style=style, color=color, bps=bps, brightness=brightness)
@@ -20,8 +23,14 @@ class VisionMixin:
         return {"message": "Подсветка переливается выбранным цветом"}
 
     def _light_blink(self) -> dict[str, Any]:
-        self._set_light("boom", "white", bps=3, brightness=1)
-        return {"message": "Подсветка мигает"}
+        self._set_light("boom", "white", bps=self._LIGHT_BLINK_BPS, brightness=1)
+        try:
+            # ``boom`` is a repeating animation. Let exactly three cycles run,
+            # then explicitly stop it so the LEDs cannot remain animated.
+            time.sleep(self._LIGHT_BLINK_COUNT / self._LIGHT_BLINK_BPS)
+        finally:
+            self._light_off()
+        return {"message": "Подсветка мигнула 3 раза и выключена"}
 
     def _light_off(self) -> dict[str, Any]:
         self._set_light("breath", "#000000", bps=1, brightness=0)
