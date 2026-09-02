@@ -151,10 +151,13 @@ class AudioMixin:
         """Synthesize a short assistant response with Piper and play it safely."""
         if self._dry_run:
             return
-        piper = shutil.which("piper")
+        configured_piper = Path(os.environ.get("PIDOG_PIPER_BIN", "")).expanduser()
+        piper = (str(configured_piper) if configured_piper.is_file()
+                 and os.access(configured_piper, os.X_OK) else shutil.which("piper"))
+        runtime_home = self._assistant_runtime_home()
         voice = Path(os.environ.get(
             "PIDOG_PIPER_MODEL",
-            str(Path.home() / ".local/share/pidog-llm/voices/ru_RU-irina-medium.onnx"),
+            str(runtime_home / ".local/share/pidog-llm/voices/ru_RU-irina-medium.onnx"),
         )).expanduser()
         if piper is None or not voice.is_file():
             raise AudioUnavailableError("Piper или русский голос не установлен")
@@ -190,6 +193,20 @@ class AudioMixin:
                         raise AudioUnavailableError(detail or "не удалось воспроизвести ответ")
                 finally:
                     self._disable_speaker()
+
+    @staticmethod
+    def _assistant_runtime_home() -> Path:
+        """Resolve the assistant user's home for a root-owned voice service."""
+        explicit_home = os.environ.get("PIDOG_RUNTIME_HOME")
+        if explicit_home:
+            return Path(explicit_home).expanduser()
+        user = os.environ.get("PIDOG_USER")
+        if user:
+            try:
+                return Path(pwd.getpwnam(user).pw_dir)
+            except KeyError:
+                LOG.warning("PIDOG_USER does not exist while locating Piper files: %s", user)
+        return Path.home()
 
     def _speak_via_alsa(self, name: str, volume: int = 100) -> bool:
         sound_path = self._resolve_sound_file(name)

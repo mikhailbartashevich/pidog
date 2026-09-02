@@ -189,7 +189,11 @@ class RobotController(AudioMixin, VisionMixin, SensorsMixin):
             # Any new command takes control immediately and stops the old mode.
             if command not in {"stop_face_follow", "stop_object_follow", "wake"}:
                 self._cancel_behavior()
-            command_color = COMMAND_COLORS.get(command)
+            # ``show_battery`` writes a static eight-LED gauge itself.  Do not
+            # overlay the regular command animation or completion flashes on it.
+            command_color = (
+                None if command == "show_battery" else COMMAND_COLORS.get(command)
+            )
             if command_color is not None:
                 self._set_light("breath", command_color, bps=1.2, brightness=0.8)
             try:

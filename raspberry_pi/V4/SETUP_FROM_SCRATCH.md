@@ -148,6 +148,33 @@ aplay -l
 python3 -c 'from pidog import Pidog; print("PiDog library available")'
 ```
 
+### Set the built-in microphone level
+
+The Robot HAT V5 capture mixer may start at 0 dB (roughly 51%).  That level
+can be sufficient for recording but too quiet for offline Vosk recognition:
+PiDog stays in listening mode without receiving a usable phrase.  Set the
+capture level to its intended maximum and save it so it survives a reboot:
+
+```bash
+amixer set 'robot-hat mic' 100%
+sudo alsactl store
+```
+
+Confirm that the microphone receives actual speech before configuring the
+voice service.  Speak normally 15–30 cm from PiDog during this short capture;
+the reported maximum amplitude should be clearly above silence (typically
+above `0.05` for normal nearby speech):
+
+```bash
+arecord -D default -f S16_LE -r 48000 -c 1 -d 5 /tmp/pidog-mic-check.wav
+sox /tmp/pidog-mic-check.wav -n stat 2>&1 | grep -E 'Maximum amplitude|RMS.*amplitude'
+rm -f /tmp/pidog-mic-check.wav
+```
+
+If `arecord -D mic` reports that only `S32_LE` is available, use `-D default`
+as shown above.  The `default` ALSA device applies the format conversion that
+the microphone's hardware device does not provide directly.
+
 ## 4. Deploy the PiDog voice service
 
 From the development computer, create a staging directory and copy the project
@@ -175,7 +202,7 @@ sudo install -m 0644 "$SRC/__init__.py" /opt/pidog-voice/pidog_voice/__init__.py
 sudo cp -a "$SRC/pidog_voice/." /opt/pidog-voice/common/pidog_voice/
 sudo install -m 0644 "$SRC/pidog-voice.service" /etc/systemd/system/pidog-voice.service
 TOKEN=$(openssl rand -hex 32)
-sudo sh -c "printf '%s\n' 'PIDOG_TOKEN=$TOKEN' 'PIDOG_USER=$PIDOG_USER' 'PIDOG_VOICE_LANGUAGE=ru' 'PIDOG_ALSA_DEVICE=robothat' 'PIDOG_SOUND_DIR=$PIDOG_HOME/pidog/sounds' 'PIDOG_LLM_URL=http://127.0.0.1:8081' 'PIDOG_LLM_UNIT=pidog-llm.service' 'PIDOG_SYSTEMD_SCOPE=user' > /etc/pidog-voice.env"
+sudo sh -c "printf '%s\n' 'PIDOG_TOKEN=$TOKEN' 'PIDOG_USER=$PIDOG_USER' 'PIDOG_VOICE_LANGUAGE=ru' 'PIDOG_ALSA_DEVICE=robothat' 'PIDOG_SOUND_DIR=$PIDOG_HOME/pidog/sounds' 'PIDOG_LLM_URL=http://127.0.0.1:8081' 'PIDOG_LLM_UNIT=pidog-llm.service' 'PIDOG_SYSTEMD_SCOPE=user' 'PIDOG_PIPER_BIN=$PIDOG_HOME/.local/share/pidog-llm/piper-venv/bin/piper' 'PIDOG_PIPER_MODEL=$PIDOG_HOME/.local/share/pidog-llm/voices/ru_RU-irina-medium.onnx' > /etc/pidog-voice.env"
 sudo chmod 0600 /etc/pidog-voice.env
 sudo systemctl daemon-reload
 sudo systemctl enable --now pidog-voice.service

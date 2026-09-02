@@ -51,7 +51,8 @@ curl --silent http://127.0.0.1:8081/health
 ```
 
 The installer pins the llama.cpp source revision, verifies the Qwen model checksum, installs the
-search dependency in a dedicated virtual environment, and enables `pidog-llm.service` at login.
+search dependency and Piper in dedicated virtual environments, checks the Russian voice, and
+enables `pidog-llm.service` at login.
 The model server is not reachable from the LAN; only the authenticated PiDog API can use it.
 
 For more reliable web search, add one of these optional variables to

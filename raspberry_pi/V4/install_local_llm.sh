@@ -26,6 +26,12 @@ if test ! -x "$PIDOG_SEARCH_ENV/bin/python"; then
 fi
 "$PIDOG_SEARCH_ENV/bin/pip" install --disable-pip-version-check --upgrade ddgs
 
+PIDOG_PIPER_ENV="$PIDOG_LLM_ROOT/piper-venv"
+if test ! -x "$PIDOG_PIPER_ENV/bin/piper"; then
+  python3 -m venv "$PIDOG_PIPER_ENV"
+  "$PIDOG_PIPER_ENV/bin/pip" install --disable-pip-version-check --upgrade piper-tts
+fi
+
 PIDOG_INSTALLED_REF=""
 if test -f "$PIDOG_LLM_ROOT/llama.cpp-version"; then
   PIDOG_INSTALLED_REF=$(sed -n '1p' "$PIDOG_LLM_ROOT/llama.cpp-version")
@@ -67,6 +73,17 @@ mv "$PIDOG_VOICE.part" "$PIDOG_VOICE"
 curl --fail --location --retry 4 --output "$PIDOG_VOICE_CONFIG.part" \
   "$PIDOG_VOICE_BASE/ru_RU-irina-medium.onnx.json"
 mv "$PIDOG_VOICE_CONFIG.part" "$PIDOG_VOICE_CONFIG"
+
+# Verify the downloaded voice with the same isolated Piper executable used by
+# the root-owned API service.  The service receives its absolute path via
+# PIDOG_PIPER_BIN, so it does not rely on a user-systemd PATH.
+PIDOG_PIPER_TEST=$(mktemp "${TMPDIR:-/tmp}/pidog-piper-test.XXXXXX.wav")
+trap 'rm -rf "${PIDOG_BUILD_DIR:-}"; rm -f "${PIDOG_PIPER_TEST:-}"' EXIT HUP INT TERM
+printf '%s\n' 'Проверка голоса.' | "$PIDOG_PIPER_ENV/bin/piper" \
+  --model "$PIDOG_VOICE" --output-file "$PIDOG_PIPER_TEST"
+test -s "$PIDOG_PIPER_TEST"
+rm -f "$PIDOG_PIPER_TEST"
+unset PIDOG_PIPER_TEST
 
 install -m 0644 "$PIDOG_SCRIPT_DIR/pidog-llm.service" "$PIDOG_UNIT_DIR/pidog-llm.service"
 systemctl --user daemon-reload

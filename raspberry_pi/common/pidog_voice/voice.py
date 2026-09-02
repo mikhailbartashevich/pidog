@@ -131,6 +131,7 @@ class LocalVoiceListener:
         self._lock = threading.Lock()
         self._stop_event = threading.Event()
         self._thread: threading.Thread | None = None
+        self._recognizer: Any | None = None
         self._state = "off"
         self._error: str | None = None
         self._last_phrase: str | None = None
@@ -178,7 +179,17 @@ class LocalVoiceListener:
                 return False
             self._stop_event.set()
             self._state = "stopping"
-            return True
+            recognizer = self._recognizer
+        # Vosk blocks inside listen() while waiting for an utterance. Its own
+        # cancellation event must be set as well, otherwise local_voice_off
+        # leaves the microphone captured until someone speaks again.
+        stop_listening = getattr(recognizer, "stop_listening", None)
+        if callable(stop_listening):
+            try:
+                stop_listening()
+            except Exception:
+                LOG.debug("could not interrupt PiDog speech recognizer", exc_info=True)
+        return True
 
     def close(self) -> None:
         self.stop()
@@ -190,6 +201,9 @@ class LocalVoiceListener:
         try:
             recognizer = self._recognizer_factory()
             with self._lock:
+                self._recognizer = recognizer
+                if self._stop_event.is_set():
+                    return
                 self._state = "listening"
             LOG.info("local voice control is listening through the PiDog microphone")
             while not self._stop_event.is_set():
@@ -220,6 +234,7 @@ class LocalVoiceListener:
             return
         finally:
             with self._lock:
+                self._recognizer = None
                 if self._state != "error":
                     self._state = "off"
             LOG.info("local voice control stopped")

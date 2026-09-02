@@ -250,6 +250,28 @@ class LightingTest(unittest.TestCase):
             call(style="breath", color="#000000", bps=1, brightness=0),
         ], controller._dog.rgb_strip.set_mode.call_args_list)
 
+    def test_show_battery_leaves_static_gauge_on_leds(self):
+        controller = object.__new__(RobotController)
+        controller._dry_run = False
+        controller._lock = threading.RLock()
+        controller._behavior_lock = threading.Lock()
+        controller._behavior_stop = threading.Event()
+        controller._behavior_thread = None
+        controller._dog = SimpleNamespace(
+            get_battery_voltage=Mock(return_value=7.4),
+            rgb_strip=SimpleNamespace(display=Mock(), set_mode=Mock()),
+        )
+        controller._actions = {"show_battery": controller._show_battery}
+
+        result = controller.execute("show_battery")
+
+        self.assertEqual(50, result["battery_percent"])
+        controller._dog.rgb_strip.set_mode.assert_not_called()
+        self.assertEqual([
+            [255, 20, 10], [255, 20, 10], [255, 190, 0], [255, 190, 0],
+            [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0],
+        ], controller._dog.rgb_strip.display.call_args.args[0])
+
     def test_sit_centers_head_before_sitting(self):
         controller = object.__new__(RobotController)
         controller._dog = Mock()
@@ -558,6 +580,28 @@ class LocalVoiceControlTest(unittest.TestCase):
         self.assertEqual("error", listener.status["state"])
         self.assertIn("Vosk model unavailable", listener.status["error"])
 
+    def test_listener_stop_interrupts_blocking_recognizer(self):
+        listening = threading.Event()
+        interrupted = threading.Event()
+
+        class Recognizer:
+            def listen(self, stream=False):
+                listening.set()
+                interrupted.wait(2)
+                return None
+
+            def stop_listening(self):
+                interrupted.set()
+
+        listener = LocalVoiceListener(lambda *_: None, Recognizer)
+        self.assertTrue(listener.start())
+        self.assertTrue(listening.wait(2))
+        self.assertTrue(listener.stop())
+        listener.close()
+
+        self.assertTrue(interrupted.is_set())
+        self.assertEqual("off", listener.status["state"])
+
     def test_listener_accepts_json_text_returned_by_vosk(self):
         self.assertEqual("сядь", LocalVoiceListener._extract_phrase('{"text": "сядь"}'))
 
@@ -656,6 +700,23 @@ class VisionCompatibilityTest(unittest.TestCase):
 
 
 class AssistantRoutingTest(unittest.TestCase):
+    def test_uses_configured_pi_user_home_for_assistant_files(self):
+        if not hasattr(AssistantManager, "_runtime_home"):
+            self.skipTest("only the CPU assistant stores its runtime under PIDOG_USER")
+        with patch.dict(os.environ, {"PIDOG_USER": "mikhail"}, clear=False), \
+             patch("pidog_voice.assistant.pwd.getpwnam",
+                   return_value=SimpleNamespace(pw_dir="/home/mikhail")):
+            manager = AssistantManager()
+
+        self.assertEqual(
+            Path("/home/mikhail/.local/share/pidog-llm/models/Qwen3.5-2B-Q4_K_M.gguf"),
+            manager._model_path,
+        )
+        self.assertEqual(
+            Path("/home/mikhail/.local/share/pidog-llm/piper-venv/bin/piper"),
+            manager._piper_path,
+        )
+
     def test_fresh_information_uses_web(self):
         self.assertTrue(AssistantManager._needs_web("Какая погода сегодня?"))
         self.assertTrue(AssistantManager._needs_web("Find the latest news"))

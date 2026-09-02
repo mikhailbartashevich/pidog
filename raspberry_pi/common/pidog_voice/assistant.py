@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import pwd
 import re
 import shutil
 import subprocess
@@ -27,19 +28,28 @@ class AssistantManager:
 
     def __init__(self, dry_run: bool = False) -> None:
         self._dry_run = dry_run
+        runtime_home = self._runtime_home()
         self._base_url = os.environ.get("PIDOG_LLM_URL", "http://127.0.0.1:8081").rstrip("/")
         self._unit = os.environ.get("PIDOG_LLM_UNIT", "pidog-llm.service")
         self._model_name = os.environ.get("PIDOG_LLM_NAME", "Qwen3.5-2B Q4_K_M")
         self._model_path = Path(os.environ.get(
             "PIDOG_LLM_MODEL",
-            str(Path.home() / ".local/share/pidog-llm/models/Qwen3.5-2B-Q4_K_M.gguf"),
+            str(runtime_home / ".local/share/pidog-llm/models/Qwen3.5-2B-Q4_K_M.gguf"),
         )).expanduser()
         self._server_path = Path(os.environ.get(
-            "PIDOG_LLM_SERVER", str(Path.home() / ".local/bin/llama-server")
+            "PIDOG_LLM_SERVER", str(runtime_home / ".local/bin/llama-server")
         )).expanduser()
         self._search_python = Path(os.environ.get(
             "PIDOG_SEARCH_PYTHON",
-            str(Path.home() / ".local/share/pidog-llm/search-venv/bin/python"),
+            str(runtime_home / ".local/share/pidog-llm/search-venv/bin/python"),
+        )).expanduser()
+        self._piper_path = Path(os.environ.get(
+            "PIDOG_PIPER_BIN",
+            str(runtime_home / ".local/share/pidog-llm/piper-venv/bin/piper"),
+        )).expanduser()
+        self._voice_path = Path(os.environ.get(
+            "PIDOG_PIPER_MODEL",
+            str(runtime_home / ".local/share/pidog-llm/voices/ru_RU-irina-medium.onnx"),
         )).expanduser()
         self._search_worker = Path(__file__).with_name("search_worker.py")
         # Keep just the two most recent exchanges. On a Pi 4, a short prompt history
@@ -70,11 +80,8 @@ class AssistantManager:
             if service_state == "active" and not running:
                 service_state = "starting"
             search_available = self._search_python.is_file() and self._search_worker.is_file()
-            piper = shutil.which("piper")
-            voice = Path(os.environ.get(
-                "PIDOG_PIPER_MODEL",
-                str(Path.home() / ".local/share/pidog-llm/voices/ru_RU-irina-medium.onnx"),
-            )).expanduser()
+            piper = self._piper_path if self._piper_path.is_file() else shutil.which("piper")
+            voice = self._voice_path
             result: dict[str, Any] = {
                 "installed": installed,
                 "running": running,
@@ -285,6 +292,20 @@ class AssistantManager:
         if os.environ.get("PIDOG_SEARXNG_URL"):
             return "SearXNG"
         return "DDGS"
+
+    @staticmethod
+    def _runtime_home() -> Path:
+        """Return the Pi user's home even when the API runs as root."""
+        explicit_home = os.environ.get("PIDOG_RUNTIME_HOME")
+        if explicit_home:
+            return Path(explicit_home).expanduser()
+        user = os.environ.get("PIDOG_USER")
+        if user:
+            try:
+                return Path(pwd.getpwnam(user).pw_dir)
+            except KeyError:
+                LOG.warning("PIDOG_USER does not exist while locating assistant files: %s", user)
+        return Path.home()
 
     @staticmethod
     def _needs_web(message: str) -> bool:
