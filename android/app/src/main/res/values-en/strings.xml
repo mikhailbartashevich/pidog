@@ -20,6 +20,8 @@
     <string name="nav_movement">Control</string>
     <string name="nav_commands">Commands</string>
     <string name="nav_camera">Camera</string>
+    <string name="nav_ai_vision">AI vision</string>
+    <string name="nav_ai_commands">AI commands</string>
     <string name="nav_sensors">Sensors</string>
     <string name="nav_assistant">LLM</string>
 
@@ -153,6 +155,34 @@
     <string name="latest_events">Latest events</string>
     <string name="clear_button">Clear</string>
     <string name="vision_log_empty">No events yet. Choose a color to find.</string>
+
+    <string name="ai_vision_page_title">AI vision &amp; memory</string>
+    <string name="ai_vision_page_subtitle">Select a detection from a frame and save its name in the local AI Pi database</string>
+    <string name="ai_vision_camera_eyebrow">PI 5 + AI HAT+ 2</string>
+    <string name="ai_vision_waiting">AI · WAITING FOR A FRAME</string>
+    <string name="ai_vision_frame_content_description">Latest PiDog frame analyzed by AI Pi</string>
+    <string name="ai_vision_start_camera">▶ Start camera and AI</string>
+    <string name="ai_vision_refresh_frame">↻ New AI frame</string>
+    <string name="ai_vision_frame_hint">This is the exact frame analyzed by AI Pi. Use the detection list below for reliable selection.</string>
+    <string name="ai_vision_detected_title">RECENTLY DETECTED</string>
+    <string name="ai_vision_detected_hint">The list grows with new frames. Select a face or object to save a name.</string>
+    <string name="ai_vision_face_title">REMEMBER PERSON</string>
+    <string name="ai_vision_face_hint">Add multiple names or language variants, separated by commas.</string>
+    <string name="ai_vision_face_names_hint">Names and variants, e.g. Misha, Mikhail</string>
+    <string name="ai_vision_object_title">NAME AN OBJECT</string>
+    <string name="ai_vision_object_hint">AI will look for the selected appearance among future detections.</string>
+    <string name="ai_vision_object_name_hint">Object name</string>
+    <string name="ai_vision_log_title">RECOGNITION LOG</string>
+    <string name="ai_commands_page_title">AI commands</string>
+    <string name="ai_commands_page_subtitle">Guard a selected target and safely track through PiDog</string>
+    <string name="ai_guard_title">GUARD AGAINST</string>
+    <string name="ai_guard_hint">Choose a person or visual target from the AI Pi database. An alert sounds when it is closer than 100 cm.</string>
+    <string name="ai_guard_refresh">↻ Refresh list</string>
+    <string name="ai_guard_selected">Guard selected</string>
+    <string name="ai_guard_note">The alert repeats no more than once every 12 seconds. The robot never walks autonomously.</string>
+    <string name="ai_commands_mode_title">AI MODE</string>
+    <string name="ai_follow_person">Find a person</string>
+    <string name="ai_stop_mode">Stop AI mode</string>
 
     <string name="sensors_page_title">Sensors and lights</string>
     <string name="sensors_page_subtitle">Live indicators and lighting effects</string>

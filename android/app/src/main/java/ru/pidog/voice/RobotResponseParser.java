@@ -4,6 +4,9 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /** Parses server payloads and owns user-facing localization for protocol responses. */
 final class RobotResponseParser {
     private final boolean english;
@@ -37,6 +40,56 @@ final class RobotResponseParser {
                 json.optBoolean("external_power", false),
                 !json.isNull("charging"),
                 json.optBoolean("charging", false));
+    }
+
+    RobotClient.AiVisionData parseAiVision(String response) throws JSONException {
+        JSONObject root = new JSONObject(response);
+        List<RobotClient.AiVisionFace> faces = new ArrayList<>();
+        List<RobotClient.AiVisionObject> objects = new ArrayList<>();
+        JSONArray faceItems = root.optJSONArray("faces");
+        if (faceItems != null) {
+            for (int index = 0; index < faceItems.length(); index++) {
+                JSONObject item = faceItems.optJSONObject(index);
+                if (item == null) continue;
+                faces.add(new RobotClient.AiVisionFace(
+                        (float) item.optDouble("x", 0), (float) item.optDouble("y", 0),
+                        (float) item.optDouble("w", 0), (float) item.optDouble("h", 0),
+                        item.isNull("name") ? "" : item.optString("name", ""),
+                        strings(item.optJSONArray("names"))));
+            }
+        }
+        JSONArray objectItems = root.optJSONArray("objects");
+        if (objectItems != null) {
+            for (int index = 0; index < objectItems.length(); index++) {
+                JSONObject item = objectItems.optJSONObject(index);
+                if (item == null) continue;
+                objects.add(new RobotClient.AiVisionObject(
+                        (float) item.optDouble("x", 0), (float) item.optDouble("y", 0),
+                        (float) item.optDouble("w", 0), (float) item.optDouble("h", 0),
+                        item.optString("label", "object"),
+                        item.isNull("name") ? "" : item.optString("name", "")));
+            }
+        }
+        return new RobotClient.AiVisionData(faces, objects,
+                root.isNull("distance_cm") ? -1 : (float) root.optDouble("distance_cm"),
+                root.optString("frame_jpeg", ""));
+    }
+
+    List<RobotClient.AiVisionTarget> parseAiVisionTargets(String response) throws JSONException {
+        JSONObject root = new JSONObject(response);
+        JSONArray items = root.optJSONArray("targets");
+        List<RobotClient.AiVisionTarget> targets = new ArrayList<>();
+        if (items == null) return targets;
+        for (int index = 0; index < items.length(); index++) {
+            JSONObject item = items.optJSONObject(index);
+            if (item == null) continue;
+            String name = item.optString("name", "").trim();
+            if (!name.isEmpty()) {
+                targets.add(new RobotClient.AiVisionTarget(name,
+                        item.optString("source", "object")));
+            }
+        }
+        return targets;
     }
 
     RobotClient.AssistantReply parseAssistantReply(String response) throws JSONException {
@@ -212,5 +265,15 @@ final class RobotResponseParser {
 
     private static float optionalFloat(JSONObject json, String name) {
         return json.isNull(name) ? -1 : (float) json.optDouble(name);
+    }
+
+    private static String[] strings(JSONArray values) {
+        if (values == null || values.length() == 0) return new String[0];
+        List<String> result = new ArrayList<>();
+        for (int index = 0; index < values.length(); index++) {
+            String value = values.optString(index, "").trim();
+            if (!value.isEmpty()) result.add(value);
+        }
+        return result.toArray(new String[0]);
     }
 }

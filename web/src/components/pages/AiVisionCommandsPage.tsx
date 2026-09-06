@@ -19,15 +19,20 @@ import {
 } from '@mui/material'
 import { useCallback, useEffect, useState } from 'react'
 
+import { useAiVision } from '../../hooks/useAiVision'
 import { pidogApi, type VisionGuardTarget } from '../../lib/api'
 import { tr } from '../../lib/i18n'
 import type { AiVisionCommandsPageProps } from '../../types/ui'
 import { PageHeading } from '../ui/PageHeading'
+import { VisionCameraCard } from '../vision/VisionCameraCard'
+import { VisionRecognitionLog } from '../vision/VisionRecognitionLog'
 
 export function AiVisionCommandsPage({
   language,
   connected,
   configured,
+  streaming,
+  streamNonce,
   settings,
   onGuard,
   onCommand,
@@ -37,6 +42,15 @@ export function AiVisionCommandsPage({
   const [loading, setLoading] = useState(false)
   const [guarding, setGuarding] = useState(false)
   const [error, setError] = useState('')
+  const [livePreview, setLivePreview] = useState(true)
+  const vision = useAiVision({
+    connected,
+    configured,
+    streaming,
+    settings,
+    enrollFace: async () => [],
+    enrollObject: async (name) => name,
+  })
 
   const loadTargets = useCallback(async () => {
     if (!connected || !configured) return
@@ -102,129 +116,154 @@ export function AiVisionCommandsPage({
       <Box
         sx={{
           display: 'grid',
-          gridTemplateColumns: { xs: '1fr', lg: 'minmax(0, 1.35fr) minmax(290px, .65fr)' },
-          gap: 1.5,
+          gridTemplateColumns: { xs: '1fr', lg: 'minmax(320px, 430px) minmax(0, 1fr)' },
+          gap: { xs: 1.5, lg: 2 },
+          alignItems: 'start',
         }}
       >
-        <Card>
-          <CardContent sx={{ p: { xs: 2, sm: 2.5 } }}>
-            <Stack sx={{ gap: 1.7 }}>
-              <Stack
-                direction="row"
-                sx={{ justifyContent: 'space-between', alignItems: 'center', gap: 1 }}
-              >
-                <Stack direction="row" sx={{ alignItems: 'center', gap: 1.2 }}>
-                  <Avatar sx={{ bgcolor: 'error.dark', color: 'error.light' }}>
-                    <ShieldRounded />
-                  </Avatar>
-                  <Box>
-                    <Typography variant="h3">
-                      {tr(language, 'Сторожить от', 'Guard against')}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
+        <Stack sx={{ gap: 1.2, position: { lg: 'sticky' }, top: { lg: 82 } }}>
+          <VisionCameraCard
+            language={language}
+            connected={connected}
+            configured={configured}
+            streaming={streaming}
+            streamNonce={streamNonce}
+            settings={settings}
+            result={vision.result}
+            selectedFace={null}
+            selectedObject={null}
+            refreshing={vision.refreshing}
+            editing={false}
+            livePreview={livePreview}
+            onCommand={onCommand}
+            onFaceSelect={() => undefined}
+            onObjectSelect={() => undefined}
+            onRefresh={() => void vision.refresh()}
+            onLivePreviewToggle={() => setLivePreview((current) => !current)}
+          />
+          <VisionRecognitionLog language={language} entries={vision.recognitionLog} />
+        </Stack>
+        <Stack sx={{ gap: 1.5 }}>
+          <Card>
+            <CardContent sx={{ p: { xs: 2, sm: 2.5 } }}>
+              <Stack sx={{ gap: 1.7 }}>
+                <Stack
+                  direction="row"
+                  sx={{ justifyContent: 'space-between', alignItems: 'center', gap: 1 }}
+                >
+                  <Stack direction="row" sx={{ alignItems: 'center', gap: 1.2 }}>
+                    <Avatar sx={{ bgcolor: 'error.dark', color: 'error.light' }}>
+                      <ShieldRounded />
+                    </Avatar>
+                    <Box>
+                      <Typography variant="h3">
+                        {tr(language, 'Сторожить от', 'Guard against')}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        {tr(
+                          language,
+                          'Список напрямую из базы AI Pi 5',
+                          'List read directly from the AI Pi 5 database',
+                        )}
+                      </Typography>
+                    </Box>
+                  </Stack>
+                  <Button
+                    size="small"
+                    startIcon={loading ? <CircularProgress size={15} /> : <RefreshRounded />}
+                    onClick={() => void loadTargets()}
+                    disabled={!connected || !configured || loading}
+                  >
+                    {tr(language, 'Обновить', 'Refresh')}
+                  </Button>
+                </Stack>
+                <Stack direction="row" useFlexGap sx={{ gap: 1, flexWrap: 'wrap' }}>
+                  {targets.map((target) => (
+                    <Chip
+                      key={`${target.source}:${target.name}`}
+                      label={target.name}
+                      color={selected === target.name ? 'primary' : 'default'}
+                      variant={selected === target.name ? 'filled' : 'outlined'}
+                      onClick={() => setSelected(target.name)}
+                      icon={target.source === 'face' ? <PersonSearchRounded /> : <ShieldRounded />}
+                    />
+                  ))}
+                  {!loading && targets.length === 0 && (
+                    <Typography color="text.secondary">
                       {tr(
                         language,
-                        'Список напрямую из базы AI Pi 5',
-                        'List read directly from the AI Pi 5 database',
+                        'В базе пока нет персон. Добавьте лицо или перенесите кота из объектов.',
+                        'No people in the database yet. Add a face or promote a cat from objects.',
                       )}
                     </Typography>
-                  </Box>
+                  )}
                 </Stack>
                 <Button
-                  size="small"
-                  startIcon={loading ? <CircularProgress size={15} /> : <RefreshRounded />}
-                  onClick={() => void loadTargets()}
-                  disabled={!connected || !configured || loading}
+                  variant="contained"
+                  color="error"
+                  startIcon={
+                    guarding ? <CircularProgress size={18} color="inherit" /> : <CampaignRounded />
+                  }
+                  onClick={() => void guard()}
+                  disabled={!connected || !configured || !selected || guarding}
+                  sx={{ alignSelf: 'start' }}
                 >
-                  {tr(language, 'Обновить', 'Refresh')}
+                  {tr(language, 'Сторожить выбранного', 'Guard selected')}
                 </Button>
-              </Stack>
-              <Stack direction="row" useFlexGap sx={{ gap: 1, flexWrap: 'wrap' }}>
-                {targets.map((target) => (
-                  <Chip
-                    key={`${target.source}:${target.name}`}
-                    label={target.name}
-                    color={selected === target.name ? 'primary' : 'default'}
-                    variant={selected === target.name ? 'filled' : 'outlined'}
-                    onClick={() => setSelected(target.name)}
-                    icon={target.source === 'face' ? <PersonSearchRounded /> : <ShieldRounded />}
-                  />
-                ))}
-                {!loading && targets.length === 0 && (
-                  <Typography color="text.secondary">
-                    {tr(
-                      language,
-                      'В базе пока нет персон. Добавьте лицо или перенесите кота из объектов.',
-                      'No people in the database yet. Add a face or promote a cat from objects.',
-                    )}
-                  </Typography>
-                )}
-              </Stack>
-              <Button
-                variant="contained"
-                color="error"
-                startIcon={
-                  guarding ? <CircularProgress size={18} color="inherit" /> : <CampaignRounded />
-                }
-                onClick={() => void guard()}
-                disabled={!connected || !configured || !selected || guarding}
-                sx={{ alignSelf: 'start' }}
-              >
-                {tr(language, 'Сторожить выбранного', 'Guard selected')}
-              </Button>
-              <Typography variant="caption" color="text.secondary">
-                {tr(
-                  language,
-                  'Сигнал повторяется не чаще одного раза в 12 секунд. Робот не ходит самостоятельно.',
-                  'The alert repeats no more than once every 12 seconds. The robot never walks autonomously.',
-                )}
-              </Typography>
-            </Stack>
-          </CardContent>
-        </Card>
-        <Stack sx={{ gap: 1.5 }}>
-          <Card
-            component="button"
-            onClick={() => onCommand('follow_ai_target')}
-            sx={{ textAlign: 'left', color: 'text.primary', cursor: 'pointer' }}
-          >
-            <CardContent sx={{ display: 'flex', gap: 1.3, alignItems: 'center' }}>
-              <Avatar sx={{ bgcolor: 'primary.dark' }}>
-                <PersonSearchRounded />
-              </Avatar>
-              <Box>
-                <Typography sx={{ fontWeight: 800 }}>
-                  {tr(language, 'Искать человека', 'Find a person')}
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
+                <Typography variant="caption" color="text.secondary">
                   {tr(
                     language,
-                    'AI-слежение без выбора цели',
-                    'AI tracking without a chosen target',
+                    'Сигнал повторяется не чаще одного раза в 12 секунд. Робот не ходит самостоятельно.',
+                    'The alert repeats no more than once every 12 seconds. The robot never walks autonomously.',
                   )}
                 </Typography>
-              </Box>
+              </Stack>
             </CardContent>
           </Card>
-          <Card
-            component="button"
-            onClick={() => onCommand('stop_ai_target')}
-            sx={{ textAlign: 'left', color: 'text.primary', cursor: 'pointer' }}
-          >
-            <CardContent sx={{ display: 'flex', gap: 1.3, alignItems: 'center' }}>
-              <Avatar sx={{ bgcolor: 'error.dark' }}>
-                <StopRounded />
-              </Avatar>
-              <Box>
-                <Typography sx={{ fontWeight: 800 }}>
-                  {tr(language, 'Остановить AI-режим', 'Stop AI mode')}
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  {tr(language, 'Остановить слежение и сторожа', 'Stop tracking and guard mode')}
-                </Typography>
-              </Box>
-            </CardContent>
-          </Card>
+          <Stack direction={{ xs: 'column', sm: 'row' }} sx={{ gap: 1.5 }}>
+            <Card
+              component="button"
+              onClick={() => onCommand('follow_ai_target')}
+              sx={{ textAlign: 'left', color: 'text.primary', cursor: 'pointer' }}
+            >
+              <CardContent sx={{ display: 'flex', gap: 1.3, alignItems: 'center' }}>
+                <Avatar sx={{ bgcolor: 'primary.dark' }}>
+                  <PersonSearchRounded />
+                </Avatar>
+                <Box>
+                  <Typography sx={{ fontWeight: 800 }}>
+                    {tr(language, 'Искать человека', 'Find a person')}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    {tr(
+                      language,
+                      'AI-слежение без выбора цели',
+                      'AI tracking without a chosen target',
+                    )}
+                  </Typography>
+                </Box>
+              </CardContent>
+            </Card>
+            <Card
+              component="button"
+              onClick={() => onCommand('stop_ai_target')}
+              sx={{ textAlign: 'left', color: 'text.primary', cursor: 'pointer' }}
+            >
+              <CardContent sx={{ display: 'flex', gap: 1.3, alignItems: 'center' }}>
+                <Avatar sx={{ bgcolor: 'error.dark' }}>
+                  <StopRounded />
+                </Avatar>
+                <Box>
+                  <Typography sx={{ fontWeight: 800 }}>
+                    {tr(language, 'Остановить AI-режим', 'Stop AI mode')}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    {tr(language, 'Остановить слежение и сторожа', 'Stop tracking and guard mode')}
+                  </Typography>
+                </Box>
+              </CardContent>
+            </Card>
+          </Stack>
         </Stack>
       </Box>
     </Stack>

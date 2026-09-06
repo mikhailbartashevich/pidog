@@ -9,6 +9,7 @@ import { VisionCameraCard } from '../vision/VisionCameraCard'
 import { VisionDetectionList } from '../vision/VisionDetectionList'
 import { VisionFaceMemoryCard } from '../vision/VisionFaceMemoryCard'
 import { VisionMemoryControls } from '../vision/VisionMemoryControls'
+import { VisionRecognitionLog } from '../vision/VisionRecognitionLog'
 
 export function AiVisionPage({
   language,
@@ -104,6 +105,7 @@ export function AiVisionPage({
             onFace={vision.selectFace}
             onObject={vision.selectObject}
           />
+          <VisionRecognitionLog language={language} entries={vision.recognitionLog} />
         </Stack>
         <Stack sx={{ gap: 1.2, order: { xs: 1, lg: 1 } }}>
           <VisionFaceMemoryCard

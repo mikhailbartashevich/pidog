@@ -39,6 +39,7 @@ class RobotController(AudioMixin, VisionMixin, SensorsMixin):
         self._behavior_lock = threading.Lock()
         self._behavior_stop = threading.Event()
         self._behavior_thread: threading.Thread | None = None
+        self._last_ai_distance_cm: float | None = None
         self._sleep_lock = threading.Lock()
         self._sleep_active = False
         self._sleep_wake_ready = threading.Event()

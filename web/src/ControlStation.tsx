@@ -450,6 +450,8 @@ export function ControlStation() {
         language,
         connected,
         configured: health?.remote_vision?.configured === true,
+        streaming,
+        streamNonce,
         settings,
         onGuard,
         onCommand,

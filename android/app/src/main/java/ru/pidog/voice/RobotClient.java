@@ -11,6 +11,7 @@ import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -43,6 +44,14 @@ public final class RobotClient {
 
     public interface AssistantChatCallback {
         void onResult(boolean success, String message, AssistantReply data);
+    }
+
+    public interface AiVisionCallback {
+        void onResult(boolean success, String message, AiVisionData data);
+    }
+
+    public interface AiVisionTargetsCallback {
+        void onResult(boolean success, String message, List<AiVisionTarget> targets);
     }
 
     public static final class AssistantStatus {
@@ -130,6 +139,67 @@ public final class RobotClient {
             this.y = y;
             this.position = position;
             this.distanceCm = distanceCm;
+        }
+    }
+
+    public static class AiVisionBox {
+        public final float x;
+        public final float y;
+        public final float width;
+        public final float height;
+
+        AiVisionBox(float x, float y, float width, float height) {
+            this.x = x;
+            this.y = y;
+            this.width = width;
+            this.height = height;
+        }
+    }
+
+    public static final class AiVisionFace extends AiVisionBox {
+        public final String name;
+        public final String[] names;
+
+        AiVisionFace(float x, float y, float width, float height, String name, String[] names) {
+            super(x, y, width, height);
+            this.name = name;
+            this.names = names;
+        }
+    }
+
+    public static final class AiVisionObject extends AiVisionBox {
+        public final String label;
+        public final String name;
+
+        AiVisionObject(float x, float y, float width, float height, String label, String name) {
+            super(x, y, width, height);
+            this.label = label;
+            this.name = name;
+        }
+    }
+
+    public static final class AiVisionData {
+        public final List<AiVisionFace> faces;
+        public final List<AiVisionObject> objects;
+        public final float distanceCm;
+        public final String frameJpeg;
+
+        AiVisionData(List<AiVisionFace> faces, List<AiVisionObject> objects,
+                     float distanceCm, String frameJpeg) {
+            this.faces = faces;
+            this.objects = objects;
+            this.distanceCm = distanceCm;
+            this.frameJpeg = frameJpeg;
+        }
+    }
+
+    public static final class AiVisionTarget {
+        public final String name;
+        public final String source;
+
+        AiVisionTarget(String name, String source) {
+            this.name = name;
+            this.source = source;
         }
     }
 
@@ -239,6 +309,67 @@ public final class RobotClient {
     public void clearAssistantHistory(String host, int port, String token, Callback callback) {
         execute(() -> request("POST", host, port, token, "/assistant/history",
                 "{\"action\":\"clear\"}"), callback);
+    }
+
+    public void aiVisionInfer(String host, int port, String token, AiVisionCallback callback) {
+        executor.execute(() -> {
+            Result result;
+            AiVisionData data = null;
+            try {
+                result = request("POST", host, port, token, "/vision/infer", "{}");
+                if (result.success && result.response != null) {
+                    data = responseParser.parseAiVision(result.response);
+                }
+            } catch (Exception error) {
+                result = new Result(false, responseParser.readableError(error), null);
+            }
+            Result finalResult = result;
+            AiVisionData finalData = data;
+            postResult(() -> callback.onResult(finalResult.success, finalResult.message, finalData));
+        });
+    }
+
+    public void aiVisionGuardTargets(String host, int port, String token,
+                                     AiVisionTargetsCallback callback) {
+        executor.execute(() -> {
+            Result result;
+            List<AiVisionTarget> targets = null;
+            try {
+                result = request("GET", host, port, token, "/vision/guard-targets", null);
+                if (result.success && result.response != null) {
+                    targets = responseParser.parseAiVisionTargets(result.response);
+                }
+            } catch (Exception error) {
+                result = new Result(false, responseParser.readableError(error), null);
+            }
+            Result finalResult = result;
+            List<AiVisionTarget> finalTargets = targets;
+            postResult(() -> callback.onResult(
+                    finalResult.success, finalResult.message, finalTargets));
+        });
+    }
+
+    public void aiVisionEnrollFace(String host, int port, String token, String[] names,
+                                   AiVisionFace face, Callback callback) {
+        StringBuilder json = new StringBuilder("{\"names\":[");
+        for (int index = 0; index < names.length; index++) {
+            if (index > 0) json.append(',');
+            json.append('"').append(escape(names[index])).append('"');
+        }
+        json.append("],\"face\":").append(boxJson(face)).append('}');
+        execute(() -> request("POST", host, port, token, "/vision/enroll", json.toString()), callback);
+    }
+
+    public void aiVisionEnrollObject(String host, int port, String token, String name,
+                                     AiVisionObject object, Callback callback) {
+        String json = "{\"name\":\"" + escape(name) + "\",\"object\":"
+                + boxJson(object) + "}";
+        execute(() -> request("POST", host, port, token, "/vision/objects/enroll", json), callback);
+    }
+
+    public void aiVisionGuard(String host, int port, String token, String name, Callback callback) {
+        String json = "{\"name\":\"" + escape(name) + "\"}";
+        execute(() -> request("POST", host, port, token, "/vision/guard", json), callback);
     }
 
     private void assistantRequest(String method, String host, int port, String token,
@@ -395,6 +526,11 @@ public final class RobotClient {
         return "{\"command\":\"" + escape(wireName) + "\","
                 + "\"phrase\":\""
                 + escape(recognizedPhrase == null ? "" : recognizedPhrase) + "\"}";
+    }
+
+    private static String boxJson(AiVisionBox box) {
+        return String.format(Locale.US, "{\"x\":%.6f,\"y\":%.6f,\"w\":%.6f,\"h\":%.6f}",
+                box.x, box.y, box.width, box.height);
     }
 
     private interface Request {

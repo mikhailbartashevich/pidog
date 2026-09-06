@@ -289,6 +289,25 @@ class VisionMixin:
         self._ensure_camera()
         frame = self._camera_frame(timeout=1.5)
         result: dict[str, Any] = self._remote_vision.infer(frame)
+        # The ultrasonic sensor reports the nearest obstacle ahead of PiDog.
+        # It is attached to the same analysed frame so the UI can show the
+        # distance alongside a recognised person or target.
+        raw_distance = self._safe_sensor(lambda: float(self._dog.read_distance()))
+        # HC-SR04-style readings below 2 cm or above 400 cm are invalid echo
+        # values (often -1/-2 while the measurement settles), not a distance.
+        distance_cm = (
+            round(raw_distance, 1)
+            if isinstance(raw_distance, (int, float)) and 2 <= raw_distance <= 400
+            else None
+        )
+        if distance_cm is not None:
+            self._last_ai_distance_cm = distance_cm
+        # A new ultrasonic reading can briefly be an invalid no-echo value
+        # between valid frames. Keep the last physical measurement visible so
+        # the recognition log does not flicker between a number and no data.
+        result["distance_cm"] = distance_cm if distance_cm is not None else getattr(
+            self, "_last_ai_distance_cm", None
+        )
         try:
             import cv2
             encoded, jpeg = cv2.imencode(".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, 76])

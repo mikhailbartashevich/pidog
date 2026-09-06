@@ -125,6 +125,7 @@ export type VisionInferenceResponse = {
   ok: true
   objects: VisionObject[]
   faces: VisionFace[]
+  distance_cm?: number | null
   frame_jpeg?: string
   frame_width?: number
   frame_height?: number

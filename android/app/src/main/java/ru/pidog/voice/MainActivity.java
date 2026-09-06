@@ -35,12 +35,15 @@ public final class MainActivity extends Activity {
     private static final int PAGE_MOVEMENT = 2;
     private static final int PAGE_COMMANDS = 3;
     private static final int PAGE_ASSISTANT = 6;
+    private static final int PAGE_AI_VISION = 7;
+    private static final int PAGE_AI_COMMANDS = 8;
 
     private String currentLanguageTag;
     private RobotClient robotClient;
     private RobotConnection connection;
     private MovementController movementController;
     private VisionController visionController;
+    private AiVisionController aiVisionController;
     private SensorController sensorController;
     private AssistantController assistantController;
     private SpeechRecognitionController speechController;
@@ -106,6 +109,8 @@ public final class MainActivity extends Activity {
                 this, robotClient, connection, currentLanguageTag);
         visionController = new VisionController(
                 this, robotClient, connection, currentLanguageTag);
+        aiVisionController = new AiVisionController(
+                this, robotClient, connection, currentLanguageTag);
         sensorController = new SensorController(this, robotClient, connection);
         assistantController = new AssistantController(this, robotClient, connection);
         speechController = new SpeechRecognitionController(
@@ -133,6 +138,7 @@ public final class MainActivity extends Activity {
                 .setOnClickListener(view -> enableBuiltInMicrophone());
         movementController.bind();
         visionController.bind();
+        aiVisionController.bind();
         sensorController.bind();
         speechController.bind();
         assistantController.bind(speechController::toggleAssistant);
@@ -270,6 +276,7 @@ public final class MainActivity extends Activity {
         if (page == PAGE_ASSISTANT) {
             assistantController.refreshStatus(false);
         }
+        aiVisionController.onPageChanged(page, PAGE_AI_VISION, PAGE_AI_COMMANDS);
         for (int index = 0; index < navButtons.length; index++) {
             boolean selected = index == page;
             navButtons[index].setBackgroundTintList(ColorStateList.valueOf(
@@ -290,11 +297,15 @@ public final class MainActivity extends Activity {
                 R.string.nav_movement,
                 R.string.nav_commands,
                 R.string.nav_camera,
+                R.string.nav_ai_vision,
+                R.string.nav_ai_commands,
                 R.string.nav_sensors,
                 R.string.nav_assistant
         };
-        for (int page = 0; page < labels.length; page++) {
-            popup.getMenu().add(Menu.NONE, page, page, labels[page]);
+        int[] pages = {0, PAGE_VOICE, PAGE_MOVEMENT, PAGE_COMMANDS, 4,
+                PAGE_AI_VISION, PAGE_AI_COMMANDS, 5, PAGE_ASSISTANT};
+        for (int index = 0; index < labels.length; index++) {
+            popup.getMenu().add(Menu.NONE, pages[index], index, labels[index]);
         }
         popup.setOnMenuItemClickListener(item -> {
             showPage(item.getItemId());
@@ -312,6 +323,8 @@ public final class MainActivity extends Activity {
             case 4: return R.string.camera_page_title;
             case 5: return R.string.sensors_page_title;
             case PAGE_ASSISTANT: return R.string.assistant_page_title;
+            case PAGE_AI_VISION: return R.string.ai_vision_page_title;
+            case PAGE_AI_COMMANDS: return R.string.ai_commands_page_title;
             default: return R.string.app_name;
         }
     }

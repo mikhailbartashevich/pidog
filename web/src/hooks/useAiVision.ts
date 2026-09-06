@@ -23,6 +23,15 @@ type UseAiVisionOptions = VisionEnrollment & {
   settings: ConnectionSettings
 }
 
+export type VisionRecognitionLogEntry = {
+  id: string
+  kind: 'face' | 'object'
+  name: string
+  distanceCm: number | null
+  seenAt: number
+  present: boolean
+}
+
 function errorText(error: unknown): string {
   return error instanceof Error ? error.message : 'AI vision request failed'
 }
@@ -37,6 +46,7 @@ export function useAiVision({
 }: UseAiVisionOptions) {
   const [result, setResult] = useState<VisionInferenceResponse | null>(null)
   const [detections, setDetections] = useState<VisionDetection[]>([])
+  const [recognitionLog, setRecognitionLog] = useState<VisionRecognitionLogEntry[]>([])
   const [selectedFace, setSelectedFace] = useState<VisionFace | null>(null)
   const [selectedObject, setSelectedObject] = useState<VisionObject | null>(null)
   const [names, setNames] = useState<string[]>([])
@@ -56,6 +66,36 @@ export function useAiVision({
       const next = await pidogApi.visionInfer(settings)
       setResult(next)
       setDetections((current) => mergeVisionDetections(current, next))
+      const recognized = [
+        ...next.faces.map((face) => ({
+          id: `face:${face.name ?? face.names?.join('/') ?? 'unknown'}`,
+          kind: 'face' as const,
+          name: face.name ?? face.names?.join(' / ') ?? 'Unknown face',
+        })),
+        ...next.objects.map((object) => ({
+          id: `object:${object.name ?? object.label}`,
+          kind: 'object' as const,
+          name: object.name ?? object.label,
+        })),
+      ]
+      const seenAt = Date.now()
+      const distanceCm = next.distance_cm ?? null
+      setRecognitionLog((current) => {
+        const nextEntries = recognized.map((item) => ({
+          ...item,
+          distanceCm,
+          seenAt,
+          present: true,
+        }))
+        const incoming = new Map(nextEntries.map((entry) => [entry.id, entry]))
+        const updated = current.map(
+          (entry) => incoming.get(entry.id) ?? { ...entry, present: false },
+        )
+        const additions = nextEntries.filter(
+          (entry) => !current.some((currentEntry) => currentEntry.id === entry.id),
+        )
+        return [...updated, ...additions].slice(0, 12)
+      })
       setError('')
     } catch (cause) {
       const status = cause as PiDogApiError
@@ -154,6 +194,7 @@ export function useAiVision({
   return {
     result,
     detections,
+    recognitionLog,
     selectedFace,
     selectedObject,
     names,

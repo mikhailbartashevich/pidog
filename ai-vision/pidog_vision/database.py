@@ -61,5 +61,5 @@ def initialize_object_database(database: Path) -> None:
         connection.execute(
             "INSERT OR IGNORE INTO guard_person(name) "
             "SELECT DISTINCT name FROM object_memory "
-            "WHERE lower(name) IN ('cat', 'кот')"
+            "WHERE name LIKE '%cat%' COLLATE NOCASE OR name LIKE '%кот%'"
         )

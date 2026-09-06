@@ -24,6 +24,8 @@
     <string name="nav_movement">Управление</string>
     <string name="nav_commands">Команды</string>
     <string name="nav_camera">Камера</string>
+    <string name="nav_ai_vision">AI зрение</string>
+    <string name="nav_ai_commands">AI команды</string>
     <string name="nav_sensors">Сенсоры</string>
     <string name="nav_assistant">LLM</string>
 
@@ -160,6 +162,34 @@
     <string name="latest_events">Последние события</string>
     <string name="clear_button">Очистить</string>
     <string name="vision_log_empty">Событий пока нет. Выберите цвет для поиска.</string>
+
+    <string name="ai_vision_page_title">AI-зрение и память</string>
+    <string name="ai_vision_page_subtitle">Выберите находку на кадре и сохраните имя в локальную базу AI Pi</string>
+    <string name="ai_vision_camera_eyebrow">PI 5 + AI HAT+ 2</string>
+    <string name="ai_vision_waiting">AI · ОЖИДАЮ КАДР</string>
+    <string name="ai_vision_frame_content_description">Последний кадр Пайдог, проанализированный AI Pi</string>
+    <string name="ai_vision_start_camera">▶ Включить камеру и AI</string>
+    <string name="ai_vision_refresh_frame">↻ Новый AI-кадр</string>
+    <string name="ai_vision_frame_hint">Это точный кадр, который распознал AI Pi. Для надёжного выбора используйте список находок ниже.</string>
+    <string name="ai_vision_detected_title">НАЙДЕНО НЕДАВНО</string>
+    <string name="ai_vision_detected_hint">Список пополняется новыми кадрами. Выберите лицо или предмет, чтобы сохранить имя.</string>
+    <string name="ai_vision_face_title">ЗАПОМНИТЬ ЧЕЛОВЕКА</string>
+    <string name="ai_vision_face_hint">Добавьте несколько имён или языковых вариантов через запятую.</string>
+    <string name="ai_vision_face_names_hint">Имена и варианты, например Миша, Mikhail</string>
+    <string name="ai_vision_object_title">ПОДПИСАТЬ ПРЕДМЕТ</string>
+    <string name="ai_vision_object_hint">AI будет искать выбранный внешний вид среди будущих находок.</string>
+    <string name="ai_vision_object_name_hint">Название предмета</string>
+    <string name="ai_vision_log_title">ЖУРНАЛ РАСПОЗНАВАНИЯ</string>
+    <string name="ai_commands_page_title">AI-команды</string>
+    <string name="ai_commands_page_subtitle">Охрана выбранной цели и безопасное AI-слежение через PiDog</string>
+    <string name="ai_guard_title">СТОРОЖИТЬ ОТ</string>
+    <string name="ai_guard_hint">Выберите персону или визуальную цель из базы AI Pi. Сигнал подаётся, когда цель ближе 100 см.</string>
+    <string name="ai_guard_refresh">↻ Обновить список</string>
+    <string name="ai_guard_selected">Сторожить выбранного</string>
+    <string name="ai_guard_note">Сигнал повторяется не чаще раза в 12 секунд. Робот не ходит самостоятельно.</string>
+    <string name="ai_commands_mode_title">AI-РЕЖИМ</string>
+    <string name="ai_follow_person">Искать человека</string>
+    <string name="ai_stop_mode">Остановить AI-режим</string>
 
     <string name="sensors_page_title">Сенсоры и свет</string>
     <string name="sensors_page_subtitle">Живые индикаторы и световые эффекты</string>

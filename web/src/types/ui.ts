@@ -89,6 +89,8 @@ export type AiVisionPageProps = PageProps & {
 export type AiVisionCommandsPageProps = PageProps & {
   connected: boolean
   configured: boolean
+  streaming: boolean
+  streamNonce: number
   settings: ConnectionSettings
   onGuard: (name: string) => Promise<void>
   onCommand: (command: string) => void

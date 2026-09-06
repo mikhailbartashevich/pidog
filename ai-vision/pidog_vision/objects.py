@@ -125,7 +125,7 @@ class ObjectRegistry:
                 "INSERT INTO object_memory(name, feature, image, updated_at) VALUES (?, ?, ?, ?)",
                 (name, feature.tobytes(), picture, int(time.time())),
             )
-            if name.casefold() in {"cat", "кот"}:
+            if "cat" in name.casefold() or "кот" in name.casefold():
                 connection.execute("INSERT OR IGNORE INTO guard_person(name) VALUES (?)", (name,))
 
     @staticmethod
