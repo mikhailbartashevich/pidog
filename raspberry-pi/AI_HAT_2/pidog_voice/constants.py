@@ -8,7 +8,6 @@ import logging
 LOG = logging.getLogger("pidog-voice")
 MAX_BODY_BYTES = 16 * 1024
 AUDIO_FILES = ("single_bark_1", "howling")
-AUDIO_VOLUME_MULTIPLIER = 1.30
 AUDIO_PLAYBACK_TIMEOUT_SECONDS = 6
 SERVER_VERSION = "2.0.0-ai-hat-2"
 

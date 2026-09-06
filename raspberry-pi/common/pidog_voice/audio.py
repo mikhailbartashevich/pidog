@@ -12,7 +12,16 @@ import time
 from pathlib import Path
 from typing import Any, Callable
 
-from .constants import AUDIO_FILES, AUDIO_PLAYBACK_TIMEOUT_SECONDS, AUDIO_VOLUME_MULTIPLIER, LOG
+from .constants import AUDIO_FILES, AUDIO_PLAYBACK_TIMEOUT_SECONDS, LOG
+
+
+# Peak-only gain made the bundled effects clip before they sounded much louder.
+# This SoX chain raises the useful average loudness, then normalizes its output
+# to full scale. It is applied to every speaker effect and Piper response.
+_LOUDNESS_EFFECTS = (
+    "compand", "0.02,0.20", "6:-70,-60,-40,-25,-20,-12,-5,-4,0,-2",
+    "-3", "-90", "0.2", "gain", "-n",
+)
 
 
 class AudioUnavailableError(RuntimeError):
@@ -184,8 +193,7 @@ class AudioMixin:
                 self._enable_speaker()
                 try:
                     played = subprocess.run(
-                        [self._audio_player, "-q", "-v",
-                         f"{min(1.6, 0.95 * AUDIO_VOLUME_MULTIPLIER):.2f}", wav_file.name],
+                        [self._audio_player, "-q", wav_file.name, *_LOUDNESS_EFFECTS],
                         capture_output=True, text=True, env=environment,
                         timeout=90, check=False,
                     )
@@ -216,13 +224,14 @@ class AudioMixin:
         if self._audio_player is None:
             raise AudioUnavailableError("SoX play не настроен")
 
-        # PiDog presets use 0..100. Apply the same master gain used by speech,
-        # then cap playback at +4 dB to avoid extreme clipping.
-        level = min(1.6, max(0, int(volume)) / 100 * AUDIO_VOLUME_MULTIPLIER)
+        # PiDog presets use 0..100. The explicit preset volume remains the
+        # final attenuation after the shared loudness processing.
+        level = max(0, min(100, int(volume))) / 100
         environment = os.environ.copy()
         environment["AUDIODEV"] = os.environ.get("PIDOG_ALSA_DEVICE", "robothat")
         process = subprocess.Popen(
-            [self._audio_player, "-q", "-v", f"{level:.2f}", str(sound_path)],
+            [self._audio_player, "-q", str(sound_path), *_LOUDNESS_EFFECTS,
+             "vol", f"{level:.2f}"],
             stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True,
             env=environment,
         )
