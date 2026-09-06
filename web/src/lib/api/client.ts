@@ -13,6 +13,8 @@ import type {
   VisionEnrollResponse,
   VisionFace,
   VisionInferenceResponse,
+  VisionGuardResponse,
+  VisionGuardTargetsResponse,
   VisionObject,
   VisionObjectEnrollResponse,
 } from './types'
@@ -105,6 +107,13 @@ export const pidogApi = {
     request<VisionInferenceResponse>(settings, '/vision/infer', {
       method: 'POST',
       body: JSON.stringify({}),
+    }),
+  visionGuardTargets: (settings: ConnectionSettings) =>
+    request<VisionGuardTargetsResponse>(settings, '/vision/guard-targets'),
+  visionGuard: (settings: ConnectionSettings, name: string) =>
+    request<VisionGuardResponse>(settings, '/vision/guard', {
+      method: 'POST',
+      body: JSON.stringify({ name }),
     }),
   visionEnroll: (settings: ConnectionSettings, names: string[], face: VisionFace) =>
     request<VisionEnrollResponse>(settings, '/vision/enroll', {

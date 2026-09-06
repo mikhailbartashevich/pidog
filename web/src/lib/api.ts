@@ -27,6 +27,9 @@ export type {
   VisionEnrollResponse,
   VisionFace,
   VisionInferenceResponse,
+  VisionGuardResponse,
+  VisionGuardTarget,
+  VisionGuardTargetsResponse,
   VisionObject,
   VisionObjectEnrollResponse,
 } from './api/types'

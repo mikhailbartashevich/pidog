@@ -95,9 +95,17 @@ class ServerTest(unittest.TestCase):
         self.assertEqual(503, status)
         self.assertIn("AI vision", payload["error"])
 
+        status, payload = self.request("GET", "/vision/guard-targets")
+        self.assertEqual(503, status)
+        self.assertIn("AI vision", payload["error"])
+
         status, payload = self.request("POST", "/vision/enroll", {
             "name": "Mikhail", "face": {"x": 0.2, "y": 0.2, "w": 0.3, "h": 0.3},
         })
+        self.assertEqual(409, status)
+        self.assertFalse(payload["ok"])
+
+        status, payload = self.request("POST", "/vision/guard", {"name": "Mikhail"})
         self.assertEqual(409, status)
         self.assertFalse(payload["ok"])
 

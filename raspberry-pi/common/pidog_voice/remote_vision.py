@@ -28,6 +28,28 @@ class RemoteVisionClient:
         payload = self._post_jpeg("/infer", frame)
         return {"objects": self._items(payload.get("objects")), "faces": self._items(payload.get("faces"))}
 
+    def faces(self) -> list[str]:
+        """Return the enrolled face names directly from the AI Pi registry."""
+        payload = self._get("/faces")
+        names = payload.get("names")
+        if not isinstance(names, list):
+            return []
+        return [name for name in names if isinstance(name, str)]
+
+    def guard_targets(self) -> list[dict[str, str]]:
+        """Return the AI Pi's persisted guard targets and their recognizer type."""
+        payload = self._get("/guard-targets")
+        targets = payload.get("targets")
+        if not isinstance(targets, list):
+            return []
+        return [
+            {"name": item["name"], "source": item["source"]}
+            for item in targets
+            if isinstance(item, dict)
+            and isinstance(item.get("name"), str)
+            and item.get("source") in {"face", "object"}
+        ]
+
     def enroll(self, name: str, frame: Any) -> dict[str, Any]:
         """Store one already-selected face crop under ``name`` on the AI Pi."""
         return self._post_jpeg(f"/faces/{quote(name, safe='')}", frame)
@@ -48,6 +70,21 @@ class RemoteVisionClient:
             raise RemoteVisionError("could not encode camera frame")
         request = Request(f"{self._url}{path}", data=jpeg.tobytes(), method="POST", headers={
             "Content-Type": "image/jpeg", "X-PiDog-Vision-Token": self._token,
+        })
+        try:
+            with urlopen(request, timeout=self._timeout) as response:
+                payload = json.loads(response.read(256 * 1024).decode("utf-8"))
+        except (OSError, URLError, ValueError) as error:
+            raise RemoteVisionError(f"remote vision unavailable: {error}") from error
+        if not isinstance(payload, dict) or payload.get("ok") is not True:
+            raise RemoteVisionError("remote vision returned an invalid response")
+        return payload
+
+    def _get(self, path: str) -> dict[str, Any]:
+        if not self._url or not self._token:
+            raise RemoteVisionError("remote vision is not configured")
+        request = Request(f"{self._url}{path}", method="GET", headers={
+            "X-PiDog-Vision-Token": self._token,
         })
         try:
             with urlopen(request, timeout=self._timeout) as response:

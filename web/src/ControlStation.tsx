@@ -385,6 +385,31 @@ export function ControlStation() {
   }
 
   const onCommand = (command: string) => void sendCommand(command)
+  const onGuard = async (name: string) => {
+    if (!connected) {
+      setConnectionOpen(true)
+      throw new Error(tr(language, 'Сначала подключитесь к Пайдогу', 'Connect to PiDog first'))
+    }
+    const request = beginDogStatus(
+      'working',
+      tr(language, `Включаю сторожа: ${name}…`, `Starting guard: ${name}…`),
+    )
+    try {
+      const response = await pidogApi.visionGuard(settings, name)
+      const message =
+        response.message ?? tr(language, `Сторож включён: ${name}`, `Guard enabled: ${name}`)
+      setNotice({ message, severity: 'success' })
+      finishDogStatus(request, 'success', message)
+    } catch (error) {
+      if (isConnectivityError(error)) markDisconnected(error)
+      else {
+        const message = errorMessage(error)
+        setNotice({ message, severity: 'error' })
+        finishDogStatus(request, 'error', message)
+      }
+      throw error
+    }
+  }
   const { enrollFace, enrollObject } = useVisionEnrollment({
     connected,
     language,
@@ -420,6 +445,14 @@ export function ControlStation() {
         onEnroll: enrollFace,
         onEnrollObject: enrollObject,
         onHead: moveHead,
+      }}
+      visionCommands={{
+        language,
+        connected,
+        configured: health?.remote_vision?.configured === true,
+        settings,
+        onGuard,
+        onCommand,
       }}
       voice={{
         language,

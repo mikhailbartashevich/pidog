@@ -244,6 +244,44 @@ class VisionMixin:
         self._dog.head_move([[0, 0, 0]], immediately=True, speed=65)
         return {"active": False, "message": "Слежение через AI Pi остановлено"}
 
+    def ai_vision_faces(self) -> list[str]:
+        """Read enrolled face names from the SQLite registry on the AI Pi."""
+        if not self._remote_vision.status["configured"]:
+            raise RuntimeError("удалённое зрение не настроено")
+        return self._remote_vision.faces()
+
+    def ai_vision_guard_targets(self) -> list[dict[str, str]]:
+        """Read people and promoted visual targets from the AI Pi databases."""
+        if not self._remote_vision.status["configured"]:
+            raise RuntimeError("удалённое зрение не настроено")
+        return self._remote_vision.guard_targets()
+
+    def ai_vision_guard(self, name: str) -> dict[str, Any]:
+        """Watch one chosen target and alert when its obstacle distance is below 100 cm."""
+        if not isinstance(name, str) or not name.strip() or len(name.strip()) > 48:
+            raise ValueError("нужно выбрать человека из списка AI Pi")
+        target_name = name.strip()
+        target = next(
+            (item for item in self.ai_vision_guard_targets() if item["name"] == target_name),
+            None,
+        )
+        if target is None:
+            raise ValueError("этой цели нет в базе AI Pi")
+        with self._lock:
+            if self._dry_run:
+                return {"active": True, "target": target_name, "message": f"Режим сторожа включён: {target_name}"}
+            self._cancel_behavior()
+            self._ensure_camera()
+            self._start_behavior(
+                "ai-guard",
+                lambda stop_event: self._ai_guard_worker(stop_event, target),
+            )
+        return {
+            "active": True,
+            "target": target_name,
+            "message": f"Пайдог сторожит: {target_name}. Сигнал при расстоянии меньше 100 см",
+        }
+
     def ai_vision_infer(self) -> dict[str, Any]:
         """Return one analysed camera frame and aligned overlays for the web UI."""
         if not self._remote_vision.status["configured"]:
@@ -348,6 +386,50 @@ class VisionMixin:
             yaw = self._clamp(yaw + (0.5 - center_x) * 35, -80, 80)
             pitch = self._clamp(pitch + (0.5 - center_y) * 22, -30, 30)
             self._dog.head_move([[yaw, 0, pitch]], immediately=True, speed=75)
+
+    def _ai_guard_worker(self, stop_event: threading.Event, target: dict[str, str]) -> None:
+        """Track a target and emit a short speaker alarm while it is nearby."""
+        target_name, source = target["name"], target["source"]
+        yaw = pitch = 0.0
+        misses = 0
+        last_alert = 0.0
+        while not stop_event.wait(0.25):
+            try:
+                result = self._remote_vision.infer(self._camera_frame(timeout=0.4))
+            except Exception as error:
+                LOG.warning("AI guard frame skipped: %s", error)
+                misses += 1
+                if misses >= 5:
+                    return
+                continue
+            candidates = result["faces"] if source == "face" else result["objects"]
+            matches = [
+                item for item in candidates
+                if item.get("name") == target_name
+                and all(isinstance(item.get(key), (int, float)) for key in ("x", "y", "w", "h"))
+            ]
+            target = max(matches, key=lambda face: float(face["w"]) * float(face["h"]), default=None)
+            if target is None:
+                misses += 1
+                continue
+            misses = 0
+            center_x = float(target["x"]) + float(target["w"]) / 2
+            center_y = float(target["y"]) + float(target["h"]) / 2
+            yaw = self._clamp(yaw + (0.5 - center_x) * 30, -80, 80)
+            pitch = self._clamp(pitch + (0.5 - center_y) * 18, -30, 30)
+            self._dog.head_move([[yaw, 0, pitch]], immediately=True, speed=65)
+            distance = self._safe_sensor(lambda: float(self._dog.read_distance()))
+            if isinstance(distance, (int, float)) and 0 < distance < 100 and time.monotonic() - last_alert >= 12:
+                last_alert = time.monotonic()
+                self._guard_alert(target_name, round(float(distance)))
+
+    def _guard_alert(self, target_name: str, distance_cm: int) -> None:
+        """The bundled bark works even when optional Piper text-to-speech is absent."""
+        try:
+            self._play_with_speaker(lambda: self._dog.speak("single_bark_1", 100))
+            LOG.info("AI guard alert target=%s distance_cm=%s", target_name, distance_cm)
+        except Exception as error:
+            LOG.warning("AI guard speaker alert failed for %s: %s", target_name, error)
 
     @staticmethod
     def _ai_target(result: dict[str, list[dict[str, Any]]]) -> dict[str, Any] | None:

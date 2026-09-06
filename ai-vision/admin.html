@@ -33,7 +33,7 @@
     </section>
     <section id="app">
       <div class="card toolbar row"><div><h2>Сохранённые записи</h2><p id="summary">Загрузка…</p></div><div class="row"><button class="secondary" id="reload">Обновить</button><button class="secondary" id="lock">Закрыть</button></div></div>
-      <section class="card"><h2>Люди</h2><div id="faces" class="grid"></div></section>
+      <section class="card"><h2>Персоны и охраняемые цели</h2><div id="people" class="grid"></div></section>
       <section class="card"><h2>Предметы</h2><div id="objects" class="grid"></div></section>
     </section>
   </main>
@@ -51,10 +51,12 @@
     };
     const setNote = (message, error = false) => { note.textContent = message; note.className = `notice${error ? ' error' : ''}`; };
     const escapeHtml = (value) => String(value).replace(/[&<>'"]/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;' })[c]);
-    const makeEntry = (kind, entry) => {
+    const makeEntry = (kind, entry, isGuardObject = false) => {
       const card = document.createElement('article'); card.className = 'card entry';
       const picture = entry.image_jpeg ? `<img alt="${escapeHtml(entry.name)}" src="data:image/jpeg;base64,${entry.image_jpeg}">` : '<span>Нет сохранённой картинки</span>';
-      card.innerHTML = `<div class="picture">${picture}</div><div class="entry-body"><div class="entry-name">${escapeHtml(entry.name)}</div><div class="kind">${kind === 'faces' ? 'Лицо / aliases use separate entries' : 'Подписанный предмет'}</div><div class="row"><input aria-label="Новое имя" value="${escapeHtml(entry.name)}"><button class="secondary rename">Переименовать</button><button class="danger delete">Удалить</button></div></div>`;
+      const kindText = kind === 'faces' ? 'Лицо' : isGuardObject ? 'Визуальная цель (например, кот)' : 'Подписанный предмет';
+      const roleButton = kind === 'objects' && !isGuardObject ? '<button class="secondary move-person">Перенести в персоны</button>' : '';
+      card.innerHTML = `<div class="picture">${picture}</div><div class="entry-body"><div class="entry-name">${escapeHtml(entry.name)}</div><div class="kind">${kindText}</div><div class="row"><input aria-label="Новое имя" value="${escapeHtml(entry.name)}"><button class="secondary rename">Переименовать</button>${roleButton}<button class="danger delete">Удалить</button></div></div>`;
       const input = card.querySelector('input');
       card.querySelector('.rename').onclick = async () => {
         const name = input.value.trim(); if (!name || name === entry.name) return;
@@ -64,19 +66,26 @@
         if (!confirm(`Удалить «${entry.name}» из локальной базы?`)) return;
         try { await request(`/${kind}/${encodeURIComponent(entry.name)}`, { method:'DELETE' }); await load(); } catch (error) { alert(`Не удалось удалить: ${error.message}`); }
       };
+      const move = card.querySelector('.move-person');
+      if (move) move.onclick = async () => {
+        try { await request(`/objects/${encodeURIComponent(entry.name)}/role`, { method:'PATCH', headers:{ 'Content-Type':'application/json' }, body:JSON.stringify({ role:'person' }) }); await load(); } catch (error) { alert(`Не удалось перенести: ${error.message}`); }
+      };
       return card;
     };
-    const render = (target, kind, entries) => {
+    const render = (target, kind, entries, isGuardObject = false) => {
       target.replaceChildren();
       if (!entries.length) { target.innerHTML = '<div class="empty">Пока нет сохранённых записей.</div>'; return; }
-      entries.forEach(entry => target.append(makeEntry(kind, entry)));
+      entries.forEach(entry => target.append(makeEntry(kind, entry, isGuardObject)));
     };
     async function load() {
       try {
         const memory = await request('/memory');
-        render(document.querySelector('#faces'), 'faces', memory.faces || []);
+        const people = [...(memory.faces || []), ...(memory.people || [])];
+        render(document.querySelector('#people'), 'faces', people.filter(entry => entry.source === 'face'));
+        const peopleTarget = document.querySelector('#people');
+        (memory.people || []).forEach(entry => peopleTarget.append(makeEntry('objects', entry, true)));
         render(document.querySelector('#objects'), 'objects', memory.objects || []);
-        document.querySelector('#summary').textContent = `Лиц: ${(memory.faces || []).length} · предметов: ${(memory.objects || []).length}`;
+        document.querySelector('#summary').textContent = `Персон: ${people.length} · предметов: ${(memory.objects || []).length}`;
         login.style.display = 'none'; app.style.display = 'block'; setNote('');
       } catch (error) { app.style.display = 'none'; login.style.display = 'block'; setNote(`Не удалось открыть базу: ${error.message}`, true); }
     }

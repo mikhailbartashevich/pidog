@@ -5,6 +5,7 @@ import {
   RocketLaunchRounded,
   SensorsRounded,
   VisibilityRounded,
+  ShieldRounded,
 } from '@mui/icons-material'
 import {
   alpha,
@@ -32,6 +33,13 @@ export const pages: Array<{
 }> = [
   { id: 'cockpit', path: '/', ru: 'Пульт', en: 'Cockpit', icon: DashboardRounded },
   { id: 'vision', path: '/ai-vision', ru: 'AI зрение', en: 'AI vision', icon: VisibilityRounded },
+  {
+    id: 'visionCommands',
+    path: '/ai-commands',
+    ru: 'AI команды',
+    en: 'AI commands',
+    icon: ShieldRounded,
+  },
   { id: 'voice', path: '/voice', ru: 'Голос', en: 'Voice', icon: MicRounded },
   { id: 'commands', path: '/commands', ru: 'Команды', en: 'Commands', icon: RocketLaunchRounded },
   { id: 'sensors', path: '/sensors', ru: 'Сенсоры', en: 'Sensors', icon: SensorsRounded },

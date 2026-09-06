@@ -47,6 +47,10 @@ The installer places the Python service in `/opt/pidog-ai-vision/`, creates
 SSH-owner-only token copy at `/home/mikhail/.config/pidog-ai-vision.token`.
 It does not print the token in logs.
 
+The service source is split into the `pidog_vision/` package: HTTP API,
+database migrations, face memory, object memory, and Hailo detection are kept
+in separate modules. The installer copies the complete package.
+
 Verify the service locally:
 
 ```bash
@@ -71,22 +75,33 @@ PiDog calls AI Vision, so the AI Vision token never reaches the browser.
 
 ## Face and object memory
 
-- `POST /faces/<name>` stores one clear face embedding and a small JPEG preview
-  in `/var/lib/pidog-ai-vision/faces.sqlite3`.
-- `POST /objects/<name>` stores a selected object's visual memory in
-  `/var/lib/pidog-ai-vision/objects.sqlite3`; it does not retrain the Hailo
-  model.
+- `POST /faces/<name>` appends one clear face embedding and a small JPEG preview
+  in `/var/lib/pidog-ai-vision/faces.sqlite3`. Reusing a name adds another
+  reference sample; it never replaces an earlier image.
+- `POST /objects/<name>` appends a selected object's visual memory in
+  `/var/lib/pidog-ai-vision/objects.sqlite3`; reusing a name adds another
+  sample and does not retrain the Hailo model.
 - An owner can open `http://AI_PI_ADDRESS:8790/admin` from the trusted network,
   enter the separate token, and rename or delete entries.
+
+For the current AI Pi, open `http://192.168.1.158:8790/admin`. Deleting or
+renaming a name applies to every sample currently saved under that name.
 
 The service does not save video and has no motor access. Test
 `follow_ai_target` only while PiDog is stationary on a clear floor: it must
 move the robot head only.
 
+## Database safety
+
+All values supplied to SQLite use parameterized queries. Schema updates use a
+fixed allowlist of SQL statements; table and column identifiers are never built
+from a request or another runtime value.
+
 ## Updating
 
-Copy the new `pidog_ai_vision.py`, service file, and any updated ONNX models to
-the staging directory and run the installer again. Then run:
+Copy the updated `pidog_ai_vision.py`, `pidog_vision/` package, `admin.html`,
+service file, and any updated ONNX models to the staging directory and run the
+installer again. Then run:
 
 ```bash
 sudo systemctl restart pidog-ai-vision

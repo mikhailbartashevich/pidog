@@ -9,9 +9,13 @@ TOKEN_COPY=/home/mikhail/.config/pidog-ai-vision.token
 
 test -f "$SOURCE_DIR/pidog_ai_vision.py"
 test -f "$SOURCE_DIR/pidog-ai-vision.service"
+test -f "$SOURCE_DIR/admin.html"
+test -f "$SOURCE_DIR/pidog_vision/__init__.py"
 
-install -d -m 0755 "$TARGET_DIR" "$TARGET_DIR/models"
+install -d -m 0755 "$TARGET_DIR" "$TARGET_DIR/models" "$TARGET_DIR/pidog_vision"
 install -m 0755 "$SOURCE_DIR/pidog_ai_vision.py" "$TARGET_DIR/pidog_ai_vision.py"
+install -m 0644 "$SOURCE_DIR/admin.html" "$TARGET_DIR/admin.html"
+install -m 0644 "$SOURCE_DIR"/pidog_vision/*.py "$TARGET_DIR/pidog_vision/"
 install -m 0644 "$SOURCE_DIR/pidog-ai-vision.service" /etc/systemd/system/pidog-ai-vision.service
 install -d -o mikhail -g mikhail -m 0750 /var/lib/pidog-ai-vision
 

@@ -140,3 +140,20 @@ export type VisionObjectEnrollResponse = {
   ok: true
   name: string
 }
+
+export type VisionGuardTarget = {
+  name: string
+  source: 'face' | 'object'
+}
+
+export type VisionGuardTargetsResponse = {
+  ok: true
+  targets: VisionGuardTarget[]
+}
+
+export type VisionGuardResponse = {
+  ok: true
+  active: boolean
+  target: string
+  message?: string
+}

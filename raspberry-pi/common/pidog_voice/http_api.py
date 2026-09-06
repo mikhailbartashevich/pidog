@@ -35,7 +35,7 @@ class RequestHandler(BaseHTTPRequestHandler):
             "/health", "/sensors", "/assistant/status", "/command",
             "/head",
             "/assistant/control", "/assistant/chat", "/assistant/history",
-            "/vision/infer", "/vision/enroll",
+            "/vision/infer", "/vision/faces", "/vision/guard-targets", "/vision/enroll", "/vision/guard",
             "/vision/objects/enroll",
         }:
             self._json(HTTPStatus.NOT_FOUND, {"ok": False, "error": "not found"})
@@ -75,13 +75,19 @@ class RequestHandler(BaseHTTPRequestHandler):
                 "ok": True, "assistant": self.server.controller.assistant_status,
             })
             return
+        if self.path == "/vision/faces":
+            self._vision_faces()
+            return
+        if self.path == "/vision/guard-targets":
+            self._vision_guard_targets()
+            return
         self._json(HTTPStatus.NOT_FOUND, {"ok": False, "error": "not found"})
 
     def do_POST(self) -> None:  # noqa: N802
         if self.path not in {
             "/command", "/head", "/assistant/control", "/assistant/chat",
             "/assistant/history",
-            "/vision/infer", "/vision/enroll",
+            "/vision/infer", "/vision/enroll", "/vision/guard",
             "/vision/objects/enroll",
         }:
             self._json(HTTPStatus.NOT_FOUND, {"ok": False, "error": "not found"})
@@ -134,6 +140,9 @@ class RequestHandler(BaseHTTPRequestHandler):
         if self.path == "/vision/objects/enroll":
             self._vision_object_enroll(payload)
             return
+        if self.path == "/vision/guard":
+            self._vision_guard(payload)
+            return
 
         command = payload.get("command")
         if not isinstance(command, str) or command not in self.server.controller.commands:
@@ -171,6 +180,28 @@ class RequestHandler(BaseHTTPRequestHandler):
             })
             return
         self._json(HTTPStatus.OK, {"ok": True, **result})
+
+    def _vision_faces(self) -> None:
+        try:
+            names = self.server.controller.ai_vision_faces()
+        except Exception as error:
+            LOG.warning("AI face registry unavailable: %s", error)
+            self._json(HTTPStatus.SERVICE_UNAVAILABLE, {
+                "ok": False, "error": "AI vision unavailable", "detail": str(error)[:300],
+            })
+            return
+        self._json(HTTPStatus.OK, {"ok": True, "names": names})
+
+    def _vision_guard_targets(self) -> None:
+        try:
+            targets = self.server.controller.ai_vision_guard_targets()
+        except Exception as error:
+            LOG.warning("AI guard target registry unavailable: %s", error)
+            self._json(HTTPStatus.SERVICE_UNAVAILABLE, {
+                "ok": False, "error": "AI vision unavailable", "detail": str(error)[:300],
+            })
+            return
+        self._json(HTTPStatus.OK, {"ok": True, "targets": targets})
 
     def _vision_enroll(self, payload: dict[str, Any]) -> None:
         face = payload.get("face")
@@ -211,6 +242,21 @@ class RequestHandler(BaseHTTPRequestHandler):
             })
             return
         self._json(HTTPStatus.CREATED, {"ok": True, **result})
+
+    def _vision_guard(self, payload: dict[str, Any]) -> None:
+        name = payload.get("name")
+        try:
+            result = self.server.controller.ai_vision_guard(name)
+        except (ValueError, RuntimeError) as error:
+            self._json(HTTPStatus.CONFLICT, {"ok": False, "error": str(error)[:300]})
+            return
+        except Exception as error:
+            LOG.exception("AI guard could not start")
+            self._json(HTTPStatus.SERVICE_UNAVAILABLE, {
+                "ok": False, "error": "AI guard unavailable", "detail": str(error)[:300],
+            })
+            return
+        self._json(HTTPStatus.ACCEPTED, {"ok": True, **result})
 
     def _move_head(self, payload: dict[str, Any]) -> None:
         yaw = payload.get("yaw")

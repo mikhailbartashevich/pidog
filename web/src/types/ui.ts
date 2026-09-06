@@ -9,7 +9,14 @@ import type {
 import type { Language } from '../lib/commands'
 import type { VoiceMatch } from '../lib/voiceCommands'
 
-export type Page = 'cockpit' | 'vision' | 'voice' | 'commands' | 'sensors' | 'assistant'
+export type Page =
+  | 'cockpit'
+  | 'vision'
+  | 'visionCommands'
+  | 'voice'
+  | 'commands'
+  | 'sensors'
+  | 'assistant'
 export type SpeechTarget = 'command' | 'assistant'
 export type Axis = 'drive' | 'turn'
 export type Direction = -1 | 0 | 1
@@ -77,6 +84,14 @@ export type AiVisionPageProps = PageProps & {
   onEnroll: (names: string[], face: VisionFace) => Promise<string[]>
   onEnrollObject: (name: string, object: VisionObject) => Promise<string>
   onHead: (x: number, y: number) => void
+}
+
+export type AiVisionCommandsPageProps = PageProps & {
+  connected: boolean
+  configured: boolean
+  settings: ConnectionSettings
+  onGuard: (name: string) => Promise<void>
+  onCommand: (command: string) => void
 }
 
 export type AssistantPageProps = PageProps & {
