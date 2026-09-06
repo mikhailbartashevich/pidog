@@ -77,7 +77,9 @@ npm run check:android
 npm run check:python
 ```
 
-Run all three sequentially with `npm run prepush`.
+Run the web, Android, and Python compilation checks sequentially with
+`npm run prepush`. Raspberry Pi tests are intentionally excluded from the
+pre-push hook; run them explicitly with `npm run check:python`.
 
 ## Safety
 

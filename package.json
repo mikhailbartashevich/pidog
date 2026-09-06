@@ -6,8 +6,9 @@
     "prepare": "husky",
     "check:web": "cd web && corepack yarn check && corepack yarn tsc --noEmit",
     "check:android": "cd android && ./gradlew --no-daemon test lint assembleDebug",
-    "check:python": "PYTHONPYCACHEPREFIX=\"${TMPDIR:-/tmp}/pidog-pycache\" python3 -m compileall -q raspberry-pi ai-vision && bash raspberry-pi/run_tests.sh",
-    "prepush": "npm run check:web && npm run check:android && npm run check:python"
+    "check:python:compile": "PYTHONPYCACHEPREFIX=\"${TMPDIR:-/tmp}/pidog-pycache\" python3 -m compileall -q raspberry-pi ai-vision",
+    "check:python": "npm run check:python:compile && bash raspberry-pi/run_tests.sh",
+    "prepush": "npm run check:web && npm run check:android && npm run check:python:compile"
   },
   "devDependencies": {
     "husky": "^9.1.7"
