@@ -22,11 +22,19 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 24
-          cache: yarn
-          cache-dependency-path: web/yarn.lock
 
       - name: Enable Corepack
         run: corepack enable
+
+      # setup-node's built-in Yarn cache runs before Corepack can select the
+      # packageManager-pinned Yarn 4, so cache it only after enabling Corepack.
+      - name: Cache Yarn downloads
+        uses: actions/cache@v4
+        with:
+          path: ~/.yarn/berry/cache
+          key: ${{ runner.os }}-yarn-${{ hashFiles('web/yarn.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-yarn-
 
       - name: Install dependencies
         run: yarn install --immutable
