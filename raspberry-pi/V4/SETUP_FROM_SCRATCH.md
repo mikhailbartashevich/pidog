@@ -124,7 +124,7 @@ the existing configuration, install the overlay and ALSA config, then reboot.
 First, on the administrator computer, copy that config to the Pi:
 
 ```bash
-scp -i "$PI_SSH_KEY" raspberry_pi/V4/robothat-v5.asound.conf \
+scp -i "$PI_SSH_KEY" raspberry-pi/V4/robothat-v5.asound.conf \
   "$PI_USER@$PI_HOST:~/robothat-v5.asound.conf"
 ```
 
@@ -182,11 +182,11 @@ server code. Run these commands from the repository root:
 
 ```bash
 ssh -i "$PI_SSH_KEY" "$PI_USER@$PI_HOST" 'mkdir -p ~/pidog-voice-staging'
-scp -i "$PI_SSH_KEY" raspberry_pi/pidog_voice_server.py \
-  raspberry_pi/pidog_voice/__init__.py \
-  raspberry_pi/V4/pidog-voice.service \
+scp -i "$PI_SSH_KEY" raspberry-pi/pidog_voice_server.py \
+  raspberry-pi/pidog_voice/__init__.py \
+  raspberry-pi/V4/pidog-voice.service \
   "$PI_USER@$PI_HOST:~/pidog-voice-staging/"
-scp -r -i "$PI_SSH_KEY" raspberry_pi/common/pidog_voice \
+scp -r -i "$PI_SSH_KEY" raspberry-pi/common/pidog_voice \
   "$PI_USER@$PI_HOST:~/pidog-voice-staging/"
 ```
 
@@ -234,7 +234,7 @@ limits memory to 2.8 GB, which is appropriate for this 4 GB Pi.
 From the administrator computer:
 
 ```bash
-scp -i "$PI_SSH_KEY" raspberry_pi/V4/install_local_llm.sh raspberry_pi/V4/pidog-llm.service \
+scp -i "$PI_SSH_KEY" raspberry-pi/V4/install_local_llm.sh raspberry-pi/V4/pidog-llm.service \
   "$PI_USER@$PI_HOST:~/pidog-voice-staging/"
 ```
 

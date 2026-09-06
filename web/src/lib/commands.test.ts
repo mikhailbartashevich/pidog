@@ -17,7 +17,7 @@ describe('command catalog', () => {
 
   it('contains every command exposed by the Android application', () => {
     const javaSource = readFileSync(
-      resolve(process.cwd(), '../app/src/main/java/ru/pidog/voice/RobotCommand.java'),
+      resolve(process.cwd(), '../android/app/src/main/java/ru/pidog/voice/RobotCommand.java'),
       'utf8',
     )
     const androidCommands = [...javaSource.matchAll(/^\s*[A-Z][A-Z0-9_]*\("([a-z0-9_]+)"/gmu)].map(

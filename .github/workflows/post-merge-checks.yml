@@ -61,6 +61,7 @@ jobs:
         uses: android-actions/setup-android@v3
 
       - name: Compile, lint and run unit tests
+        working-directory: android
         run: ./gradlew --no-daemon test lint assembleDebug
 
   raspberry-pi:
@@ -78,9 +79,9 @@ jobs:
       - name: Validate Python syntax
         env:
           PYTHONPYCACHEPREFIX: ${{ runner.temp }}/pidog-pycache
-        run: python -m compileall -q raspberry_pi
+        run: python -m compileall -q raspberry-pi ai-vision
 
       - name: Run all supported PiDog variants' tests
         env:
           PYTHONPYCACHEPREFIX: ${{ runner.temp }}/pidog-pycache
-        run: bash raspberry_pi/run_tests.sh
+        run: bash raspberry-pi/run_tests.sh

@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-# Shared implementation lives in raspberry_pi/common. Hailo-specific
+# Shared implementation lives in raspberry-pi/common. Hailo-specific
 # assistant/constants modules stay first so this bundle uses AI HAT+ 2 backend.
 _COMMON_PACKAGE = Path(__file__).resolve().parents[2] / "common" / "pidog_voice"
 if _COMMON_PACKAGE.is_dir():

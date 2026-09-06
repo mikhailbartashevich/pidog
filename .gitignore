@@ -7,8 +7,8 @@ local.properties
 secrets.properties
 keystore.properties
 credentials*.json
-/raspberry_pi/pidog-voice.env
-/raspberry_pi/V4/pidog-voice.env
+/raspberry-pi/pidog-voice.env
+/raspberry-pi/V4/pidog-voice.env
 *.jks
 *.keystore
 *.p12

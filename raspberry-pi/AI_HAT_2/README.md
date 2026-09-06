@@ -14,7 +14,7 @@ Manual PCIe Gen 3 configuration is not required for AI HAT+ 2; it is applied aut
 
 ## Install on Raspberry Pi
 
-Copy the `raspberry_pi/` directory to the Pi, preserving `AI_HAT_2/`, `common/`, and the root-level `pidog_voice_server.py`, then run:
+Copy the `raspberry-pi/` directory to the Pi, preserving `AI_HAT_2/`, `common/`, and the root-level `pidog_voice_server.py`, then run:
 
 ```bash
 cd AI_HAT_2

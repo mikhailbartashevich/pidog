@@ -17,7 +17,7 @@ REPOSITORY_PI_DIR = Path(__file__).resolve().parent.parent
 TEST_VARIANT = os.environ.get("PIDOG_TEST_VARIANT", "root")
 if TEST_VARIANT == "ai_hat_2":
     # Put the Hailo override first, while loading the canonical entry point
-    # from raspberry_pi/.
+    # from raspberry-pi/.
     sys.path.insert(0, str(REPOSITORY_PI_DIR / "AI_HAT_2"))
 sys.path.insert(1, str(REPOSITORY_PI_DIR))
 
@@ -154,7 +154,7 @@ class ServerTest(unittest.TestCase):
         if not source_path.is_file():
             source_path = (
                 Path(__file__).resolve().parents[2]
-                / "app/src/main/java/ru/pidog/voice/RobotCommand.java"
+                / "android/app/src/main/java/ru/pidog/voice/RobotCommand.java"
             )
         if not source_path.is_file():
             self.skipTest("Android command registry is not present on this server-only checkout")

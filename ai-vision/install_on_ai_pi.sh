@@ -15,6 +15,14 @@ install -m 0755 "$SOURCE_DIR/pidog_ai_vision.py" "$TARGET_DIR/pidog_ai_vision.py
 install -m 0644 "$SOURCE_DIR/pidog-ai-vision.service" /etc/systemd/system/pidog-ai-vision.service
 install -d -o mikhail -g mikhail -m 0750 /var/lib/pidog-ai-vision
 
+for model in face_detection_yunet_2023mar.onnx face_recognition_sface_2021dec.onnx; do
+  if test -f "$SOURCE_DIR/models/$model"; then
+    install -m 0644 "$SOURCE_DIR/models/$model" "$TARGET_DIR/models/$model"
+  else
+    echo "optional face model not staged: $model" >&2
+  fi
+done
+
 if ! test -s "$ENV_FILE"; then
   PIDOG_VISION_TOKEN=$(openssl rand -hex 32)
   printf 'PIDOG_VISION_TOKEN=%s\n' "$PIDOG_VISION_TOKEN" > "$ENV_FILE"

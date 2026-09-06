@@ -1,11 +1,11 @@
 import { alpha, Avatar, Box, CircularProgress, Stack, Typography } from '@mui/material'
 
-import errorMascot from '../../../../app/src/main/res/drawable-nodpi/pidog_status_error.png'
-import listeningMascot from '../../../../app/src/main/res/drawable-nodpi/pidog_status_listening.png'
-import mascot from '../../../../app/src/main/res/drawable-nodpi/pidog_status_mascot.png'
-import searchingMascot from '../../../../app/src/main/res/drawable-nodpi/pidog_status_searching.png'
-import speakingMascot from '../../../../app/src/main/res/drawable-nodpi/pidog_status_speaking.png'
-import thinkingMascot from '../../../../app/src/main/res/drawable-nodpi/pidog_status_thinking.png'
+import errorMascot from '../../../../android/app/src/main/res/drawable-nodpi/pidog_status_error.png'
+import listeningMascot from '../../../../android/app/src/main/res/drawable-nodpi/pidog_status_listening.png'
+import mascot from '../../../../android/app/src/main/res/drawable-nodpi/pidog_status_mascot.png'
+import searchingMascot from '../../../../android/app/src/main/res/drawable-nodpi/pidog_status_searching.png'
+import speakingMascot from '../../../../android/app/src/main/res/drawable-nodpi/pidog_status_speaking.png'
+import thinkingMascot from '../../../../android/app/src/main/res/drawable-nodpi/pidog_status_thinking.png'
 import type { Language } from '../../lib/commands'
 import { tr } from '../../lib/i18n'
 
