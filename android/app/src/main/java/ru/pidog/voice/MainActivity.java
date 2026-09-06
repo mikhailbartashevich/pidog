@@ -396,6 +396,7 @@ public final class MainActivity extends Activity {
         super.onResume();
         sensorController.startPolling();
         visionController.onResume();
+        aiVisionController.onResume();
     }
 
     @Override
@@ -405,6 +406,7 @@ public final class MainActivity extends Activity {
             movementController.stop();
         }
         visionController.onPause();
+        aiVisionController.onPause();
         super.onPause();
     }
 

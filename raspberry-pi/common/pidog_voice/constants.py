@@ -8,6 +8,10 @@ import logging
 LOG = logging.getLogger("pidog-voice")
 MAX_BODY_BYTES = 16 * 1024
 AUDIO_FILES = ("single_bark_1", "howling")
+# One gain applies consistently to sound effects and synthesized speech.
+# +30% is loud enough to be noticeable while retaining headroom for the
+# Robot HAT speaker and keeping the hard safety cap in the audio backend.
+AUDIO_VOLUME_MULTIPLIER = 1.30
 # A sound effect is only a few seconds long.  Keeping this short is important:
 # ALSA can otherwise leave the command lock held indefinitely after a device
 # failure, making the control service look unavailable.

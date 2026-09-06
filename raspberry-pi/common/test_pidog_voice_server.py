@@ -291,17 +291,28 @@ class LightingTest(unittest.TestCase):
             [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0],
         ], controller._dog.rgb_strip.display.call_args.args[0])
 
-    def test_sit_centers_head_before_sitting(self):
+    def test_sit_preserves_head_position(self):
         controller = object.__new__(RobotController)
         controller._dog = Mock()
 
         controller._sit()
 
-        self.assertEqual([
-            call.head_move(
-                [[0, 0, 0]], pitch_comp=-40, immediately=True, speed=65),
-            call.do_action("sit", speed=65),
-        ], controller._dog.mock_calls)
+        controller._dog.head_move.assert_not_called()
+        controller._dog.do_action.assert_called_once_with("sit", speed=65)
+
+    def test_stopping_trackers_preserves_current_head_position(self):
+        controller = object.__new__(RobotController)
+        controller._cancel_behavior = Mock()
+        controller._set_face_detection = Mock()
+        controller._vilib = None
+        controller._dog = Mock()
+
+        controller._stop_face_follow()
+        controller._stop_object_follow()
+        controller._stop_ai_target()
+
+        self.assertEqual(3, controller._cancel_behavior.call_count)
+        controller._dog.head_move.assert_not_called()
 
 
 class SleepCommandTest(unittest.TestCase):
@@ -356,8 +367,7 @@ class SleepCommandTest(unittest.TestCase):
             call("stand", speed=85),
             call("stretch", speed=50),
         ])
-        controller._dog.head_move.assert_called_once_with(
-            [[0, 0, 0]], pitch_comp=-40, immediately=True, speed=65)
+        controller._dog.head_move.assert_not_called()
         controller._dog.do_action.assert_called_with("sit", speed=65)
         controller._dog.wait_all_done.assert_called_once_with()
         self.assertEqual(3, controller._dog.wait_legs_done.call_count)

@@ -1113,15 +1113,14 @@
                         android:textColor="@color/brand_dark"
                         android:textSize="14sp"
                         android:textStyle="bold" />
-                    <ImageView
+                    <ru.pidog.voice.AiVisionFrameView
                         android:id="@+id/aiVisionFrame"
                         android:layout_width="match_parent"
                         android:layout_height="230dp"
                         android:layout_marginTop="12dp"
                         android:adjustViewBounds="true"
                         android:background="@drawable/bg_camera_frame"
-                        android:contentDescription="@string/ai_vision_frame_content_description"
-                        android:scaleType="fitCenter" />
+                        android:contentDescription="@string/ai_vision_frame_content_description" />
                     <Button
                         android:id="@+id/aiVisionStartCameraButton"
                         style="@style/PrimaryButton"
@@ -1271,14 +1270,13 @@
                         android:textColor="@color/brand_dark"
                         android:textSize="14sp"
                         android:textStyle="bold" />
-                    <ImageView
+                    <ru.pidog.voice.AiVisionFrameView
                         android:id="@+id/aiCommandsFrame"
                         android:layout_width="match_parent"
                         android:layout_height="210dp"
                         android:layout_marginTop="12dp"
                         android:background="@drawable/bg_camera_frame"
-                        android:contentDescription="@string/ai_vision_frame_content_description"
-                        android:scaleType="fitCenter" />
+                        android:contentDescription="@string/ai_vision_frame_content_description" />
                     <Button
                         android:id="@+id/aiCommandsRefreshButton"
                         style="@style/SecondaryButton"

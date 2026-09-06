@@ -116,7 +116,6 @@ class VisionMixin:
                 break
 
         if found is None:
-            self._dog.head_move([[0, 0, 0]], immediately=True, speed=55)
             self._dog.do_action("shake_head", speed=70)
             return {
                 "found": False, "color": color,
@@ -194,7 +193,6 @@ class VisionMixin:
         self._cancel_behavior()
         if self._vilib is not None:
             self._set_face_detection(False)
-        self._dog.head_move([[0, 0, 0]], immediately=True, speed=65)
         return {"active": False, "message": "Слежение за лицом остановлено"}
 
     def _follow_object(self) -> dict[str, Any]:
@@ -228,7 +226,6 @@ class VisionMixin:
 
     def _stop_object_follow(self) -> dict[str, Any]:
         self._cancel_behavior()
-        self._dog.head_move([[0, 0, 0]], immediately=True, speed=65)
         return {"active": False, "message": "Слежение за предметом остановлено"}
 
     def _follow_ai_target(self) -> dict[str, Any]:
@@ -241,7 +238,6 @@ class VisionMixin:
 
     def _stop_ai_target(self) -> dict[str, Any]:
         self._cancel_behavior()
-        self._dog.head_move([[0, 0, 0]], immediately=True, speed=65)
         return {"active": False, "message": "Слежение через AI Pi остановлено"}
 
     def ai_vision_faces(self) -> list[str]:

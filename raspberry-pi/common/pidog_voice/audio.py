@@ -12,7 +12,7 @@ import time
 from pathlib import Path
 from typing import Any, Callable
 
-from .constants import AUDIO_FILES, AUDIO_PLAYBACK_TIMEOUT_SECONDS, LOG
+from .constants import AUDIO_FILES, AUDIO_PLAYBACK_TIMEOUT_SECONDS, AUDIO_VOLUME_MULTIPLIER, LOG
 
 
 class AudioUnavailableError(RuntimeError):
@@ -184,7 +184,8 @@ class AudioMixin:
                 self._enable_speaker()
                 try:
                     played = subprocess.run(
-                        [self._audio_player, "-q", "-v", "0.95", wav_file.name],
+                        [self._audio_player, "-q", "-v",
+                         f"{min(1.6, 0.95 * AUDIO_VOLUME_MULTIPLIER):.2f}", wav_file.name],
                         capture_output=True, text=True, env=environment,
                         timeout=90, check=False,
                     )
@@ -215,7 +216,9 @@ class AudioMixin:
         if self._audio_player is None:
             raise AudioUnavailableError("SoX play не настроен")
 
-        level = max(0, min(100, int(volume))) / 100
+        # PiDog presets use 0..100. Apply the same master gain used by speech,
+        # then cap playback at +4 dB to avoid extreme clipping.
+        level = min(1.6, max(0, int(volume)) / 100 * AUDIO_VOLUME_MULTIPLIER)
         environment = os.environ.copy()
         environment["AUDIODEV"] = os.environ.get("PIDOG_ALSA_DEVICE", "robothat")
         process = subprocess.Popen(

@@ -3,13 +3,14 @@ package ru.pidog.voice;
 import android.app.Activity;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.os.Handler;
+import android.os.Looper;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.util.Base64;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
-import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
@@ -24,13 +25,14 @@ import java.util.Set;
 
 /** Synchronizes Android's AI vision screens with the PiDog web control station. */
 final class AiVisionController {
+    private static final long FRAME_REFRESH_MILLIS = 950L;
     private final Activity activity;
     private final RobotClient client;
     private final RobotConnection connection;
     private final String languageTag;
 
-    private final ImageView frameImage;
-    private final ImageView commandsFrameImage;
+    private final AiVisionFrameView frameImage;
+    private final AiVisionFrameView commandsFrameImage;
     private final TextView status;
     private final TextView commandsStatus;
     private final TextView error;
@@ -49,6 +51,10 @@ final class AiVisionController {
     private String selectedTarget = "";
     private boolean loadingFrame;
     private boolean loadingTargets;
+    private boolean pageActive;
+    private boolean appResumed = true;
+    private final Handler handler = new Handler(Looper.getMainLooper());
+    private final Runnable framePoll = this::pollFrame;
     private final Map<String, Recognition> recognitions = new LinkedHashMap<>();
     private final SimpleDateFormat timeFormat = new SimpleDateFormat("HH:mm:ss", Locale.US);
 
@@ -99,17 +105,44 @@ final class AiVisionController {
         };
         faceNames.addTextChangedListener(selectionWatcher);
         objectName.addTextChangedListener(selectionWatcher);
+        AiVisionFrameView.Listener boxListener = new AiVisionFrameView.Listener() {
+            @Override public void onFaceSelected(RobotClient.AiVisionFace face) {
+                selectedFace = face;
+                selectedObject = null;
+                renderSelectionControls();
+            }
+
+            @Override public void onObjectSelected(RobotClient.AiVisionObject object) {
+                selectedObject = object;
+                selectedFace = null;
+                renderSelectionControls();
+            }
+        };
+        frameImage.setListener(boxListener);
+        commandsFrameImage.setListener(boxListener);
         renderRecognitionLog();
         renderSelectionControls();
     }
 
     void onPageChanged(int page, int visionPage, int commandsPage) {
+        pageActive = page == visionPage || page == commandsPage;
         if (page == visionPage) {
             refreshFrame();
         } else if (page == commandsPage) {
             refreshTargets();
             refreshFrame();
         }
+        updatePolling();
+    }
+
+    void onResume() {
+        appResumed = true;
+        updatePolling();
+    }
+
+    void onPause() {
+        appResumed = false;
+        handler.removeCallbacks(framePoll);
     }
 
     private void startCameraAndRefresh() {
@@ -139,6 +172,7 @@ final class AiVisionController {
                         showError(detail);
                         setStatus(text("AI · НЕДОСТУПНО", "AI · UNAVAILABLE"));
                         connection.showStatus(detail, R.color.danger);
+                        updatePolling();
                         return;
                     }
                     applyFrame(data);
@@ -149,6 +183,7 @@ final class AiVisionController {
                                     text("см", "cm"));
                     setStatus(text("AI · ГОТОВО · ", "AI · READY · ") + distance);
                     connection.showStatus(text("AI-кадр обновлён", "AI frame updated"), R.color.brand);
+                    updatePolling();
                 });
     }
 
@@ -157,8 +192,9 @@ final class AiVisionController {
             try {
                 byte[] bytes = Base64.decode(data.frameJpeg, Base64.DEFAULT);
                 Bitmap image = BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
-                frameImage.setImageBitmap(image);
-                commandsFrameImage.setImageBitmap(image);
+                frameImage.setFrame(image, data.frameWidth, data.frameHeight, data.faces, data.objects);
+                commandsFrameImage.setFrame(image, data.frameWidth, data.frameHeight,
+                        data.faces, data.objects);
             } catch (IllegalArgumentException error) {
                 showError(text("Не удалось открыть AI-кадр", "Could not open the AI frame"));
             }
@@ -222,6 +258,8 @@ final class AiVisionController {
                 : text("Запомнить лицо и имена", "Remember face and names"));
         rememberObject.setText(selectedObject == null ? text("Выберите предмет на кадре", "Select an object from the frame")
                 : text("Запомнить предмет", "Remember object"));
+        frameImage.setSelection(selectedFace, selectedObject);
+        commandsFrameImage.setSelection(selectedFace, selectedObject);
     }
 
     private void saveFace() {
@@ -424,6 +462,17 @@ final class AiVisionController {
     private void setStatus(String value) {
         status.setText(value);
         commandsStatus.setText(value);
+    }
+
+    private void pollFrame() {
+        refreshFrame();
+    }
+
+    private void updatePolling() {
+        handler.removeCallbacks(framePoll);
+        if (pageActive && appResumed) {
+            handler.postDelayed(framePoll, FRAME_REFRESH_MILLIS);
+        }
     }
 
     private void showError(String value) {

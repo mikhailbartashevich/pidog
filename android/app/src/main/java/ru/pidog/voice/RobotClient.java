@@ -183,13 +183,17 @@ public final class RobotClient {
         public final List<AiVisionObject> objects;
         public final float distanceCm;
         public final String frameJpeg;
+        public final int frameWidth;
+        public final int frameHeight;
 
         AiVisionData(List<AiVisionFace> faces, List<AiVisionObject> objects,
-                     float distanceCm, String frameJpeg) {
+                     float distanceCm, String frameJpeg, int frameWidth, int frameHeight) {
             this.faces = faces;
             this.objects = objects;
             this.distanceCm = distanceCm;
             this.frameJpeg = frameJpeg;
+            this.frameWidth = frameWidth;
+            this.frameHeight = frameHeight;
         }
     }
 

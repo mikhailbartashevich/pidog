@@ -72,7 +72,8 @@ final class RobotResponseParser {
         }
         return new RobotClient.AiVisionData(faces, objects,
                 root.isNull("distance_cm") ? -1 : (float) root.optDouble("distance_cm"),
-                root.optString("frame_jpeg", ""));
+                root.optString("frame_jpeg", ""), root.optInt("frame_width", 4),
+                root.optInt("frame_height", 3));
     }
 
     List<RobotClient.AiVisionTarget> parseAiVisionTargets(String response) throws JSONException {
