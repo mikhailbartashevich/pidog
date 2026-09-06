@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import time
 import threading
+import base64
 from pathlib import Path
 from typing import Any
 
@@ -229,6 +230,132 @@ class VisionMixin:
         self._cancel_behavior()
         self._dog.head_move([[0, 0, 0]], immediately=True, speed=65)
         return {"active": False, "message": "Слежение за предметом остановлено"}
+
+    def _follow_ai_target(self) -> dict[str, Any]:
+        """Track a Pi 5 confirmed person/known face; movement stays head-only."""
+        if not self._remote_vision.status["configured"]:
+            raise RuntimeError("удалённое зрение не настроено")
+        self._ensure_camera()
+        self._start_behavior("ai-target", self._follow_ai_target_worker)
+        return {"active": True, "message": "Пайдог ищет человека через AI Pi"}
+
+    def _stop_ai_target(self) -> dict[str, Any]:
+        self._cancel_behavior()
+        self._dog.head_move([[0, 0, 0]], immediately=True, speed=65)
+        return {"active": False, "message": "Слежение через AI Pi остановлено"}
+
+    def ai_vision_infer(self) -> dict[str, Any]:
+        """Return one analysed camera frame and aligned overlays for the web UI."""
+        if not self._remote_vision.status["configured"]:
+            raise RuntimeError("удалённое зрение не настроено")
+        self._ensure_camera()
+        frame = self._camera_frame(timeout=1.5)
+        result: dict[str, Any] = self._remote_vision.infer(frame)
+        try:
+            import cv2
+            encoded, jpeg = cv2.imencode(".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, 76])
+        except Exception as error:
+            raise RuntimeError(f"не удалось подготовить кадр для веб-панели: {error}") from error
+        if not encoded:
+            raise RuntimeError("не удалось подготовить кадр для веб-панели")
+        # This image is the exact frame sent to the AI Pi, so its boxes and
+        # click targets remain aligned even while the separate MJPEG stream
+        # advances to a newer frame.
+        result["frame_jpeg"] = base64.b64encode(jpeg.tobytes()).decode("ascii")
+        result["frame_width"] = int(frame.shape[1])
+        result["frame_height"] = int(frame.shape[0])
+        return result
+
+    def ai_vision_enroll(self, names: list[str], face: dict[str, Any]) -> dict[str, Any]:
+        """Send only the face selected in the browser to the private AI Pi registry."""
+        if not self._remote_vision.status["configured"]:
+            raise RuntimeError("удалённое зрение не настроено")
+        normalized_names = list(dict.fromkeys(
+            name.strip() for name in names
+            if isinstance(name, str) and name.strip() and len(name.strip()) <= 48
+        ))
+        if not normalized_names or len(normalized_names) != len(names):
+            raise ValueError("каждое имя должно содержать от 1 до 48 символов")
+        values = [face.get(key) for key in ("x", "y", "w", "h")]
+        if not all(isinstance(value, (int, float)) and not isinstance(value, bool) for value in values):
+            raise ValueError("нужна корректно выбранная рамка лица")
+        x, y, width, height = (float(value) for value in values)
+        if width <= 0 or height <= 0 or x < 0 or y < 0 or x + width > 1 or y + height > 1:
+            raise ValueError("рамка лица вне кадра")
+        self._ensure_camera()
+        image = self._camera_frame(timeout=1.5)
+        image_height, image_width = image.shape[:2]
+        # Add context around the clicked face. It gives YuNet enough forehead
+        # and jaw pixels to align the face, while excluding other people.
+        padding = 0.25
+        left = max(0, int((x - width * padding) * image_width))
+        top = max(0, int((y - height * padding) * image_height))
+        right = min(image_width, int((x + width * (1 + padding)) * image_width))
+        bottom = min(image_height, int((y + height * (1 + padding)) * image_height))
+        crop = image[top:bottom, left:right]
+        if crop.size == 0:
+            raise RuntimeError("не удалось вырезать лицо из кадра")
+        for name in normalized_names:
+            self._remote_vision.enroll(name, crop)
+        return {"name": normalized_names[0], "names": normalized_names}
+
+    def ai_vision_enroll_object(self, name: str, box: dict[str, Any]) -> dict[str, Any]:
+        """Store the labelled object selected on the analysed frame."""
+        if not self._remote_vision.status["configured"]:
+            raise RuntimeError("удалённое зрение не настроено")
+        if not isinstance(name, str) or not name.strip() or len(name) > 48:
+            raise ValueError("имя должно содержать от 1 до 48 символов")
+        values = [box.get(key) for key in ("x", "y", "w", "h")]
+        if not all(isinstance(value, (int, float)) and not isinstance(value, bool) for value in values):
+            raise ValueError("нужна корректно выбранная рамка предмета")
+        x, y, width, height = (float(value) for value in values)
+        if width <= 0 or height <= 0 or x < 0 or y < 0 or x + width > 1 or y + height > 1:
+            raise ValueError("рамка предмета вне кадра")
+        self._ensure_camera()
+        image = self._camera_frame(timeout=1.5)
+        image_height, image_width = image.shape[:2]
+        left, top = int(x * image_width), int(y * image_height)
+        right, bottom = int((x + width) * image_width), int((y + height) * image_height)
+        crop = image[top:bottom, left:right]
+        if crop.size == 0:
+            raise RuntimeError("не удалось вырезать предмет из кадра")
+        return self._remote_vision.enroll_object(name.strip(), crop)
+
+    def _follow_ai_target_worker(self, stop_event: threading.Event) -> None:
+        """Keep motors local and tolerate an unavailable AI Pi without motion."""
+        from .remote_vision import RemoteVisionError
+
+        yaw = pitch = 0.0
+        misses = 0
+        while not stop_event.wait(0.18):
+            try:
+                result = self._remote_vision.infer(self._camera_frame(timeout=0.4))
+            except (RemoteVisionError, RuntimeError) as error:
+                LOG.warning("AI vision frame skipped: %s", error)
+                if misses >= 5:
+                    return
+                misses += 1
+                continue
+            target = self._ai_target(result)
+            if target is None:
+                misses += 1
+                if misses >= 12:
+                    return
+                continue
+            misses = 0
+            center_x = float(target["x"]) + float(target["w"]) / 2
+            center_y = float(target["y"]) + float(target["h"]) / 2
+            yaw = self._clamp(yaw + (0.5 - center_x) * 35, -80, 80)
+            pitch = self._clamp(pitch + (0.5 - center_y) * 22, -30, 30)
+            self._dog.head_move([[yaw, 0, pitch]], immediately=True, speed=75)
+
+    @staticmethod
+    def _ai_target(result: dict[str, list[dict[str, Any]]]) -> dict[str, Any] | None:
+        known = [face for face in result["faces"] if isinstance(face.get("name"), str)]
+        people = [item for item in result["objects"] if item.get("label") == "person"]
+        candidates = known or people
+        valid = [item for item in candidates if all(isinstance(item.get(key), (int, float)) for key in ("x", "y", "w", "h"))]
+        return max(valid, key=lambda item: float(item["w"]) * float(item["h"]), default=None)
 
     def _camera_frame(self, timeout: float = 2.0) -> Any:
         deadline = time.monotonic() + timeout

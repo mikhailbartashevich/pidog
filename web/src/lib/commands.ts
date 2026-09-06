@@ -223,6 +223,22 @@ export const actionGroups: ActionGroup[] = [
         'Stop tracking',
         '#8297a3',
       ),
+      action(
+        'follow_ai_target',
+        'Следить через AI Pi',
+        'Follow through AI Pi',
+        'Искать человека или знакомое лицо',
+        'Find a person or known face',
+        '#18d5ff',
+      ),
+      action(
+        'stop_ai_target',
+        'Стоп AI-слежение',
+        'Stop AI tracking',
+        'Остановить слежение через AI Pi',
+        'Stop tracking through the AI Pi',
+        '#8297a3',
+      ),
     ],
   },
   {

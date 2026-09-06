@@ -31,6 +31,10 @@ export type HealthResponse = {
   audio?: Record<string, unknown>
   local_voice?: Record<string, unknown>
   assistant?: AssistantStatus
+  remote_vision?: {
+    configured?: boolean
+    url?: string | null
+  }
 }
 
 export type SensorsResponse = {
@@ -96,4 +100,43 @@ export type AssistantControlResponse = {
 export type ClearAssistantHistoryResponse = {
   ok: true
   message?: string
+}
+
+export type VisionBox = {
+  x: number
+  y: number
+  w: number
+  h: number
+  score?: number
+}
+
+export type VisionObject = VisionBox & {
+  label: string
+  name?: string
+  memory_score?: number
+}
+
+export type VisionFace = VisionBox & {
+  name: string | null
+  names?: string[]
+}
+
+export type VisionInferenceResponse = {
+  ok: true
+  objects: VisionObject[]
+  faces: VisionFace[]
+  frame_jpeg?: string
+  frame_width?: number
+  frame_height?: number
+}
+
+export type VisionEnrollResponse = {
+  ok: true
+  name: string
+  names?: string[]
+}
+
+export type VisionObjectEnrollResponse = {
+  ok: true
+  name: string
 }

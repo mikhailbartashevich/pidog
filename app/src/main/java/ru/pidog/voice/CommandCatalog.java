@@ -46,6 +46,7 @@ public final class CommandCatalog {
                     RobotCommand.FIND_BLUE, RobotCommand.FIND_PURPLE,
                     RobotCommand.FOLLOW_FACE, RobotCommand.STOP_FACE_FOLLOW,
                     RobotCommand.FOLLOW_OBJECT, RobotCommand.STOP_OBJECT_FOLLOW,
+                    RobotCommand.FOLLOW_AI_TARGET, RobotCommand.STOP_AI_TARGET,
                     RobotCommand.CAMERA_ON, RobotCommand.CAMERA_OFF),
             new Group("ДАТЧИКИ", "SENSORS",
                     RobotCommand.MEASURE_DISTANCE, RobotCommand.LISTEN_SOUND,

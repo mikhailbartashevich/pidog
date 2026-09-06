@@ -70,7 +70,6 @@ async function mockPiDogApi(page: Page) {
 }
 
 async function connectToMockPiDog(page: Page) {
-  await page.getByRole('button', { name: 'Настроить подключение' }).click()
   await page.getByRole('button', { name: 'Проверить и сохранить' }).click()
   await expect(page.getByText(/На связи/)).toBeVisible()
 }
@@ -89,18 +88,21 @@ test.describe('PiDog control station E2E', () => {
     )
     const navigation = page.locator('aside')
     const screens = [
-      ['Голос', 'Голосовое управление'],
-      ['Команды', 'Все команды'],
-      ['Сенсоры', 'Сенсоры и свет'],
-      ['LLM', 'Локальный Пайдог'],
-      ['Пульт', 'ХОД / ПОВОРОТ'],
+      ['AI зрение', 'AI-зрение и память', /#\/ai-vision$/],
+      ['Голос', 'Голосовое управление', /#\/voice$/],
+      ['Команды', 'Все команды', /#\/commands$/],
+      ['Сенсоры', 'Сенсоры и свет', /#\/sensors$/],
+      ['LLM', 'Локальный Пайдог', /#\/llm$/],
+      ['Пульт', 'ХОД / ПОВОРОТ', /#\/$/],
     ] as const
 
-    for (const [navigationLabel, heading] of screens) {
+    for (const [navigationLabel, heading, url] of screens) {
       // eslint-disable-next-line no-await-in-loop
       await navigation.getByRole('button', { name: navigationLabel, exact: true }).click()
       // eslint-disable-next-line no-await-in-loop
       await expect(page.getByText(heading, { exact: true })).toBeVisible()
+      // eslint-disable-next-line no-await-in-loop
+      await expect(page).toHaveURL(url)
     }
   })
 

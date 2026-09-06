@@ -23,4 +23,10 @@ export type {
   HeadResponse,
   HealthResponse,
   SensorsResponse,
+  VisionBox,
+  VisionEnrollResponse,
+  VisionFace,
+  VisionInferenceResponse,
+  VisionObject,
+  VisionObjectEnrollResponse,
 } from './api/types'

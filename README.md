@@ -199,6 +199,33 @@ corepack yarn check
 After updating an existing Raspberry Pi installation, copy the refreshed `pidog_voice` package and
 restart `pidog-voice` so browser preflight requests are accepted.
 
+### Deploy the production web panel
+
+Build the panel locally, then upload only the generated `web/dist/` directory to the PiDog web
+service directory. The panel uses hash routes (for example, `/#/ai-vision`), so opening or
+refreshing a page works with the built-in Python HTTP server and does not require server-side route
+rewrites.
+
+```bash
+cd web
+corepack yarn lint && corepack yarn test && corepack yarn build
+PIDOG_WEB_ARCHIVE=/tmp/pidog-web-$(date +%Y%m%d-%H%M%S).tgz
+tar -C dist -czf "$PIDOG_WEB_ARCHIVE" .
+scp "$PIDOG_WEB_ARCHIVE" mikhail@PIDOG_IP:/home/mikhail/
+```
+
+On PiDog, unpack the archive in a unique staging directory, check that it contains `index.html`,
+and replace `/home/mikhail/pidog-web` only after retaining the previous directory as a rollback
+copy. Then restart the user web service and verify the HTTP response:
+
+```bash
+systemctl --user restart pidog-web.service
+curl --fail http://127.0.0.1:8088/
+```
+
+The `pidog-web.service` unit serves static files only; deploying the web panel does not restart the
+motor, camera, voice, or vision services.
+
 ## 3. Build the Android app
 
 Requirements: Android Studio, or JDK 17+ and Android SDK 36. The project uses AGP 9.3 and Gradle 9.5. JDK 17 remains the target Java toolchain for maximum Android code compatibility.

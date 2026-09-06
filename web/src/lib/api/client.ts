@@ -10,6 +10,11 @@ import type {
   HeadResponse,
   HealthResponse,
   SensorsResponse,
+  VisionEnrollResponse,
+  VisionFace,
+  VisionInferenceResponse,
+  VisionObject,
+  VisionObjectEnrollResponse,
 } from './types'
 
 type ErrorPayload = {
@@ -95,5 +100,23 @@ export const pidogApi = {
     request<ClearAssistantHistoryResponse>(settings, '/assistant/history', {
       method: 'POST',
       body: JSON.stringify({ action: 'clear' }),
+    }),
+  visionInfer: (settings: ConnectionSettings) =>
+    request<VisionInferenceResponse>(settings, '/vision/infer', {
+      method: 'POST',
+      body: JSON.stringify({}),
+    }),
+  visionEnroll: (settings: ConnectionSettings, names: string[], face: VisionFace) =>
+    request<VisionEnrollResponse>(settings, '/vision/enroll', {
+      method: 'POST',
+      body: JSON.stringify({ names, face: { x: face.x, y: face.y, w: face.w, h: face.h } }),
+    }),
+  visionObjectEnroll: (settings: ConnectionSettings, name: string, object: VisionObject) =>
+    request<VisionObjectEnrollResponse>(settings, '/vision/objects/enroll', {
+      method: 'POST',
+      body: JSON.stringify({
+        name,
+        object: { x: object.x, y: object.y, w: object.w, h: object.h },
+      }),
     }),
 }

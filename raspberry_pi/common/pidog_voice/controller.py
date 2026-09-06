@@ -14,6 +14,7 @@ from .audio import AudioMixin, _DeferredMusic
 from .assistant import AssistantManager
 from .constants import COMMAND_COLORS, LOG
 from .sensors import SensorsMixin
+from .remote_vision import RemoteVisionClient
 from .vision import VisionMixin
 from .voice import LocalVoiceListener
 
@@ -48,6 +49,7 @@ class RobotController(AudioMixin, VisionMixin, SensorsMixin):
         self._power_samples: deque[tuple[float, float]] = deque()
         self._external_power: bool | None = None
         self._assistant = AssistantManager(dry_run=dry_run)
+        self._remote_vision = RemoteVisionClient()
         self._local_voice = LocalVoiceListener(
             self._execute_local_voice, conversation=self._execute_local_conversation)
         if not dry_run:
@@ -118,6 +120,8 @@ class RobotController(AudioMixin, VisionMixin, SensorsMixin):
             "stop_face_follow": self._stop_face_follow,
             "follow_object": self._follow_object,
             "stop_object_follow": self._stop_object_follow,
+            "follow_ai_target": self._follow_ai_target,
+            "stop_ai_target": self._stop_ai_target,
             "camera_on": self._camera_on,
             "camera_off": self._camera_off,
         }
@@ -160,6 +164,10 @@ class RobotController(AudioMixin, VisionMixin, SensorsMixin):
     @property
     def assistant_status(self) -> dict[str, Any]:
         return self._assistant.status
+
+    @property
+    def remote_vision_status(self) -> dict[str, Any]:
+        return self._remote_vision.status
 
     def assistant_control(self, action: str) -> dict[str, Any]:
         return self._assistant.control(action)

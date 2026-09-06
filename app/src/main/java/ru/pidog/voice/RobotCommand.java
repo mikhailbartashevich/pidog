@@ -35,6 +35,8 @@ public enum RobotCommand {
     STOP_FACE_FOLLOW("stop_face_follow", "Остановить слежение за лицом", "Stop face tracking"),
     FOLLOW_OBJECT("follow_object", "Следить за предметом в центре", "Follow centered object"),
     STOP_OBJECT_FOLLOW("stop_object_follow", "Остановить слежение за предметом", "Stop object tracking"),
+    FOLLOW_AI_TARGET("follow_ai_target", "Следить через AI Pi", "Follow through AI Pi"),
+    STOP_AI_TARGET("stop_ai_target", "Остановить AI-слежение", "Stop AI tracking"),
     CAMERA_ON("camera_on", "Включить камеру", "Turn camera on"),
     CAMERA_OFF("camera_off", "Выключить камеру", "Turn camera off"),
     LIGHT_RED("light_red", "Свет: красный", "Light: red"),

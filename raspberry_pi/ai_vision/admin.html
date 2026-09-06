@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#071522">
+  <title>PiDog · AI memory</title>
+  <style>
+    :root { color-scheme: dark; font-family: Inter, system-ui, sans-serif; background:#071522; color:#eaf7ff; }
+    * { box-sizing:border-box; } body { margin:0; min-height:100vh; background:radial-gradient(circle at 20% 0,#103454,#071522 52%); }
+    main { max-width:1120px; margin:auto; padding:32px 20px 60px; } h1 { margin:0; font-size:clamp(26px,4vw,42px); } h2 { margin:0; font-size:18px; }
+    p { color:#a9c1d2; line-height:1.5; } .eyebrow { color:#18d5ff; font-size:12px; font-weight:800; letter-spacing:.12em; }
+    .card { background:#0b1d2d; border:1px solid #24465f; border-radius:18px; padding:20px; margin-top:18px; box-shadow:0 18px 40px #0003; }
+    .row { display:flex; flex-wrap:wrap; gap:10px; align-items:center; } input { min-width:240px; flex:1; border:1px solid #3b607a; border-radius:10px; background:#06121e; color:#fff; padding:12px; font:inherit; }
+    button { border:0; border-radius:10px; padding:11px 14px; font:inherit; font-weight:750; cursor:pointer; color:#001018; background:#18d5ff; } button.secondary { background:#18374d; color:#eaf7ff; } button.danger { background:#ff7593; } button:disabled { opacity:.5; cursor:not-allowed; }
+    #app { display:none; } .toolbar { justify-content:space-between; } .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:14px; margin-top:14px; }
+    .entry { overflow:hidden; padding:0; } .picture { width:100%; height:175px; display:grid; place-items:center; background:#06121e; color:#7192a8; } .picture img { width:100%; height:100%; object-fit:cover; }
+    .entry-body { padding:13px; } .entry-name { font-weight:800; font-size:17px; overflow-wrap:anywhere; } .kind { color:#18d5ff; font-size:12px; margin-top:4px; }
+    .entry .row { margin-top:12px; } .entry input { min-width:0; width:100%; padding:9px; } .entry button { padding:8px 10px; font-size:13px; }
+    .notice { min-height:24px; color:#a9c1d2; margin-top:12px; } .error { color:#ff9caf; } .empty { border:1px dashed #3b607a; border-radius:12px; padding:20px; color:#a9c1d2; text-align:center; }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="eyebrow">PI 5 · PRIVATE LOCAL MEMORY</div>
+    <h1>PiDog AI memory</h1>
+    <p>Локальная база имён, миниатюр и признаков распознавания. Данные остаются на этом Pi 5.</p>
+    <section id="login" class="card">
+      <h2>Открыть защищённую базу</h2>
+      <p>Введите отдельный PiDog vision token. Он не является токеном обычного веб-пульта.</p>
+      <div class="row"><input id="token" type="password" autocomplete="off" placeholder="Vision token"><button id="open">Открыть</button></div>
+      <div id="login-note" class="notice"></div>
+    </section>
+    <section id="app">
+      <div class="card toolbar row"><div><h2>Сохранённые записи</h2><p id="summary">Загрузка…</p></div><div class="row"><button class="secondary" id="reload">Обновить</button><button class="secondary" id="lock">Закрыть</button></div></div>
+      <section class="card"><h2>Люди</h2><div id="faces" class="grid"></div></section>
+      <section class="card"><h2>Предметы</h2><div id="objects" class="grid"></div></section>
+    </section>
+  </main>
+  <script>
+    const login = document.querySelector('#login'), app = document.querySelector('#app');
+    const note = document.querySelector('#login-note'), tokenInput = document.querySelector('#token');
+    let token = sessionStorage.getItem('pidogVisionToken') || '';
+    tokenInput.value = token;
+    const headers = () => ({ 'X-PiDog-Vision-Token': token });
+    const request = async (path, init = {}) => {
+      const response = await fetch(path, { ...init, headers: { ...headers(), ...(init.headers || {}) } });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || data.detail || `HTTP ${response.status}`);
+      return data;
+    };
+    const setNote = (message, error = false) => { note.textContent = message; note.className = `notice${error ? ' error' : ''}`; };
+    const escapeHtml = (value) => String(value).replace(/[&<>'"]/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;' })[c]);
+    const makeEntry = (kind, entry) => {
+      const card = document.createElement('article'); card.className = 'card entry';
+      const picture = entry.image_jpeg ? `<img alt="${escapeHtml(entry.name)}" src="data:image/jpeg;base64,${entry.image_jpeg}">` : '<span>Нет сохранённой картинки</span>';
+      card.innerHTML = `<div class="picture">${picture}</div><div class="entry-body"><div class="entry-name">${escapeHtml(entry.name)}</div><div class="kind">${kind === 'faces' ? 'Лицо / aliases use separate entries' : 'Подписанный предмет'}</div><div class="row"><input aria-label="Новое имя" value="${escapeHtml(entry.name)}"><button class="secondary rename">Переименовать</button><button class="danger delete">Удалить</button></div></div>`;
+      const input = card.querySelector('input');
+      card.querySelector('.rename').onclick = async () => {
+        const name = input.value.trim(); if (!name || name === entry.name) return;
+        try { await request(`/${kind}/${encodeURIComponent(entry.name)}`, { method:'PATCH', headers:{ 'Content-Type':'application/json' }, body:JSON.stringify({ name }) }); await load(); } catch (error) { alert(`Не удалось переименовать: ${error.message}`); }
+      };
+      card.querySelector('.delete').onclick = async () => {
+        if (!confirm(`Удалить «${entry.name}» из локальной базы?`)) return;
+        try { await request(`/${kind}/${encodeURIComponent(entry.name)}`, { method:'DELETE' }); await load(); } catch (error) { alert(`Не удалось удалить: ${error.message}`); }
+      };
+      return card;
+    };
+    const render = (target, kind, entries) => {
+      target.replaceChildren();
+      if (!entries.length) { target.innerHTML = '<div class="empty">Пока нет сохранённых записей.</div>'; return; }
+      entries.forEach(entry => target.append(makeEntry(kind, entry)));
+    };
+    async function load() {
+      try {
+        const memory = await request('/memory');
+        render(document.querySelector('#faces'), 'faces', memory.faces || []);
+        render(document.querySelector('#objects'), 'objects', memory.objects || []);
+        document.querySelector('#summary').textContent = `Лиц: ${(memory.faces || []).length} · предметов: ${(memory.objects || []).length}`;
+        login.style.display = 'none'; app.style.display = 'block'; setNote('');
+      } catch (error) { app.style.display = 'none'; login.style.display = 'block'; setNote(`Не удалось открыть базу: ${error.message}`, true); }
+    }
+    document.querySelector('#open').onclick = () => { token = tokenInput.value.trim(); sessionStorage.setItem('pidogVisionToken', token); load(); };
+    tokenInput.addEventListener('keydown', event => { if (event.key === 'Enter') document.querySelector('#open').click(); });
+    document.querySelector('#reload').onclick = load;
+    document.querySelector('#lock').onclick = () => { token = ''; sessionStorage.removeItem('pidogVisionToken'); app.style.display = 'none'; login.style.display = 'block'; tokenInput.value = ''; };
+    if (token) load();
+  </script>
+</body>
+</html>

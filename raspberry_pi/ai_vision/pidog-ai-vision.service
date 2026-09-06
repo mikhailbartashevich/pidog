@@ -1,0 +1,19 @@
+[Unit]
+Description=PiDog Pi 5 Hailo vision service
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=mikhail
+Group=mikhail
+EnvironmentFile=/etc/pidog-ai-vision.env
+Environment=HOME=/var/lib/pidog-ai-vision
+ExecStart=/home/mikhail/hailo-apps/venv_hailo_apps/bin/python3 /opt/pidog-ai-vision/pidog_ai_vision.py --host 0.0.0.0 --port 8790
+Restart=on-failure
+RestartSec=3
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

@@ -1,8 +1,15 @@
-import type { AssistantStatus, ChatResponse, ConnectionSettings, SensorsResponse } from '../lib/api'
+import type {
+  AssistantStatus,
+  ChatResponse,
+  ConnectionSettings,
+  SensorsResponse,
+  VisionFace,
+  VisionObject,
+} from '../lib/api'
 import type { Language } from '../lib/commands'
 import type { VoiceMatch } from '../lib/voiceCommands'
 
-export type Page = 'cockpit' | 'voice' | 'commands' | 'sensors' | 'assistant'
+export type Page = 'cockpit' | 'vision' | 'voice' | 'commands' | 'sensors' | 'assistant'
 export type SpeechTarget = 'command' | 'assistant'
 export type Axis = 'drive' | 'turn'
 export type Direction = -1 | 0 | 1
@@ -58,6 +65,18 @@ export type SensorsPageProps = PageProps & {
   connected: boolean
   onRefresh: () => void
   onCommand: (command: string) => void
+}
+
+export type AiVisionPageProps = PageProps & {
+  connected: boolean
+  configured: boolean
+  streaming: boolean
+  streamNonce: number
+  settings: ConnectionSettings
+  onCommand: (command: string) => void
+  onEnroll: (names: string[], face: VisionFace) => Promise<string[]>
+  onEnrollObject: (name: string, object: VisionObject) => Promise<string>
+  onHead: (x: number, y: number) => void
 }
 
 export type AssistantPageProps = PageProps & {

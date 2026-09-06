@@ -1,0 +1,16 @@
+[Unit]
+Description=PiDog web control panel
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/pidog-web
+ExecStart=/usr/bin/python3 -m http.server 8088 --bind 0.0.0.0 --directory %h/pidog-web
+Restart=on-failure
+RestartSec=3
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=default.target

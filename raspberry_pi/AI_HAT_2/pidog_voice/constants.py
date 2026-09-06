@@ -21,6 +21,7 @@ COMMAND_COLORS = {
     "approach_obstacle": "#00A878", "follow_face": "#EC407A",
     "stop_face_follow": "#78909C", "follow_object": "#7E57C2",
     "stop_object_follow": "#78909C",
+    "follow_ai_target": "#00BCD4", "stop_ai_target": "#78909C",
     "measure_distance": "#26C6DA", "listen_sound": "#AB47BC",
     "show_battery": "#66BB6A",
     "local_voice_on": "#00D9FF", "local_voice_off": "#78909C",

@@ -35,6 +35,8 @@ class RequestHandler(BaseHTTPRequestHandler):
             "/health", "/sensors", "/assistant/status", "/command",
             "/head",
             "/assistant/control", "/assistant/chat", "/assistant/history",
+            "/vision/infer", "/vision/enroll",
+            "/vision/objects/enroll",
         }:
             self._json(HTTPStatus.NOT_FOUND, {"ok": False, "error": "not found"})
             return
@@ -55,6 +57,7 @@ class RequestHandler(BaseHTTPRequestHandler):
                 "audio": self.server.controller.audio_status,
                 "local_voice": self.server.controller.local_voice_status,
                 "assistant": self.server.controller.assistant_status,
+                "remote_vision": self.server.controller.remote_vision_status,
                 "commands": self.server.controller.commands,
             })
             return
@@ -78,6 +81,8 @@ class RequestHandler(BaseHTTPRequestHandler):
         if self.path not in {
             "/command", "/head", "/assistant/control", "/assistant/chat",
             "/assistant/history",
+            "/vision/infer", "/vision/enroll",
+            "/vision/objects/enroll",
         }:
             self._json(HTTPStatus.NOT_FOUND, {"ok": False, "error": "not found"})
             return
@@ -120,6 +125,15 @@ class RequestHandler(BaseHTTPRequestHandler):
         if self.path == "/head":
             self._move_head(payload)
             return
+        if self.path == "/vision/infer":
+            self._vision_infer()
+            return
+        if self.path == "/vision/enroll":
+            self._vision_enroll(payload)
+            return
+        if self.path == "/vision/objects/enroll":
+            self._vision_object_enroll(payload)
+            return
 
         command = payload.get("command")
         if not isinstance(command, str) or command not in self.server.controller.commands:
@@ -146,6 +160,57 @@ class RequestHandler(BaseHTTPRequestHandler):
             })
             return
         self._json(HTTPStatus.ACCEPTED, {"ok": True, "command": command, **result})
+
+    def _vision_infer(self) -> None:
+        try:
+            result = self.server.controller.ai_vision_infer()
+        except Exception as error:
+            LOG.warning("AI vision inference failed: %s", error)
+            self._json(HTTPStatus.SERVICE_UNAVAILABLE, {
+                "ok": False, "error": "AI vision unavailable", "detail": str(error)[:300],
+            })
+            return
+        self._json(HTTPStatus.OK, {"ok": True, **result})
+
+    def _vision_enroll(self, payload: dict[str, Any]) -> None:
+        face = payload.get("face")
+        names = payload.get("names")
+        if names is None and isinstance(payload.get("name"), str):
+            names = [payload["name"]]
+        if (not isinstance(names, list) or not names or not all(isinstance(name, str) for name in names)
+                or not isinstance(face, dict)):
+            self._json(HTTPStatus.BAD_REQUEST, {"ok": False, "error": "names and face are required"})
+            return
+        try:
+            result = self.server.controller.ai_vision_enroll(names, face)
+        except (ValueError, RuntimeError) as error:
+            self._json(HTTPStatus.CONFLICT, {"ok": False, "error": str(error)[:300]})
+            return
+        except Exception as error:
+            LOG.exception("AI face enrollment failed")
+            self._json(HTTPStatus.SERVICE_UNAVAILABLE, {
+                "ok": False, "error": "AI face enrollment unavailable", "detail": str(error)[:300],
+            })
+            return
+        self._json(HTTPStatus.CREATED, {"ok": True, **result})
+
+    def _vision_object_enroll(self, payload: dict[str, Any]) -> None:
+        name, box = payload.get("name"), payload.get("object")
+        if not isinstance(name, str) or not isinstance(box, dict):
+            self._json(HTTPStatus.BAD_REQUEST, {"ok": False, "error": "name and object are required"})
+            return
+        try:
+            result = self.server.controller.ai_vision_enroll_object(name, box)
+        except (ValueError, RuntimeError) as error:
+            self._json(HTTPStatus.CONFLICT, {"ok": False, "error": str(error)[:300]})
+            return
+        except Exception as error:
+            LOG.exception("AI object enrollment failed")
+            self._json(HTTPStatus.SERVICE_UNAVAILABLE, {
+                "ok": False, "error": "AI object enrollment unavailable", "detail": str(error)[:300],
+            })
+            return
+        self._json(HTTPStatus.CREATED, {"ok": True, **result})
 
     def _move_head(self, payload: dict[str, Any]) -> None:
         yaw = payload.get("yaw")

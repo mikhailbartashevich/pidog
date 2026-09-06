@@ -90,6 +90,17 @@ class ServerTest(unittest.TestCase):
         self.assertEqual(200, status)
         self.assertIn("assistant", payload)
 
+    def test_ai_vision_endpoints_need_a_configured_ai_pi(self):
+        status, payload = self.request("POST", "/vision/infer", {})
+        self.assertEqual(503, status)
+        self.assertIn("AI vision", payload["error"])
+
+        status, payload = self.request("POST", "/vision/enroll", {
+            "name": "Mikhail", "face": {"x": 0.2, "y": 0.2, "w": 0.3, "h": 0.3},
+        })
+        self.assertEqual(409, status)
+        self.assertFalse(payload["ok"])
+
     def test_assistant_rejects_oversized_question(self):
         status, payload = self.request(
             "POST", "/assistant/chat", {"message": "x" * 601})

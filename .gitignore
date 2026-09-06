@@ -23,5 +23,7 @@ captures/
 .DS_Store
 __pycache__/
 *.pyc
+node_modules/
 README.ru.md
 DEPLOY_AGENT.md
+AI_VISION_FOR_DUMMY_USER.md

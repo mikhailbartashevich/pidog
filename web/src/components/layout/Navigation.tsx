@@ -4,6 +4,7 @@ import {
   MicRounded,
   RocketLaunchRounded,
   SensorsRounded,
+  VisibilityRounded,
 } from '@mui/icons-material'
 import {
   alpha,
@@ -15,19 +16,32 @@ import {
   Paper,
   Stack,
   Tooltip,
+  Typography,
 } from '@mui/material'
 
 import type { Language } from '../../lib/commands'
 import { tr } from '../../lib/i18n'
 import type { Page } from '../../types/ui'
 
-export const pages: Array<{ id: Page; ru: string; en: string; icon: typeof DashboardRounded }> = [
-  { id: 'cockpit', ru: 'Пульт', en: 'Cockpit', icon: DashboardRounded },
-  { id: 'voice', ru: 'Голос', en: 'Voice', icon: MicRounded },
-  { id: 'commands', ru: 'Команды', en: 'Commands', icon: RocketLaunchRounded },
-  { id: 'sensors', ru: 'Сенсоры', en: 'Sensors', icon: SensorsRounded },
-  { id: 'assistant', ru: 'LLM', en: 'LLM', icon: AutoAwesomeRounded },
+export const pages: Array<{
+  id: Page
+  path: string
+  ru: string
+  en: string
+  icon: typeof DashboardRounded
+}> = [
+  { id: 'cockpit', path: '/', ru: 'Пульт', en: 'Cockpit', icon: DashboardRounded },
+  { id: 'vision', path: '/ai-vision', ru: 'AI зрение', en: 'AI vision', icon: VisibilityRounded },
+  { id: 'voice', path: '/voice', ru: 'Голос', en: 'Voice', icon: MicRounded },
+  { id: 'commands', path: '/commands', ru: 'Команды', en: 'Commands', icon: RocketLaunchRounded },
+  { id: 'sensors', path: '/sensors', ru: 'Сенсоры', en: 'Sensors', icon: SensorsRounded },
+  { id: 'assistant', path: '/llm', ru: 'LLM', en: 'LLM', icon: AutoAwesomeRounded },
 ]
+
+export const pagePath = (page: Page) => pages.find((item) => item.id === page)?.path ?? '/'
+
+export const pageFromPath = (path: string): Page =>
+  pages.find((item) => item.path === path)?.id ?? 'cockpit'
 
 type NavigationProps = {
   page: Page
@@ -67,7 +81,9 @@ export function NavigationRail({ page, language, connected, onPage }: Navigation
               sx={{
                 borderRadius: 2.5,
                 mb: 0.6,
-                minHeight: 54,
+                minHeight: 62,
+                flexDirection: 'column',
+                gap: 0.3,
                 justifyContent: 'center',
                 '&.Mui-selected': { bgcolor: alpha('#18d5ff', 0.12), color: 'primary.light' },
               }}
@@ -75,6 +91,11 @@ export function NavigationRail({ page, language, connected, onPage }: Navigation
               <ListItemIcon sx={{ minWidth: 0, color: 'inherit', justifyContent: 'center' }}>
                 <Icon />
               </ListItemIcon>
+              <Typography
+                sx={{ fontSize: 10, lineHeight: 1, fontWeight: 750, textAlign: 'center' }}
+              >
+                {tr(language, ru, en)}
+              </Typography>
             </ListItemButton>
           </Tooltip>
         ))}
