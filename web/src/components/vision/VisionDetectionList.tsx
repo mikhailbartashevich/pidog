@@ -1,48 +1,13 @@
 import { FaceRounded, SellRounded } from '@mui/icons-material'
 import { Button, Card, CardContent, Stack, Typography } from '@mui/material'
 
-import type { VisionFace, VisionInferenceResponse, VisionObject } from '../../lib/api'
+import type { VisionFace, VisionObject } from '../../lib/api'
 import type { Language } from '../../lib/commands'
 import { tr } from '../../lib/i18n'
+import type { VisionDetection } from './visionDetections'
+import { visionFaceLabel, visionObjectLabel } from './visionLabels'
 
-export type VisionDetection =
-  | { id: string; kind: 'face'; value: VisionFace }
-  | { id: string; kind: 'object'; value: VisionObject }
-
-function faceLabel(face: VisionFace, language: Language) {
-  const names = face.names?.length ? face.names : face.name ? [face.name] : []
-  return names.length ? names.join(' / ') : tr(language, 'Неизвестное лицо', 'Unknown face')
-}
-
-function objectLabel(object: VisionObject, language: Language) {
-  if (object.name) return object.name
-  if (object.label) return `${object.label} · ${Math.round((object.score ?? 0) * 100)}%`
-  return tr(language, 'Предмет', 'Object')
-}
-
-function faceId(face: VisionFace, index: number) {
-  return face.name ?? face.names?.join('/') ?? String(index)
-}
-
-export function mergeVisionDetections(current: VisionDetection[], result: VisionInferenceResponse) {
-  const incoming: VisionDetection[] = [
-    ...result.faces.map((value, index) => ({
-      id: `face:${faceId(value, index)}`,
-      kind: 'face' as const,
-      value,
-    })),
-    ...result.objects.map((value) => ({
-      id: `object:${value.name ?? value.label}`,
-      kind: 'object' as const,
-      value,
-    })),
-  ]
-  return incoming.reduce<VisionDetection[]>((history, next) => {
-    const index = history.findIndex((item) => item.id === next.id)
-    if (index === -1) return [...history, next].slice(-12)
-    return history.map((item, itemIndex) => (itemIndex === index ? next : item))
-  }, current)
-}
+export type { VisionDetection } from './visionDetections'
 
 type VisionDetectionListProps = {
   language: Language
@@ -81,7 +46,7 @@ export function VisionDetectionList({
                 startIcon={<FaceRounded />}
                 onClick={() => onFace(item.value)}
                 sx={{ justifyContent: 'flex-start', textAlign: 'left' }}
-              >{`${tr(language, 'Лицо', 'Face')}: ${faceLabel(item.value, language)}`}</Button>
+              >{`${tr(language, 'Лицо', 'Face')}: ${visionFaceLabel(item.value, language)}`}</Button>
             ) : (
               <Button
                 key={item.id}
@@ -89,7 +54,7 @@ export function VisionDetectionList({
                 startIcon={<SellRounded />}
                 onClick={() => onObject(item.value)}
                 sx={{ justifyContent: 'flex-start', textAlign: 'left' }}
-              >{`${tr(language, 'Предмет', 'Object')}: ${objectLabel(item.value, language)}`}</Button>
+              >{`${tr(language, 'Предмет', 'Object')}: ${visionObjectLabel(item.value, language)}`}</Button>
             ),
           )}
           {items.length === 0 && (
