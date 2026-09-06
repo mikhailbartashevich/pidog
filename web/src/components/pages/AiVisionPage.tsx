@@ -73,6 +73,7 @@ export function AiVisionPage({
   const [selectedFace, setSelectedFace] = useState<VisionFace | null>(null)
   const [selectedObject, setSelectedObject] = useState<VisionObject | null>(null)
   const [names, setNames] = useState<string[]>([])
+  const [nameInput, setNameInput] = useState('')
   const [objectName, setObjectName] = useState('')
   const [error, setError] = useState('')
   const [refreshing, setRefreshing] = useState(false)
@@ -117,12 +118,15 @@ export function AiVisionPage({
   }, [analyze, editing])
 
   const rememberFace = async () => {
-    const cleanNames = [...new Set(names.map((name) => name.trim()).filter(Boolean))]
+    const cleanNames = [
+      ...new Set([...names, nameInput].map((name) => name.trim()).filter(Boolean)),
+    ]
     if (!selectedFace || cleanNames.length === 0) return
     setSaving('face')
     try {
       const storedNames = await onEnroll(cleanNames, selectedFace)
       setNames([])
+      setNameInput('')
       setSelectedFace(null)
       setError('')
       void refresh()
@@ -431,9 +435,11 @@ export function AiVisionPage({
                 freeSolo
                 options={[]}
                 value={names}
+                inputValue={nameInput}
                 onChange={(_event, next) =>
                   setNames(next.map((name) => name.trim()).filter(Boolean))
                 }
+                onInputChange={(_event, next) => setNameInput(next)}
                 disabled={!selectedFace || saving !== null}
                 renderInput={(params) => (
                   <TextField
@@ -442,8 +448,8 @@ export function AiVisionPage({
                     label={tr(language, 'Имёна и варианты', 'Names and variants')}
                     placeholder={tr(
                       language,
-                      'Enter после каждого имени',
-                      'Press Enter after each name',
+                      'Можно сохранить и без Enter',
+                      'You can save without pressing Enter',
                     )}
                   />
                 )}
@@ -455,7 +461,7 @@ export function AiVisionPage({
                 startIcon={
                   saving === 'face' ? <CircularProgress size={16} /> : <PersonAddAlt1Rounded />
                 }
-                disabled={!selectedFace || names.length === 0 || saving !== null}
+                disabled={!selectedFace || (!names.length && !nameInput.trim()) || saving !== null}
                 onClick={() => void rememberFace()}
                 sx={{ mt: 1.1 }}
               >

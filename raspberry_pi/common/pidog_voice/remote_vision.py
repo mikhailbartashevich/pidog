@@ -6,6 +6,7 @@ import json
 import os
 from typing import Any
 from urllib.error import URLError
+from urllib.parse import quote
 from urllib.request import Request, urlopen
 
 
@@ -29,11 +30,11 @@ class RemoteVisionClient:
 
     def enroll(self, name: str, frame: Any) -> dict[str, Any]:
         """Store one already-selected face crop under ``name`` on the AI Pi."""
-        return self._post_jpeg(f"/faces/{name}", frame)
+        return self._post_jpeg(f"/faces/{quote(name, safe='')}", frame)
 
     def enroll_object(self, name: str, frame: Any) -> dict[str, Any]:
         """Store one user-selected object crop as local visual memory on the AI Pi."""
-        return self._post_jpeg(f"/objects/{name}", frame)
+        return self._post_jpeg(f"/objects/{quote(name, safe='')}", frame)
 
     def _post_jpeg(self, path: str, frame: Any) -> dict[str, Any]:
         if not self._url or not self._token:

@@ -66,8 +66,6 @@ jobs:
   raspberry-pi:
     name: Raspberry Pi — Python syntax and tests
     runs-on: ubuntu-latest
-    env:
-      PYTHONPYCACHEPREFIX: ${{ runner.temp }}/pidog-pycache
     steps:
       - name: Check out source
         uses: actions/checkout@v4
@@ -78,7 +76,11 @@ jobs:
           python-version: '3.12'
 
       - name: Validate Python syntax
+        env:
+          PYTHONPYCACHEPREFIX: ${{ runner.temp }}/pidog-pycache
         run: python -m compileall -q raspberry_pi
 
       - name: Run all supported PiDog variants' tests
+        env:
+          PYTHONPYCACHEPREFIX: ${{ runner.temp }}/pidog-pycache
         run: bash raspberry_pi/run_tests.sh
